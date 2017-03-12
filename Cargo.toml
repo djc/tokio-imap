@@ -1,0 +1,11 @@
+[package]
+name = "tokio-imap"
+version = "0.1.0"
+authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>"]
+
+[dependencies]
+futures = "*"
+native-tls = "*"
+tokio-core = "*"
+tokio-tls = "*"
+tokio-proto = "*"
