@@ -10,12 +10,12 @@ use std::str;
 
 use futures::Future;
 use futures::future::ok;
-use futures::stream::Stream;
-use native_tls::TlsConnector;
-use tokio_core::io::{Codec, EasyBuf, Io};
+use futures::stream::{SplitSink, SplitStream, Stream};
+use native_tls::{TlsConnector};
+use tokio_core::io::{Codec, EasyBuf, Framed, Io};
 use tokio_core::net::TcpStream;
 use tokio_core::reactor::Core;
-use tokio_tls::TlsConnectorExt;
+use tokio_tls::{TlsConnectorExt, TlsStream};
 
 struct ImapCodec;
 
@@ -50,27 +50,38 @@ impl Codec for ImapCodec {
     }
 }
 
-pub fn run(server: &str, account: &str, password: &str) {
-    let mut core = Core::new().unwrap();
-    let handle = core.handle();
-    let addr = format!("{}:993", server);
-    let addr = addr.to_socket_addrs().unwrap().next().unwrap();
+pub struct Client {
+    core: Core,
+    sink: SplitSink<Framed<TlsStream<TcpStream>, ImapCodec>>,
+    src: SplitStream<Framed<TlsStream<TcpStream>, ImapCodec>>,
+}
 
-    let cx = TlsConnector::builder().unwrap().build().unwrap();
-    let socket = TcpStream::connect(&addr, &handle);
-    let events = socket.and_then(|socket| {
-        let tls = cx.connect_async(server, socket);
-        tls.map_err(|e| {
-            io::Error::new(io::ErrorKind::Other, e)
-        })
-    }).and_then(|stream| {
-        ok(stream.framed(ImapCodec))
-    }).and_then(|transport| {
-        let (sink, src) = transport.split();
-        src.filter_map(|data| {
+impl Client {
+    pub fn connect(server: &str) -> Client {
+        let mut core = Core::new().unwrap();
+        let handle = core.handle();
+        let addr = format!("{}:993", server);
+        let addr = addr.to_socket_addrs().unwrap().next().unwrap();
+
+        let cx = TlsConnector::builder().unwrap().build().unwrap();
+        let socket = TcpStream::connect(&addr, &handle);
+        let events = socket.and_then(|socket| {
+            let tls = cx.connect_async(server, socket);
+            tls.map_err(|e| {
+                io::Error::new(io::ErrorKind::Other, e)
+            })
+        }).and_then(|stream| {
+            ok(stream.framed(ImapCodec).split())
+        });
+        let (sink, src) = core.run(events).unwrap();
+        Client { core: core, sink: sink, src: src }
+    }
+
+    pub fn login(mut self, account: &str, password: &str) {
+        let res = self.src.filter_map(|data| {
             println!("{}", data);
             Some(format!("a001 LOGIN {} {}", account, password))
-        }).forward(sink)
-    });
-    core.run(events).unwrap();
+        }).forward(self.sink);
+        self.core.run(res).unwrap();
+    }
 }
