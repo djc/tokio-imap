@@ -1,6 +1,8 @@
+extern crate bytes;
 extern crate futures;
 extern crate native_tls;
 extern crate tokio_core;
+extern crate tokio_io;
 extern crate tokio_tls;
 extern crate tokio_proto;
 
@@ -8,32 +10,28 @@ use std::io;
 use std::net::ToSocketAddrs;
 use std::str;
 
+use bytes::{BufMut, BytesMut};
 use futures::Future;
 use futures::future::ok;
 use futures::stream::{SplitSink, SplitStream, Stream};
 use native_tls::{TlsConnector};
-use tokio_core::io::{Codec, EasyBuf, Framed, Io};
 use tokio_core::net::TcpStream;
+use tokio_io::AsyncRead;
+use tokio_io::codec::{Decoder, Encoder, Framed};
 use tokio_core::reactor::Core;
 use tokio_tls::{TlsConnectorExt, TlsStream};
 
 struct ImapCodec;
 
-impl Codec for ImapCodec {
-    type In = String;
-    type Out = String;
-
-    fn decode(&mut self, buf: &mut EasyBuf)
+impl Decoder for ImapCodec {
+    type Item = String;
+    type Error = io::Error;
+    fn decode(&mut self, buf: &mut BytesMut)
              -> Result<Option<String>, io::Error> {
-        if let Some(n) = buf.as_slice().iter().position(|b| *b == b'\n') {
-            // remove the serialized frame from the buffer.
-            let line = buf.drain_to(n);
-
-            // Also remove the '\n'
-            buf.drain_to(1);
-
-            // Turn this data into a UTF string and return it in a Frame.
-            return match str::from_utf8(line.as_slice()) {
+        if let Some(n) = buf.iter().position(|b| *b == b'\n') {
+            let line = buf.split_to(n);
+            buf.split_to(1);
+            return match str::from_utf8(line.get(..).unwrap()) {
                 Ok(s) => Ok(Some(s.to_string())),
                 Err(_) => Err(io::Error::new(io::ErrorKind::Other,
                                              "invalid string")),
@@ -42,10 +40,14 @@ impl Codec for ImapCodec {
             Ok(None)
         }
     }
+}
 
-    fn encode(&mut self, msg: String, buf: &mut Vec<u8>) -> io::Result<()> {
-        buf.extend(msg.as_bytes());
-        buf.extend(&[b'\r', b'\n']);
+impl Encoder for ImapCodec {
+    type Item = String;
+    type Error = io::Error;
+    fn encode(&mut self, msg: String, dst: &mut BytesMut) -> Result<(), io::Error> {
+        dst.put(msg.as_bytes());
+        dst.put("\r\n");
         Ok(())
     }
 }
