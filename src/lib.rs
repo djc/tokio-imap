@@ -104,7 +104,6 @@ impl Future for ConnectFuture {
                     ConnectFuture::ServerGreeting(Some(transport))
                 },
                 ConnectFuture::ServerGreeting(ref mut wrapped) => {
-                    println!("server greeting");
                     let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
                     return Ok(Async::Ready(Client {
                         transport: wrapped.take().unwrap(),
@@ -130,7 +129,6 @@ impl Future for LoginFuture {
     type Item = Client;
     type Error = io::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        println!("login?");
         let transport = try_ready!(self.future.poll());
         let mut state = self.clst.take().unwrap();
         state.state = ProtoState::Authenticated;
