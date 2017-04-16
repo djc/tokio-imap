@@ -1,4 +1,5 @@
 extern crate bytes;
+#[macro_use]
 extern crate futures;
 extern crate native_tls;
 extern crate tokio_core;
@@ -11,17 +12,17 @@ use std::net::ToSocketAddrs;
 use std::str;
 
 use bytes::{BufMut, BytesMut};
-use futures::Future;
-use futures::future::ok;
-use futures::stream::{SplitSink, SplitStream, Stream};
+use futures::{Async, Future, Poll, Sink};
+use futures::stream::Stream;
+use futures::sink::Send;
 use native_tls::{TlsConnector};
-use tokio_core::net::TcpStream;
+use tokio_core::net::{TcpStream, TcpStreamNew};
 use tokio_io::AsyncRead;
 use tokio_io::codec::{Decoder, Encoder, Framed};
-use tokio_core::reactor::Core;
-use tokio_tls::{TlsConnectorExt, TlsStream};
+use tokio_core::reactor::Handle;
+use tokio_tls::{ConnectAsync, TlsConnectorExt, TlsStream};
 
-struct ImapCodec;
+pub struct ImapCodec;
 
 impl Decoder for ImapCodec {
     type Item = String;
@@ -52,38 +53,115 @@ impl Encoder for ImapCodec {
     }
 }
 
+type ImapTransport = Framed<TlsStream<TcpStream>, ImapCodec>;
+
+enum ProtoState {
+    NotAuthenticated,
+    Authenticated,
+    Selected,
+    Logout,
+}
+
+pub struct ClientState {
+    state: ProtoState,
+    server_greeting: String,
+}
+
 pub struct Client {
-    core: Core,
-    sink: SplitSink<Framed<TlsStream<TcpStream>, ImapCodec>>,
-    src: SplitStream<Framed<TlsStream<TcpStream>, ImapCodec>>,
+    transport: ImapTransport,
+    state: ClientState,
+}
+
+pub enum ConnectFuture {
+    #[doc(hidden)]
+    TcpConnecting(TcpStreamNew, String),
+    #[doc(hidden)]
+    TlsHandshake(ConnectAsync<TcpStream>),
+    #[doc(hidden)]
+    ServerGreeting(Option<ImapTransport>),
+}
+
+impl Future for ConnectFuture {
+    type Item = Client;
+    type Error = io::Error;
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        let mut changed = true;
+        while changed {
+            changed = false;
+            let fut = match *self {
+                ConnectFuture::TcpConnecting(ref mut future, ref domain) => {
+                    println!("tcp connecting");
+                    let stream = try_ready!(future.poll());
+                    let ctx = TlsConnector::builder().unwrap().build().unwrap();
+                    let future = ctx.connect_async(&domain, stream);
+                    changed = true;
+                    ConnectFuture::TlsHandshake(future)
+                },
+                ConnectFuture::TlsHandshake(ref mut future) => {
+                    println!("tls handshake");
+                    let transport = try_ready!(future.map_err(|e| {
+                        io::Error::new(io::ErrorKind::Other, e)
+                    }).poll()).framed(ImapCodec);
+                    changed = true;
+                    ConnectFuture::ServerGreeting(Some(transport))
+                },
+                ConnectFuture::ServerGreeting(ref mut wrapped) => {
+                    println!("server greeting");
+                    let mut transport = wrapped.take().unwrap();
+                    let msg = try_ready!(transport.poll()).unwrap();
+                    return Ok(Async::Ready(Client {
+                        transport: transport,
+                        state: ClientState {
+                            state: ProtoState::NotAuthenticated,
+                            server_greeting: msg,
+                        },
+                    }));
+                },
+            };
+            *self = fut;
+        }
+        Ok(Async::NotReady)
+    }
+}
+
+pub struct LoginFuture {
+    future: Send<ImapTransport>,
+    clst: Option<ClientState>,
+}
+
+impl Future for LoginFuture {
+    type Item = Client;
+    type Error = io::Error;
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        println!("login?");
+        let transport = try_ready!(self.future.poll());
+        let mut state = self.clst.take().unwrap();
+        state.state = ProtoState::Authenticated;
+        return Ok(Async::Ready(Client {
+            transport: transport,
+            state: state,
+        }));
+    }
 }
 
 impl Client {
-    pub fn connect(server: &str) -> Client {
-        let mut core = Core::new().unwrap();
-        let handle = core.handle();
+    pub fn connect(server: &str, handle: &Handle) -> ConnectFuture {
         let addr = format!("{}:993", server);
         let addr = addr.to_socket_addrs().unwrap().next().unwrap();
-
-        let cx = TlsConnector::builder().unwrap().build().unwrap();
-        let socket = TcpStream::connect(&addr, &handle);
-        let events = socket.and_then(|socket| {
-            let tls = cx.connect_async(server, socket);
-            tls.map_err(|e| {
-                io::Error::new(io::ErrorKind::Other, e)
-            })
-        }).and_then(|stream| {
-            ok(stream.framed(ImapCodec).split())
-        });
-        let (sink, src) = core.run(events).unwrap();
-        Client { core: core, sink: sink, src: src }
+        let stream = TcpStream::connect(&addr, handle);
+        ConnectFuture::TcpConnecting(stream, server.to_string())
     }
 
-    pub fn login(mut self, account: &str, password: &str) {
-        let res = self.src.filter_map(|data| {
-            println!("{}", data);
-            Some(format!("a001 LOGIN {} {}", account, password))
-        }).forward(self.sink);
-        self.core.run(res).unwrap();
+    pub fn login(self, account: &str, password: &str) -> LoginFuture {
+        let Client { transport, state } = self;
+        let msg = format!("a001 LOGIN {} {}", account, password);
+        LoginFuture {
+            future: transport.send(msg),
+            clst: Some(state),
+        }
+    }
+
+    pub fn server_greeting(&self) -> &str {
+        &self.state.server_greeting
     }
 }
