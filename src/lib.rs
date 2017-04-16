@@ -105,10 +105,9 @@ impl Future for ConnectFuture {
                 },
                 ConnectFuture::ServerGreeting(ref mut wrapped) => {
                     println!("server greeting");
-                    let mut transport = wrapped.take().unwrap();
-                    let msg = try_ready!(transport.poll()).unwrap();
+                    let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
                     return Ok(Async::Ready(Client {
-                        transport: transport,
+                        transport: wrapped.take().unwrap(),
                         state: ClientState {
                             state: ProtoState::NotAuthenticated,
                             server_greeting: msg,
