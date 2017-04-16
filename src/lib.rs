@@ -90,7 +90,6 @@ impl Future for ConnectFuture {
             changed = false;
             let fut = match *self {
                 ConnectFuture::TcpConnecting(ref mut future, ref domain) => {
-                    println!("tcp connecting");
                     let stream = try_ready!(future.poll());
                     let ctx = TlsConnector::builder().unwrap().build().unwrap();
                     let future = ctx.connect_async(&domain, stream);
@@ -98,7 +97,6 @@ impl Future for ConnectFuture {
                     ConnectFuture::TlsHandshake(future)
                 },
                 ConnectFuture::TlsHandshake(ref mut future) => {
-                    println!("tls handshake");
                     let transport = try_ready!(future.map_err(|e| {
                         io::Error::new(io::ErrorKind::Other, e)
                     }).poll()).framed(ImapCodec);
