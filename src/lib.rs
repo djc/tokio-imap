@@ -9,66 +9,25 @@ extern crate tokio_proto;
 
 use std::io;
 use std::net::ToSocketAddrs;
-use std::str;
 
-use bytes::{BufMut, BytesMut};
 use futures::{Async, Future, Poll, Sink};
 use futures::stream::Stream;
 use futures::sink::Send;
-use native_tls::{TlsConnector};
+use native_tls::TlsConnector;
 use tokio_core::net::{TcpStream, TcpStreamNew};
 use tokio_io::AsyncRead;
-use tokio_io::codec::{Decoder, Encoder, Framed};
 use tokio_core::reactor::Handle;
-use tokio_tls::{ConnectAsync, TlsConnectorExt, TlsStream};
+use tokio_tls::{ConnectAsync, TlsConnectorExt};
 
-pub struct ImapCodec;
-
-impl Decoder for ImapCodec {
-    type Item = String;
-    type Error = io::Error;
-    fn decode(&mut self, buf: &mut BytesMut)
-             -> Result<Option<String>, io::Error> {
-        if let Some(n) = buf.iter().position(|b| *b == b'\n') {
-            let line = buf.split_to(n);
-            buf.split_to(1);
-            return match str::from_utf8(line.get(..).unwrap()) {
-                Ok(s) => Ok(Some(s.to_string())),
-                Err(_) => Err(io::Error::new(io::ErrorKind::Other,
-                                             "invalid string")),
-            }
-        } else {
-            Ok(None)
-        }
-    }
-}
-
-impl Encoder for ImapCodec {
-    type Item = String;
-    type Error = io::Error;
-    fn encode(&mut self, msg: String, dst: &mut BytesMut) -> Result<(), io::Error> {
-        dst.put(msg.as_bytes());
-        dst.put("\r\n");
-        Ok(())
-    }
-}
-
-type ImapTransport = Framed<TlsStream<TcpStream>, ImapCodec>;
-
-enum ProtoState {
-    NotAuthenticated,
-    Authenticated,
-    Selected,
-    Logout,
-}
+mod proto;
 
 pub struct ClientState {
-    state: ProtoState,
+    state: proto::State,
     server_greeting: String,
 }
 
 pub struct Client {
-    transport: ImapTransport,
+    transport: proto::ImapTransport,
     state: ClientState,
 }
 
@@ -78,7 +37,7 @@ pub enum ConnectFuture {
     #[doc(hidden)]
     TlsHandshake(ConnectAsync<TcpStream>),
     #[doc(hidden)]
-    ServerGreeting(Option<ImapTransport>),
+    ServerGreeting(Option<proto::ImapTransport>),
 }
 
 impl Future for ConnectFuture {
@@ -98,7 +57,7 @@ impl Future for ConnectFuture {
         if let ConnectFuture::TlsHandshake(ref mut future) = *self {
             let transport = try_ready!(future.map_err(|e| {
                 io::Error::new(io::ErrorKind::Other, e)
-            }).poll()).framed(ImapCodec);
+            }).poll()).framed(proto::ImapCodec);
             new = Some(ConnectFuture::ServerGreeting(Some(transport)));
         }
         if new.is_some() {
@@ -109,7 +68,7 @@ impl Future for ConnectFuture {
             return Ok(Async::Ready(Client {
                 transport: wrapped.take().unwrap(),
                 state: ClientState {
-                    state: ProtoState::NotAuthenticated,
+                    state: proto::State::NotAuthenticated,
                     server_greeting: msg,
                 },
             }));
@@ -119,7 +78,7 @@ impl Future for ConnectFuture {
 }
 
 pub struct LoginFuture {
-    future: Send<ImapTransport>,
+    future: Send<proto::ImapTransport>,
     clst: Option<ClientState>,
 }
 
@@ -129,7 +88,7 @@ impl Future for LoginFuture {
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let transport = try_ready!(self.future.poll());
         let mut state = self.clst.take().unwrap();
-        state.state = ProtoState::Authenticated;
+        state.state = proto::State::Authenticated;
         return Ok(Async::Ready(Client {
             transport: transport,
             state: state,
