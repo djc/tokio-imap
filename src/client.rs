@@ -1,10 +1,12 @@
-use std::io;
-use std::net::ToSocketAddrs;
-
 use futures::{Async, Future, Poll, Sink};
 use futures::stream::Stream;
 use futures::sink::Send;
+
 use native_tls::TlsConnector;
+
+use std::io;
+use std::net::ToSocketAddrs;
+
 use tokio_core::net::{TcpStream, TcpStreamNew};
 use tokio_io::AsyncRead;
 use tokio_core::reactor::Handle;
