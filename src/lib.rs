@@ -85,36 +85,34 @@ impl Future for ConnectFuture {
     type Item = Client;
     type Error = io::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let mut changed = true;
-        while changed {
-            changed = false;
-            let fut = match *self {
-                ConnectFuture::TcpConnecting(ref mut future, ref domain) => {
-                    let stream = try_ready!(future.poll());
-                    let ctx = TlsConnector::builder().unwrap().build().unwrap();
-                    let future = ctx.connect_async(&domain, stream);
-                    changed = true;
-                    ConnectFuture::TlsHandshake(future)
+        let mut new = None;
+        if let ConnectFuture::TcpConnecting(ref mut future, ref domain) = *self {
+            let stream = try_ready!(future.poll());
+            let ctx = TlsConnector::builder().unwrap().build().unwrap();
+            let future = ctx.connect_async(&domain, stream);
+            new = Some(ConnectFuture::TlsHandshake(future));
+        }
+        if new.is_some() {
+            *self = new.take().unwrap();
+        }
+        if let ConnectFuture::TlsHandshake(ref mut future) = *self {
+            let transport = try_ready!(future.map_err(|e| {
+                io::Error::new(io::ErrorKind::Other, e)
+            }).poll()).framed(ImapCodec);
+            new = Some(ConnectFuture::ServerGreeting(Some(transport)));
+        }
+        if new.is_some() {
+            *self = new.take().unwrap();
+        }
+        if let ConnectFuture::ServerGreeting(ref mut wrapped) = *self {
+            let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
+            return Ok(Async::Ready(Client {
+                transport: wrapped.take().unwrap(),
+                state: ClientState {
+                    state: ProtoState::NotAuthenticated,
+                    server_greeting: msg,
                 },
-                ConnectFuture::TlsHandshake(ref mut future) => {
-                    let transport = try_ready!(future.map_err(|e| {
-                        io::Error::new(io::ErrorKind::Other, e)
-                    }).poll()).framed(ImapCodec);
-                    changed = true;
-                    ConnectFuture::ServerGreeting(Some(transport))
-                },
-                ConnectFuture::ServerGreeting(ref mut wrapped) => {
-                    let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
-                    return Ok(Async::Ready(Client {
-                        transport: wrapped.take().unwrap(),
-                        state: ClientState {
-                            state: ProtoState::NotAuthenticated,
-                            server_greeting: msg,
-                        },
-                    }));
-                },
-            };
-            *self = fut;
+            }));
         }
         Ok(Async::NotReady)
     }
