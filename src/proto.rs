@@ -9,6 +9,7 @@ use tokio_tls::TlsStream;
 
 pub type ImapTransport = Framed<TlsStream<TcpStream>, ImapCodec>;
 
+#[allow(dead_code)]
 pub enum State {
     NotAuthenticated,
     Authenticated,
