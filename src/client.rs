@@ -68,12 +68,12 @@ impl Future for ConnectFuture {
     }
 }
 
-pub struct LoginFuture {
+pub struct CommandFuture {
     future: Send<proto::ImapTransport>,
     clst: Option<ClientState>,
 }
 
-impl Future for LoginFuture {
+impl Future for CommandFuture {
     type Item = Client;
     type Error = io::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
@@ -95,13 +95,13 @@ impl Client {
         ConnectFuture::TcpConnecting(stream, server.to_string())
     }
 
-    pub fn login(self, account: &str, password: &str) -> LoginFuture {
+    pub fn login(self, account: &str, password: &str) -> CommandFuture {
         let Client { transport, state } = self;
         let msg = proto::Request(
             proto::tag(1),
             proto::Command::Login(account.to_string(), password.to_string()),
         );
-        LoginFuture {
+        CommandFuture {
             future: transport.send(msg),
             clst: Some(state),
         }
