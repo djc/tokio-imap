@@ -16,7 +16,6 @@ use proto;
 
 pub struct ClientState {
     state: proto::State,
-    server_greeting: String,
 }
 
 pub struct Client {
@@ -34,7 +33,7 @@ pub enum ConnectFuture {
 }
 
 impl Future for ConnectFuture {
-    type Item = Client;
+    type Item = (Client, proto::Response);
     type Error = io::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let mut new = None;
@@ -58,13 +57,12 @@ impl Future for ConnectFuture {
         }
         if let ConnectFuture::ServerGreeting(ref mut wrapped) = *self {
             let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
-            return Ok(Async::Ready(Client {
+            return Ok(Async::Ready((Client {
                 transport: wrapped.take().unwrap(),
                 state: ClientState {
                     state: proto::State::NotAuthenticated,
-                    server_greeting: msg,
                 },
-            }));
+            }, msg)));
         }
         Ok(Async::NotReady)
     }
@@ -107,9 +105,5 @@ impl Client {
             future: transport.send(msg),
             clst: Some(state),
         }
-    }
-
-    pub fn server_greeting(&self) -> &str {
-        &self.state.server_greeting
     }
 }
