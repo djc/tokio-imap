@@ -99,7 +99,10 @@ impl Client {
 
     pub fn login(self, account: &str, password: &str) -> LoginFuture {
         let Client { transport, state } = self;
-        let msg = format!("a001 LOGIN {} {}", account, password);
+        let msg = proto::Request(
+            proto::tag(1),
+            proto::Command::Login(account.to_string(), password.to_string()),
+        );
         LoginFuture {
             future: transport.send(msg),
             clst: Some(state),
