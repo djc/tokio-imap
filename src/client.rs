@@ -16,6 +16,7 @@ use proto;
 
 pub struct ClientState {
     state: proto::State,
+    next_request_id: u64,
 }
 
 pub struct Client {
@@ -61,6 +62,7 @@ impl Future for ConnectFuture {
                 transport: wrapped.take().unwrap(),
                 state: ClientState {
                     state: proto::State::NotAuthenticated,
+                    next_request_id: 0,
                 },
             }, msg)));
         }
@@ -69,21 +71,92 @@ impl Future for ConnectFuture {
 }
 
 pub struct CommandFuture {
-    future: Send<proto::ImapTransport>,
-    clst: Option<ClientState>,
+    future: Option<Send<proto::ImapTransport>>,
+    transport: Option<proto::ImapTransport>,
+    state: Option<ClientState>,
+    request_id: String,
+    next_state: Option<proto::State>,
+    responses: Option<ServerMessages>,
+}
+
+impl CommandFuture {
+    fn push_frame(&mut self, frame: proto::Response) {
+        match self.responses {
+            Some(ref mut responses) => {
+                responses.frames.push(frame);
+            },
+            None => panic!("unpossible"),
+        }
+    }
+}
+
+pub struct ServerMessages {
+    pub frames: Vec<proto::Response>,
+}
+
+impl ServerMessages {
+    fn new() -> ServerMessages {
+        ServerMessages { frames: Vec::new() }
+    }
 }
 
 impl Future for CommandFuture {
-    type Item = Client;
+    type Item = (Client, ServerMessages);
     type Error = io::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let transport = try_ready!(self.future.poll());
-        let mut state = self.clst.take().unwrap();
-        state.state = proto::State::Authenticated;
-        return Ok(Async::Ready(Client {
-            transport: transport,
-            state: state,
-        }));
+        if self.future.is_some() {
+            let mut future = self.future.take().unwrap();
+            match future.poll() {
+                Ok(Async::Ready(transport)) => {
+                    self.transport = Some(transport);
+                },
+                Ok(Async::NotReady) => {
+                    self.future = Some(future);
+                    return Ok(Async::NotReady);
+                },
+                Err(e) => {
+                    return Err(e);
+                },
+            }
+        }
+        if !self.transport.is_some() {
+            return Ok(Async::NotReady);
+        }
+        let mut transport = self.transport.take().unwrap();
+        loop {
+            match transport.poll() {
+                Ok(Async::Ready(Some(proto::Response::Status(Some(req_id), msg)))) => {
+                    let expected = req_id == self.request_id;
+                    let rsp = proto::Response::Status(Some(req_id), msg);
+                    self.push_frame(rsp);
+                    if !expected {
+                        continue;
+                    }
+                    let mut state = self.state.take().unwrap();
+                    if self.next_state.is_some() {
+                        state.state = self.next_state.take().unwrap();
+                    }
+                    let client = Client { transport, state };
+                    let responses = self.responses.take().unwrap();
+                    return Ok(Async::Ready((client, responses)));
+                },
+                Ok(Async::Ready(Some(frame))) => {
+                    self.push_frame(frame);
+                    continue;
+                },
+                Ok(Async::Ready(None)) => {
+                    break;
+                },
+                Ok(Async::NotReady) => {
+                    break;
+                },
+                Err(e) => {
+                    return Err(e);
+                },
+            }
+        }
+        self.transport = Some(transport);
+        Ok(Async::NotReady)
     }
 }
 
@@ -96,14 +169,20 @@ impl Client {
     }
 
     pub fn login(self, account: &str, password: &str) -> CommandFuture {
-        let Client { transport, state } = self;
-        let msg = proto::Request(
-            proto::tag(1),
+        let Client { transport, mut state } = self;
+        let request_id = proto::tag(state.next_request_id);
+        state.next_request_id += 1;
+        let future = transport.send(proto::Request(
+            request_id.clone(),
             proto::Command::Login(account.to_string(), password.to_string()),
-        );
+        ));
         CommandFuture {
-            future: transport.send(msg),
-            clst: Some(state),
+            future: Some(future),
+            transport: None,
+            state: Some(state),
+            request_id: request_id,
+            next_state: Some(proto::State::Authenticated),
+            responses: Some(ServerMessages::new()),
         }
     }
 }
