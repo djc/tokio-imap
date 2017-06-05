@@ -168,39 +168,32 @@ impl Client {
         ConnectFuture::TcpConnecting(stream, server.to_string())
     }
 
-    pub fn login(self, account: &str, password: &str) -> CommandFuture {
+    fn call(self, cmd: proto::Command) -> CommandFuture {
         let Client { transport, mut state } = self;
         let request_id = proto::tag(state.next_request_id);
         state.next_request_id += 1;
-        let future = transport.send(proto::Request(
-            request_id.clone(),
-            proto::Command::Login(account.to_string(), password.to_string()),
-        ));
+        let future = transport.send(proto::Request(request_id.clone(), cmd));
         CommandFuture {
             future: Some(future),
             transport: None,
             state: Some(state),
             request_id: request_id,
-            next_state: Some(proto::State::Authenticated),
+            next_state: None,
             responses: Some(ServerMessages::new()),
         }
     }
 
+    pub fn login(self, account: &str, password: &str) -> CommandFuture {
+        let cmd = proto::Command::Login(account.to_string(), password.to_string());
+        let mut future = self.call(cmd);
+        future.next_state = Some(proto::State::Authenticated);
+        future
+    }
+
     pub fn select(self, mailbox: &str) -> CommandFuture {
-        let Client { transport, mut state } = self;
-        let request_id = proto::tag(state.next_request_id);
-        state.next_request_id += 1;
-        let future = transport.send(proto::Request(
-            request_id.clone(),
-            proto::Command::Select(mailbox.to_string()),
-        ));
-        CommandFuture {
-            future: Some(future),
-            transport: None,
-            state: Some(state),
-            request_id: request_id,
-            next_state: Some(proto::State::Selected),
-            responses: Some(ServerMessages::new()),
-        }
+        let cmd = proto::Command::Select(mailbox.to_string());
+        let mut future = self.call(cmd);
+        future.next_state = Some(proto::State::Selected);
+        future
     }
 }
