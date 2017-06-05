@@ -14,65 +14,45 @@ use tokio_tls::{ConnectAsync, TlsConnectorExt};
 
 use proto::*;
 
-pub struct ClientState {
-    state: State,
-    request_ids: IdGenerator,
-}
-
-impl ClientState {
-    pub fn new() -> ClientState {
-        ClientState {
-            state: State::NotAuthenticated,
-            request_ids: IdGenerator::new(),
-        }
-    }
-}
-
 pub struct Client {
     transport: ImapTransport,
     state: ClientState,
 }
 
-pub enum ConnectFuture {
-    #[doc(hidden)]
-    TcpConnecting(TcpStreamNew, String),
-    #[doc(hidden)]
-    TlsHandshake(ConnectAsync<TcpStream>),
-    #[doc(hidden)]
-    ServerGreeting(Option<ImapTransport>),
-}
+impl Client {
+    pub fn connect(server: &str, handle: &Handle) -> ConnectFuture {
+        let addr = format!("{}:993", server);
+        let addr = addr.to_socket_addrs().unwrap().next().unwrap();
+        let stream = TcpStream::connect(&addr, handle);
+        ConnectFuture::TcpConnecting(stream, server.to_string())
+    }
 
-impl Future for ConnectFuture {
-    type Item = (Client, Response);
-    type Error = io::Error;
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let mut new = None;
-        if let ConnectFuture::TcpConnecting(ref mut future, ref domain) = *self {
-            let stream = try_ready!(future.poll());
-            let ctx = TlsConnector::builder().unwrap().build().unwrap();
-            let future = ctx.connect_async(&domain, stream);
-            new = Some(ConnectFuture::TlsHandshake(future));
+    fn call(self, cmd: Command) -> CommandFuture {
+        let Client { transport, mut state } = self;
+        let request_id = state.request_ids.next().unwrap();
+        let future = transport.send(Request(request_id.clone(), cmd));
+        CommandFuture {
+            future: Some(future),
+            transport: None,
+            state: Some(state),
+            request_id: request_id,
+            next_state: None,
+            responses: Some(ServerMessages::new()),
         }
-        if new.is_some() {
-            *self = new.take().unwrap();
-        }
-        if let ConnectFuture::TlsHandshake(ref mut future) = *self {
-            let transport = try_ready!(future.map_err(|e| {
-                io::Error::new(io::ErrorKind::Other, e)
-            }).poll()).framed(ImapCodec);
-            new = Some(ConnectFuture::ServerGreeting(Some(transport)));
-        }
-        if new.is_some() {
-            *self = new.take().unwrap();
-        }
-        if let ConnectFuture::ServerGreeting(ref mut wrapped) = *self {
-            let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
-            return Ok(Async::Ready((Client {
-                transport: wrapped.take().unwrap(),
-                state: ClientState::new(),
-            }, msg)));
-        }
-        Ok(Async::NotReady)
+    }
+
+    pub fn login(self, account: &str, password: &str) -> CommandFuture {
+        let cmd = Command::Login(account.to_string(), password.to_string());
+        let mut future = self.call(cmd);
+        future.next_state = Some(State::Authenticated);
+        future
+    }
+
+    pub fn select(self, mailbox: &str) -> CommandFuture {
+        let cmd = Command::Select(mailbox.to_string());
+        let mut future = self.call(cmd);
+        future.next_state = Some(State::Selected);
+        future
     }
 }
 
@@ -93,16 +73,6 @@ impl CommandFuture {
             },
             None => panic!("unpossible"),
         }
-    }
-}
-
-pub struct ServerMessages {
-    pub frames: Vec<Response>,
-}
-
-impl ServerMessages {
-    fn new() -> ServerMessages {
-        ServerMessages { frames: Vec::new() }
     }
 }
 
@@ -166,39 +136,69 @@ impl Future for CommandFuture {
     }
 }
 
-impl Client {
-    pub fn connect(server: &str, handle: &Handle) -> ConnectFuture {
-        let addr = format!("{}:993", server);
-        let addr = addr.to_socket_addrs().unwrap().next().unwrap();
-        let stream = TcpStream::connect(&addr, handle);
-        ConnectFuture::TcpConnecting(stream, server.to_string())
-    }
+pub enum ConnectFuture {
+    #[doc(hidden)]
+    TcpConnecting(TcpStreamNew, String),
+    #[doc(hidden)]
+    TlsHandshake(ConnectAsync<TcpStream>),
+    #[doc(hidden)]
+    ServerGreeting(Option<ImapTransport>),
+}
 
-    fn call(self, cmd: Command) -> CommandFuture {
-        let Client { transport, mut state } = self;
-        let request_id = state.request_ids.next().unwrap();
-        let future = transport.send(Request(request_id.clone(), cmd));
-        CommandFuture {
-            future: Some(future),
-            transport: None,
-            state: Some(state),
-            request_id: request_id,
-            next_state: None,
-            responses: Some(ServerMessages::new()),
+impl Future for ConnectFuture {
+    type Item = (Client, Response);
+    type Error = io::Error;
+    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        let mut new = None;
+        if let ConnectFuture::TcpConnecting(ref mut future, ref domain) = *self {
+            let stream = try_ready!(future.poll());
+            let ctx = TlsConnector::builder().unwrap().build().unwrap();
+            let future = ctx.connect_async(&domain, stream);
+            new = Some(ConnectFuture::TlsHandshake(future));
+        }
+        if new.is_some() {
+            *self = new.take().unwrap();
+        }
+        if let ConnectFuture::TlsHandshake(ref mut future) = *self {
+            let transport = try_ready!(future.map_err(|e| {
+                io::Error::new(io::ErrorKind::Other, e)
+            }).poll()).framed(ImapCodec);
+            new = Some(ConnectFuture::ServerGreeting(Some(transport)));
+        }
+        if new.is_some() {
+            *self = new.take().unwrap();
+        }
+        if let ConnectFuture::ServerGreeting(ref mut wrapped) = *self {
+            let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
+            return Ok(Async::Ready((Client {
+                transport: wrapped.take().unwrap(),
+                state: ClientState::new(),
+            }, msg)));
+        }
+        Ok(Async::NotReady)
+    }
+}
+
+pub struct ClientState {
+    state: State,
+    request_ids: IdGenerator,
+}
+
+impl ClientState {
+    pub fn new() -> ClientState {
+        ClientState {
+            state: State::NotAuthenticated,
+            request_ids: IdGenerator::new(),
         }
     }
+}
 
-    pub fn login(self, account: &str, password: &str) -> CommandFuture {
-        let cmd = Command::Login(account.to_string(), password.to_string());
-        let mut future = self.call(cmd);
-        future.next_state = Some(State::Authenticated);
-        future
+impl ServerMessages {
+    fn new() -> ServerMessages {
+        ServerMessages { frames: Vec::new() }
     }
+}
 
-    pub fn select(self, mailbox: &str) -> CommandFuture {
-        let cmd = Command::Select(mailbox.to_string());
-        let mut future = self.call(cmd);
-        future.next_state = Some(State::Selected);
-        future
-    }
+pub struct ServerMessages {
+    pub frames: Vec<Response>,
 }
