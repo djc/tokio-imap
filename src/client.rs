@@ -12,15 +12,15 @@ use tokio_io::AsyncRead;
 use tokio_core::reactor::Handle;
 use tokio_tls::{ConnectAsync, TlsConnectorExt};
 
-use proto;
+use proto::*;
 
 pub struct ClientState {
-    state: proto::State,
+    state: State,
     next_request_id: u64,
 }
 
 pub struct Client {
-    transport: proto::ImapTransport,
+    transport: ImapTransport,
     state: ClientState,
 }
 
@@ -30,11 +30,11 @@ pub enum ConnectFuture {
     #[doc(hidden)]
     TlsHandshake(ConnectAsync<TcpStream>),
     #[doc(hidden)]
-    ServerGreeting(Option<proto::ImapTransport>),
+    ServerGreeting(Option<ImapTransport>),
 }
 
 impl Future for ConnectFuture {
-    type Item = (Client, proto::Response);
+    type Item = (Client, Response);
     type Error = io::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let mut new = None;
@@ -50,7 +50,7 @@ impl Future for ConnectFuture {
         if let ConnectFuture::TlsHandshake(ref mut future) = *self {
             let transport = try_ready!(future.map_err(|e| {
                 io::Error::new(io::ErrorKind::Other, e)
-            }).poll()).framed(proto::ImapCodec);
+            }).poll()).framed(ImapCodec);
             new = Some(ConnectFuture::ServerGreeting(Some(transport)));
         }
         if new.is_some() {
@@ -61,7 +61,7 @@ impl Future for ConnectFuture {
             return Ok(Async::Ready((Client {
                 transport: wrapped.take().unwrap(),
                 state: ClientState {
-                    state: proto::State::NotAuthenticated,
+                    state: State::NotAuthenticated,
                     next_request_id: 0,
                 },
             }, msg)));
@@ -71,16 +71,16 @@ impl Future for ConnectFuture {
 }
 
 pub struct CommandFuture {
-    future: Option<Send<proto::ImapTransport>>,
-    transport: Option<proto::ImapTransport>,
+    future: Option<Send<ImapTransport>>,
+    transport: Option<ImapTransport>,
     state: Option<ClientState>,
     request_id: String,
-    next_state: Option<proto::State>,
+    next_state: Option<State>,
     responses: Option<ServerMessages>,
 }
 
 impl CommandFuture {
-    fn push_frame(&mut self, frame: proto::Response) {
+    fn push_frame(&mut self, frame: Response) {
         match self.responses {
             Some(ref mut responses) => {
                 responses.frames.push(frame);
@@ -91,7 +91,7 @@ impl CommandFuture {
 }
 
 pub struct ServerMessages {
-    pub frames: Vec<proto::Response>,
+    pub frames: Vec<Response>,
 }
 
 impl ServerMessages {
@@ -125,9 +125,9 @@ impl Future for CommandFuture {
         let mut transport = self.transport.take().unwrap();
         loop {
             match transport.poll() {
-                Ok(Async::Ready(Some(proto::Response::Status(Some(req_id), msg)))) => {
+                Ok(Async::Ready(Some(Response::Status(Some(req_id), msg)))) => {
                     let expected = req_id == self.request_id;
-                    let rsp = proto::Response::Status(Some(req_id), msg);
+                    let rsp = Response::Status(Some(req_id), msg);
                     self.push_frame(rsp);
                     if !expected {
                         continue;
@@ -168,11 +168,11 @@ impl Client {
         ConnectFuture::TcpConnecting(stream, server.to_string())
     }
 
-    fn call(self, cmd: proto::Command) -> CommandFuture {
+    fn call(self, cmd: Command) -> CommandFuture {
         let Client { transport, mut state } = self;
-        let request_id = proto::tag(state.next_request_id);
+        let request_id = tag(state.next_request_id);
         state.next_request_id += 1;
-        let future = transport.send(proto::Request(request_id.clone(), cmd));
+        let future = transport.send(Request(request_id.clone(), cmd));
         CommandFuture {
             future: Some(future),
             transport: None,
@@ -184,16 +184,16 @@ impl Client {
     }
 
     pub fn login(self, account: &str, password: &str) -> CommandFuture {
-        let cmd = proto::Command::Login(account.to_string(), password.to_string());
+        let cmd = Command::Login(account.to_string(), password.to_string());
         let mut future = self.call(cmd);
-        future.next_state = Some(proto::State::Authenticated);
+        future.next_state = Some(State::Authenticated);
         future
     }
 
     pub fn select(self, mailbox: &str) -> CommandFuture {
-        let cmd = proto::Command::Select(mailbox.to_string());
+        let cmd = Command::Select(mailbox.to_string());
         let mut future = self.call(cmd);
-        future.next_state = Some(proto::State::Selected);
+        future.next_state = Some(State::Selected);
         future
     }
 }
