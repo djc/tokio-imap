@@ -31,14 +31,7 @@ impl Client {
         let Client { transport, mut state } = self;
         let request_id = state.request_ids.next().unwrap();
         let future = transport.send(Request(request_id.clone(), cmd));
-        CommandFuture {
-            future: Some(future),
-            transport: None,
-            state: Some(state),
-            request_id: request_id,
-            next_state: None,
-            responses: Some(ServerMessages::new()),
-        }
+        CommandFuture::new(future, state, request_id)
     }
 
     pub fn login(self, account: &str, password: &str) -> CommandFuture {
@@ -66,6 +59,18 @@ pub struct CommandFuture {
 }
 
 impl CommandFuture {
+    pub fn new(future: Send<ImapTransport>, state: ClientState,
+               request_id: RequestId) -> CommandFuture {
+        CommandFuture {
+            future: Some(future),
+            transport: None,
+            state: Some(state),
+            request_id: request_id,
+            next_state: None,
+            responses: Some(ServerMessages::new()),
+        }
+    }
+
     fn push_frame(&mut self, frame: Response) {
         match self.responses {
             Some(ref mut responses) => {
