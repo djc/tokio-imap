@@ -34,7 +34,7 @@ pub enum Command {
 }
 
 #[derive(Debug)]
-pub struct Request(pub String, pub Command);
+pub struct Request(pub RequestId, pub Command);
 
 impl ToString for Command {
     fn to_string(&self) -> String {
@@ -51,11 +51,34 @@ impl ToString for Command {
 
 #[derive(Debug)]
 pub enum Response {
-    Status(Option<String>, String),
+    Status(Option<RequestId>, String),
 }
 
-pub fn tag(n: u64) -> String {
-    format!("A{:04}", n % 10000)
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RequestId(String);
+
+impl RequestId {
+    fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+}
+
+pub struct IdGenerator {
+    next: u64,
+}
+
+impl IdGenerator {
+    pub fn new() -> IdGenerator {
+        IdGenerator { next: 0 }
+    }
+}
+
+impl Iterator for IdGenerator {
+    type Item = RequestId;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next += 1;
+        Some(RequestId(format!("A{:04}", self.next % 10000)))
+    }
 }
 
 impl Decoder for ImapCodec {
@@ -72,7 +95,7 @@ impl Decoder for ImapCodec {
                 let pos = line.iter().position(|b| *b == b' ').unwrap();
                 let tag = line.split_to(pos);
                 let _ = line.split_to(1);
-                Some(str::from_utf8(&tag).unwrap().to_string())
+                Some(RequestId(str::from_utf8(&tag).unwrap().to_string()))
             };
             let rest = str::from_utf8(line.get(..).unwrap()).unwrap().to_string();
             buf.split_to(2);

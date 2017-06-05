@@ -16,7 +16,7 @@ use proto::*;
 
 pub struct ClientState {
     state: State,
-    next_request_id: u64,
+    request_ids: IdGenerator,
 }
 
 pub struct Client {
@@ -62,7 +62,7 @@ impl Future for ConnectFuture {
                 transport: wrapped.take().unwrap(),
                 state: ClientState {
                     state: State::NotAuthenticated,
-                    next_request_id: 0,
+                    request_ids: IdGenerator::new(),
                 },
             }, msg)));
         }
@@ -74,7 +74,7 @@ pub struct CommandFuture {
     future: Option<Send<ImapTransport>>,
     transport: Option<ImapTransport>,
     state: Option<ClientState>,
-    request_id: String,
+    request_id: RequestId,
     next_state: Option<State>,
     responses: Option<ServerMessages>,
 }
@@ -170,8 +170,7 @@ impl Client {
 
     fn call(self, cmd: Command) -> CommandFuture {
         let Client { transport, mut state } = self;
-        let request_id = tag(state.next_request_id);
-        state.next_request_id += 1;
+        let request_id = state.request_ids.next().unwrap();
         let future = transport.send(Request(request_id.clone(), cmd));
         CommandFuture {
             future: Some(future),
