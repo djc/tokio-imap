@@ -19,6 +19,15 @@ pub struct ClientState {
     request_ids: IdGenerator,
 }
 
+impl ClientState {
+    pub fn new() -> ClientState {
+        ClientState {
+            state: State::NotAuthenticated,
+            request_ids: IdGenerator::new(),
+        }
+    }
+}
+
 pub struct Client {
     transport: ImapTransport,
     state: ClientState,
@@ -60,10 +69,7 @@ impl Future for ConnectFuture {
             let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
             return Ok(Async::Ready((Client {
                 transport: wrapped.take().unwrap(),
-                state: ClientState {
-                    state: State::NotAuthenticated,
-                    request_ids: IdGenerator::new(),
-                },
+                state: ClientState::new(),
             }, msg)));
         }
         Ok(Async::NotReady)
