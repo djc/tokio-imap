@@ -30,6 +30,7 @@ enum Status {
 #[derive(Debug)]
 pub enum Command {
     Login(String, String),
+    Select(String),
 }
 
 #[derive(Debug)]
@@ -40,6 +41,9 @@ impl ToString for Command {
         match *self {
             Command::Login(ref user_name, ref password) => {
                 format!("LOGIN {} {}", user_name, password)
+            },
+            Command::Select(ref mailbox) => {
+                format!("SELECT {}", mailbox)
             },
         }
     }

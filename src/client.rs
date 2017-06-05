@@ -185,4 +185,22 @@ impl Client {
             responses: Some(ServerMessages::new()),
         }
     }
+
+    pub fn select(self, mailbox: &str) -> CommandFuture {
+        let Client { transport, mut state } = self;
+        let request_id = proto::tag(state.next_request_id);
+        state.next_request_id += 1;
+        let future = transport.send(proto::Request(
+            request_id.clone(),
+            proto::Command::Select(mailbox.to_string()),
+        ));
+        CommandFuture {
+            future: Some(future),
+            transport: None,
+            state: Some(state),
+            request_id: request_id,
+            next_state: Some(proto::State::Selected),
+            responses: Some(ServerMessages::new()),
+        }
+    }
 }
