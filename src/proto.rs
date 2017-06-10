@@ -29,6 +29,7 @@ enum Status {
 
 #[derive(Debug)]
 pub enum Command {
+    Check,
     Login(String, String),
     Select(String),
 }
@@ -39,6 +40,9 @@ pub struct Request(pub RequestId, pub Command);
 impl ToString for Command {
     fn to_string(&self) -> String {
         match *self {
+            Command::Check => {
+                format!("CHECK")
+            },
             Command::Login(ref user_name, ref password) => {
                 format!("LOGIN {} {}", user_name, password)
             },

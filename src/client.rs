@@ -34,6 +34,10 @@ impl Client {
         CommandFuture::new(future, state, request_id)
     }
 
+    pub fn check(self) -> CommandFuture {
+         self.call(Command::Check)
+    }
+
     pub fn login(self, account: &str, password: &str) -> CommandFuture {
         let cmd = Command::Login(account.to_string(), password.to_string());
         let mut future = self.call(cmd);
