@@ -8,6 +8,6 @@ extern crate tokio_tls;
 extern crate tokio_proto;
 
 mod client;
-mod proto;
+pub mod proto;
 
 pub use client::Client;
