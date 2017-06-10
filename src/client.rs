@@ -35,7 +35,7 @@ impl Client {
     }
 
     pub fn check(self) -> CommandFuture {
-         self.call(Command::Check)
+        self.call(Command::Check)
     }
 
     pub fn fetch(self, set: SequenceSet, items: MessageData) -> CommandFuture {
