@@ -28,8 +28,41 @@ enum Status {
 }
 
 #[derive(Debug)]
+pub enum MessageData {
+    All,
+    Fast,
+    Full,
+}
+
+impl ToString for MessageData {
+    fn to_string(&self) -> String {
+        use self::MessageData::*;
+        match *self {
+            All => "ALL".to_string(),
+            Fast => "FAST".to_string(),
+            Full => "FULL".to_string(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum SequenceSet {
+    Range(usize, usize),
+}
+
+impl ToString for SequenceSet {
+    fn to_string(&self) -> String {
+        use self::SequenceSet::*;
+        match *self {
+            Range(start, stop) => format!("{}:{}", start, stop),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum Command {
     Check,
+    Fetch(SequenceSet, MessageData),
     Login(String, String),
     Select(String),
 }
@@ -42,6 +75,9 @@ impl ToString for Command {
         match *self {
             Command::Check => {
                 format!("CHECK")
+            },
+            Command::Fetch(ref set, ref items) => {
+                format!("FETCH {} {}", &set.to_string(), &items.to_string())
             },
             Command::Login(ref user_name, ref password) => {
                 format!("LOGIN {} {}", user_name, password)

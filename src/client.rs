@@ -38,6 +38,10 @@ impl Client {
          self.call(Command::Check)
     }
 
+    pub fn fetch(self, set: SequenceSet, items: MessageData) -> CommandFuture {
+        self.call(Command::Fetch(set, items))
+    }
+
     pub fn login(self, account: &str, password: &str) -> CommandFuture {
         let cmd = Command::Login(account.to_string(), password.to_string());
         let mut future = self.call(cmd);
