@@ -151,6 +151,7 @@ pub enum State {
     Logout,
 }
 
+#[allow(dead_code)]
 enum Status {
     Ok,
     No,
