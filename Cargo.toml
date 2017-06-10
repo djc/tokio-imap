@@ -5,10 +5,9 @@ authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>"]
 license = "MIT/Apache-2.0"
 
 [dependencies]
-bytes = "*"
-futures = "*"
-native-tls = "*"
-tokio-core = "*"
-tokio-io = "*"
-tokio-tls = "*"
-tokio-proto = "*"
+bytes = "0.4"
+futures = "0.1"
+native-tls = "0.1"
+tokio-core = "0.1"
+tokio-io = "0.1"
+tokio-tls = "0.1"
