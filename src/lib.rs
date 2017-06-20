@@ -7,6 +7,7 @@ extern crate tokio_io;
 extern crate tokio_tls;
 
 mod client;
+mod parser;
 pub mod proto;
 
 pub use client::Client;
