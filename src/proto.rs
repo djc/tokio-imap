@@ -113,6 +113,9 @@ pub struct ResponseData {
 
 impl ResponseData {
     fn new<'a>(raw: String) -> ResponseData {
+        // This SHOULD be acceptable/safe: the String memory is allocated on
+        // the heap, so that moving the String itself does not invalidate
+        // references to the string data contained in the parsed Response.
         let rsp = unsafe { mem::transmute(parser::parse(&raw)) };
         ResponseData {
             raw: raw,
