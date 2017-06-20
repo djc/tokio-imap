@@ -1,6 +1,8 @@
 use bytes::{BufMut, BytesMut};
 
 use std::io;
+use std::mem;
+use std::str;
 
 use tokio_core::net::TcpStream;
 use tokio_io::codec::{Decoder, Encoder, Framed};
@@ -12,16 +14,16 @@ pub type ImapTransport = Framed<TlsStream<TcpStream>, ImapCodec>;
 
 pub struct ImapCodec;
 
-impl Decoder for ImapCodec {
-    type Item = Response;
+impl<'a> Decoder for ImapCodec {
+    type Item = ResponseData;
     type Error = io::Error;
     fn decode(&mut self, buf: &mut BytesMut)
-             -> Result<Option<Response>, io::Error> {
+             -> Result<Option<Self::Item>, io::Error> {
         if let Some(n) = buf.iter().position(|b| *b == b'\n') {
             let msg = buf.split_to(n - 1);
-            let rsp = parser::parse(&msg);
             buf.split_to(2);
-            Ok(Some(rsp))
+            let owned = str::from_utf8(&msg).unwrap().to_string();
+            Ok(Some(ResponseData::new(owned)))
         } else {
             Ok(None)
         }
@@ -104,8 +106,92 @@ impl ToString for SequenceSet {
 }
 
 #[derive(Debug)]
-pub enum Response {
-    Status(Option<RequestId>, String),
+pub struct ResponseData {
+    raw: String,
+    pub response: Response<'static>,
+}
+
+impl ResponseData {
+    fn new<'a>(raw: String) -> ResponseData {
+        let rsp = unsafe { mem::transmute(parser::parse(&raw)) };
+        ResponseData {
+            raw: raw,
+            response: rsp,
+        }
+    }
+    pub fn request_id(&self) -> Option<&RequestId> {
+        match self.response {
+            Response::Done(ref req_id, ..) => Some(req_id),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Response<'a> {
+    Capabilities(Vec<&'a str>),
+    Done(RequestId, Status, Option<ResponseCode<'a>>, &'a str),
+    Data(Status, Option<ResponseCode<'a>>, &'a str),
+    Expunge(usize),
+    Fetch(usize, Vec<Attribute<'a>>),
+    MailboxData(MailboxDatum<'a>),
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+pub enum Status {
+    Ok,
+    No,
+    Bad,
+    PreAuth,
+    Bye,
+}
+
+#[derive(Debug)]
+pub enum ResponseCode<'a> {
+    PermanentFlags(Vec<&'a str>),
+    ReadOnly,
+    ReadWrite,
+    TryCreate,
+    UidNext(usize),
+    UidValidity(usize),
+}
+
+#[derive(Debug)]
+pub enum MailboxDatum<'a> {
+    Exists(usize),
+    Flags(Vec<&'a str>),
+    Recent(usize),
+}
+
+#[derive(Debug)]
+pub enum Attribute<'a> {
+    Envelope(Envelope<'a>),
+    Flags(Vec<&'a str>),
+    InternalDate(&'a str),
+    Rfc822Size(usize),
+}
+
+#[derive(Debug)]
+pub struct Envelope<'a> {
+    pub date: Option<&'a str>,
+    pub subject: Option<&'a str>,
+    pub from: Option<Vec<Address<'a>>>,
+    pub sender: Option<Vec<Address<'a>>>,
+    pub reply_to: Option<Vec<Address<'a>>>,
+    pub to: Option<Vec<Address<'a>>>,
+    pub cc: Option<Vec<Address<'a>>>,
+    pub bcc: Option<Vec<Address<'a>>>,
+    pub in_reply_to: Option<&'a str>,
+    pub message_id: Option<&'a str>,
+}
+
+#[derive(Debug)]
+pub struct Address<'a> {
+    pub name: Option<&'a str>,
+    pub adl: Option<&'a str>,
+    pub mailbox: Option<&'a str>,
+    pub host: Option<&'a str>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -141,13 +227,4 @@ pub enum State {
     Authenticated,
     Selected,
     Logout,
-}
-
-#[allow(dead_code)]
-pub enum Status {
-    Ok,
-    No,
-    Bad,
-    PreAuth,
-    Bye,
 }

@@ -79,7 +79,7 @@ impl CommandFuture {
         }
     }
 
-    fn push_frame(&mut self, frame: Response) {
+    fn push_frame(&mut self, frame: ResponseData) {
         match self.responses {
             Some(ref mut responses) => {
                 responses.frames.push(frame);
@@ -114,9 +114,12 @@ impl Future for CommandFuture {
         let mut transport = self.transport.take().unwrap();
         loop {
             match transport.poll() {
-                Ok(Async::Ready(Some(Response::Status(Some(req_id), msg)))) => {
-                    let expected = req_id == self.request_id;
-                    let rsp = Response::Status(Some(req_id), msg);
+                Ok(Async::Ready(Some(rsp))) => {
+                    let expected = if let Some(req_id) = rsp.request_id() {
+                        *req_id == self.request_id
+                    } else {
+                        false
+                    };
                     self.push_frame(rsp);
                     if !expected {
                         continue;
@@ -128,10 +131,6 @@ impl Future for CommandFuture {
                     let client = Client { transport, state };
                     let responses = self.responses.take().unwrap();
                     return Ok(Async::Ready((client, responses)));
-                },
-                Ok(Async::Ready(Some(frame))) => {
-                    self.push_frame(frame);
-                    continue;
                 },
                 Ok(Async::Ready(None)) => {
                     break;
@@ -159,7 +158,7 @@ pub enum ConnectFuture {
 }
 
 impl Future for ConnectFuture {
-    type Item = (Client, Response);
+    type Item = (Client, ResponseData);
     type Error = io::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let mut new = None;
@@ -213,5 +212,5 @@ impl ServerMessages {
 }
 
 pub struct ServerMessages {
-    pub frames: Vec<Response>,
+    pub frames: Vec<ResponseData>,
 }
