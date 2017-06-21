@@ -155,6 +155,7 @@ pub enum Status {
 
 #[derive(Debug)]
 pub enum ResponseCode<'a> {
+    HighestModSeq(u64), // RFC 4551, section 3.1.1
     PermanentFlags(Vec<&'a str>),
     ReadOnly,
     ReadWrite,

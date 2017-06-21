@@ -77,6 +77,10 @@ named!(number<u32>, map!(nom::digit,
     |s| str::parse(str::from_utf8(s).unwrap()).unwrap()
 ));
 
+named!(number_64<u64>, map!(nom::digit,
+    |s| str::parse(str::from_utf8(s).unwrap()).unwrap()
+));
+
 named!(text<&str>, map!(take_till_s!(crlf),
     |s| str::from_utf8(s).unwrap()
 ));
@@ -152,6 +156,12 @@ named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
     })
 ));
 
+named!(resp_text_code_highest_mod_seq<ResponseCode>, dbg_dmp!(do_parse!(
+    tag_s!("HIGHESTMODSEQ ") >>
+    num: number_64 >>
+    (ResponseCode::HighestModSeq(num))
+)));
+
 named!(resp_text_code_read_only<ResponseCode>, do_parse!(
     tag_s!("READ-ONLY") >>
     (ResponseCode::ReadOnly)
@@ -187,7 +197,8 @@ named!(resp_text_code<ResponseCode>, do_parse!(
         resp_text_code_uid_next |
         resp_text_code_read_only |
         resp_text_code_read_write |
-        resp_text_code_try_create
+        resp_text_code_try_create |
+        resp_text_code_highest_mod_seq
     ) >>
     // Per the spec, the closing tag should be "] ".
     // See `resp_text` for more on why this is done differently.
