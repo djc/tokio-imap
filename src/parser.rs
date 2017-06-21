@@ -189,7 +189,9 @@ named!(resp_text_code<ResponseCode>, do_parse!(
         resp_text_code_read_write |
         resp_text_code_try_create
     ) >>
-    tag_s!("] ") >>
+    // Per the spec, the closing tag should be "] ".
+    // See `resp_text` for more on why this is done differently.
+    tag_s!("]") >>
     (coded)
 ));
 
@@ -348,41 +350,47 @@ named!(tag<RequestId>, map!(take_while1_s!(tag_char),
     |s| RequestId(str::from_utf8(s).unwrap().to_string())
 ));
 
+// This is not quite according to spec, which mandates the following:
+//     ["[" resp-text-code "]" SP] text
+// However, examples in RFC 4551 (Conditional STORE) counteract this by giving
+// examples of `resp-text` that do not include the trailing space and text.
+named!(resp_text<(Option<ResponseCode>, Option<&str>)>, do_parse!(
+    code: opt!(resp_text_code) >>
+    text: text >>
+    ((code, if text.len() > 0 { Some(&text[1..]) } else { None }))
+));
+
 named!(response_tagged<Response>, do_parse!(
     tag: tag >>
     tag_s!(" ") >>
     status: status >>
     tag_s!(" ") >>
-    code: opt!(resp_text_code) >>
-    text: text >>
-    (Response::Done(tag, status, code, text))
+    text: resp_text >>
+    (Response::Done(tag, status, text.0, text.1))
 ));
 
-named!(response_done<Response>, alt!(response_tagged));
-
-named!(resp_cond_untagged<Response>, do_parse!(
+named!(resp_cond<Response>, do_parse!(
     status: status >>
     tag_s!(" ") >>
-    code: opt!(resp_text_code) >>
-    text: text >>
-    (Response::Data(status, code, text))
+    text: resp_text >>
+    (Response::Data(status, text.0, text.1))
 ));
 
 named!(response_data<Response>, do_parse!(
     tag_s!("* ") >>
     contents: alt!(
-        resp_cond_untagged |
-        capability_data |
+        resp_cond |
         mailbox_data |
         message_data_expunge |
-        message_data_fetch
+        message_data_fetch |
+        capability_data
     ) >>
     (contents)
 ));
 
 named!(response<Response>, alt!(
     response_data |
-    response_done
+    response_tagged
 ));
 
 pub fn parse(msg: &str) -> Response {

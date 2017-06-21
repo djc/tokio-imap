@@ -136,8 +136,8 @@ impl ResponseData {
 #[derive(Debug)]
 pub enum Response<'a> {
     Capabilities(Vec<&'a str>),
-    Done(RequestId, Status, Option<ResponseCode<'a>>, &'a str),
-    Data(Status, Option<ResponseCode<'a>>, &'a str),
+    Done(RequestId, Status, Option<ResponseCode<'a>>, Option<&'a str>),
+    Data(Status, Option<ResponseCode<'a>>, Option<&'a str>),
     Expunge(u32),
     Fetch(u32, Vec<Attribute<'a>>),
     MailboxData(MailboxDatum<'a>),
