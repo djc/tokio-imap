@@ -128,6 +128,9 @@ impl ResponseData {
             _ => None,
         }
     }
+    pub fn parsed(&self) -> &Response {
+        unsafe { mem::transmute(&self.response) }
+    }
 }
 
 #[derive(Debug)]
