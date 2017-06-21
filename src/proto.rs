@@ -138,8 +138,8 @@ pub enum Response<'a> {
     Capabilities(Vec<&'a str>),
     Done(RequestId, Status, Option<ResponseCode<'a>>, &'a str),
     Data(Status, Option<ResponseCode<'a>>, &'a str),
-    Expunge(usize),
-    Fetch(usize, Vec<Attribute<'a>>),
+    Expunge(u32),
+    Fetch(u32, Vec<Attribute<'a>>),
     MailboxData(MailboxDatum<'a>),
 }
 
@@ -159,15 +159,15 @@ pub enum ResponseCode<'a> {
     ReadOnly,
     ReadWrite,
     TryCreate,
-    UidNext(usize),
-    UidValidity(usize),
+    UidNext(u32),
+    UidValidity(u32),
 }
 
 #[derive(Debug)]
 pub enum MailboxDatum<'a> {
-    Exists(usize),
+    Exists(u32),
     Flags(Vec<&'a str>),
-    Recent(usize),
+    Recent(u32),
 }
 
 #[derive(Debug)]
@@ -175,7 +175,7 @@ pub enum Attribute<'a> {
     Envelope(Envelope<'a>),
     Flags(Vec<&'a str>),
     InternalDate(&'a str),
-    Rfc822Size(usize),
+    Rfc822Size(u32),
 }
 
 #[derive(Debug)]

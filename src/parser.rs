@@ -73,7 +73,7 @@ named!(status<Status>, alt!(
     status_bye
 ));
 
-named!(number<usize>, map!(nom::digit,
+named!(number<u32>, map!(nom::digit,
     |s| str::parse(str::from_utf8(s).unwrap()).unwrap()
 ));
 
