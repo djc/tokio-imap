@@ -408,6 +408,6 @@ pub fn parse(msg: &str) -> Response {
     match response(msg.as_bytes()) {
         IResult::Done(_, res) => res,
         IResult::Error(err) => panic!("problems parsing template source: {}", err),
-        IResult::Incomplete(_) => panic!("parsing incomplete"),
+        IResult::Incomplete(_) => panic!("parsing incomplete: {:?}", msg),
     }
 }
