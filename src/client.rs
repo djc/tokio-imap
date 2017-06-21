@@ -205,12 +205,33 @@ impl ClientState {
     }
 }
 
+pub struct ServerMessages {
+    frames: Vec<ResponseData>,
+}
+
 impl ServerMessages {
     fn new() -> ServerMessages {
         ServerMessages { frames: Vec::new() }
     }
+    pub fn iter<'a>(&'a self) -> ResponseIterator<'a> {
+        ResponseIterator { inner: &self.frames, cur: 0 }
+    }
 }
 
-pub struct ServerMessages {
-    pub frames: Vec<ResponseData>,
+pub struct ResponseIterator<'a> {
+    inner: &'a [ResponseData],
+    cur: usize,
+}
+
+impl<'a> Iterator for ResponseIterator<'a> {
+    type Item = &'a Response<'a>;
+    fn next(&mut self) -> Option<&'a Response<'a>> {
+        if self.cur >= self.inner.len() {
+            None
+        } else {
+            let val = self.inner[self.cur].parsed();
+            self.cur += 1;
+            Some(val)
+        }
+    }
 }
