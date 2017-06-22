@@ -37,72 +37,141 @@ impl Encoder for ImapCodec {
              -> Result<(), io::Error> {
         dst.put(msg.0.as_bytes());
         dst.put(b' ');
-        dst.put(msg.1.to_string().as_bytes());
+        dst.put(&msg.1);
         dst.put("\r\n");
         Ok(())
     }
 }
 
 #[derive(Debug)]
-pub struct Request(pub RequestId, pub Command);
+pub struct Request(pub RequestId, pub Vec<u8>);
 
-#[derive(Debug)]
-pub enum Command {
-    Check,
-    Fetch(SequenceSet, MessageData),
-    Login(String, String),
-    Select(String),
-}
+pub struct CommandBuilder { }
 
-impl ToString for Command {
-    fn to_string(&self) -> String {
-        match *self {
-            Command::Check => {
-                format!("CHECK")
-            },
-            Command::Fetch(ref set, ref items) => {
-                format!("FETCH {} {}", &set.to_string(), &items.to_string())
-            },
-            Command::Login(ref user_name, ref password) => {
-                format!("LOGIN {} {}", user_name, password)
-            },
-            Command::Select(ref mailbox) => {
-                format!("SELECT {}", mailbox)
-            },
+impl CommandBuilder {
+    pub fn check() -> Command {
+        let mut args = vec![];
+        args.extend("CHECK".as_bytes());
+        Command {
+            args: args,
+            next_state: None,
+        }
+    }
+
+    pub fn fetch() -> FetchBuilderMessages {
+        let mut args = vec![];
+        args.extend("FETCH ".as_bytes());
+        FetchBuilderMessages { args: args, empty: true }
+    }
+
+    pub fn login(user_name: &str, password: &str) -> Command {
+        let mut args = vec![];
+        args.extend("LOGIN ".as_bytes());
+        args.extend(user_name.as_bytes());
+        args.extend(" ".as_bytes());
+        args.extend(password.as_bytes());
+        Command {
+            args: args,
+            next_state: Some(State::Authenticated),
+        }
+    }
+
+    pub fn select(mailbox: &str) -> Command {
+        let mut args = vec![];
+        args.extend("SELECT ".as_bytes());
+        args.extend(mailbox.as_bytes());
+        Command {
+            args: args,
+            next_state: Some(State::Selected),
         }
     }
 }
 
+pub struct Command {
+    args: Vec<u8>,
+    next_state: Option<State>,
+}
+
+impl Command {
+    pub fn to_parts(self) -> (Vec<u8>, Option<State>) {
+        let Command { args, next_state } = self;
+        (args, next_state)
+    }
+}
+
+pub struct FetchBuilderMessages {
+    args: Vec<u8>,
+    empty: bool,
+}
+
+impl FetchBuilderMessages {
+    pub fn uid(mut self, uid: u32) -> FetchBuilderMessages {
+        if !self.empty {
+            self.args.push(b',');
+        }
+        self.args.extend(uid.to_string().as_bytes());
+        self.empty = false;
+        self
+    }
+
+    pub fn range(mut self, start: u32, stop: u32) -> FetchBuilderMessages {
+        if !self.empty {
+            self.args.push(b',');
+        }
+        self.args.extend(start.to_string().as_bytes());
+        self.args.push(b':');
+        self.args.extend(stop.to_string().as_bytes());
+        self.empty = false;
+        self
+    }
+
+    pub fn all_after(mut self, start: u32) -> FetchBuilderMessages {
+        if !self.empty {
+            self.args.push(b',');
+        }
+        self.args.extend(start.to_string().as_bytes());
+        self.args.extend(":*".as_bytes());
+        self.empty = false;
+        self
+    }
+
+    pub fn attr_macro(self, named: AttrMacro) -> Result<FetchBuilderModifiers, ()> {
+        let FetchBuilderMessages { mut args, empty } = self;
+        if empty {
+            return Err(())
+        }
+        args.push(b' ');
+        match named {
+            AttrMacro::All => { args.extend("ALL".as_bytes()); },
+            AttrMacro::Fast => { args.extend("FAST".as_bytes()); },
+            AttrMacro::Full => { args.extend("FULL".as_bytes()); },
+        }
+        Ok(FetchBuilderModifiers { args })
+    }
+}
+
+pub struct FetchBuilderModifiers {
+    args: Vec<u8>,
+}
+
+impl FetchBuilderModifiers {
+    pub fn build(self) -> Command {
+        let FetchBuilderModifiers { args } = self;
+        Command { args, next_state: None }
+    }
+    pub fn changed_since(mut self, seq: u64) -> FetchBuilderModifiers {
+        self.args.extend(" (CHANGEDSINCE ".as_bytes());
+        self.args.extend(seq.to_string().as_bytes());
+        self.args.push(b')');
+        self
+    }
+}
+
 #[derive(Debug)]
-pub enum MessageData {
+pub enum AttrMacro {
     All,
     Fast,
     Full,
-}
-
-impl ToString for MessageData {
-    fn to_string(&self) -> String {
-        use self::MessageData::*;
-        match *self {
-            All => "ALL".to_string(),
-            Fast => "FAST".to_string(),
-            Full => "FULL".to_string(),
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum SequenceSet {
-    Range(usize, usize),
-}
-
-impl ToString for SequenceSet {
-    fn to_string(&self) -> String {
-        use self::SequenceSet::*;
-        match *self {
-            Range(start, stop) => format!("{}:{}", start, stop),
-        }
-    }
 }
 
 #[derive(Debug)]

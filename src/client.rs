@@ -27,33 +27,12 @@ impl Client {
         ConnectFuture::TcpConnecting(stream, server.to_string())
     }
 
-    fn call(self, cmd: Command) -> CommandFuture {
+    pub fn call(self, cmd: Command) -> CommandFuture {
         let Client { transport, mut state } = self;
         let request_id = state.request_ids.next().unwrap();
-        let future = transport.send(Request(request_id.clone(), cmd));
-        CommandFuture::new(future, state, request_id)
-    }
-
-    pub fn check(self) -> CommandFuture {
-        self.call(Command::Check)
-    }
-
-    pub fn fetch(self, set: SequenceSet, items: MessageData) -> CommandFuture {
-        self.call(Command::Fetch(set, items))
-    }
-
-    pub fn login(self, account: &str, password: &str) -> CommandFuture {
-        let cmd = Command::Login(account.to_string(), password.to_string());
-        let mut future = self.call(cmd);
-        future.next_state = Some(State::Authenticated);
-        future
-    }
-
-    pub fn select(self, mailbox: &str) -> CommandFuture {
-        let cmd = Command::Select(mailbox.to_string());
-        let mut future = self.call(cmd);
-        future.next_state = Some(State::Selected);
-        future
+        let (cmd_bytes, next_state) = cmd.to_parts();
+        let future = transport.send(Request(request_id.clone(), cmd_bytes));
+        CommandFuture::new(future, state, request_id, next_state)
     }
 }
 
@@ -68,13 +47,13 @@ pub struct CommandFuture {
 
 impl CommandFuture {
     pub fn new(future: Send<ImapTransport>, state: ClientState,
-               request_id: RequestId) -> CommandFuture {
+               request_id: RequestId, next_state: Option<State>) -> CommandFuture {
         CommandFuture {
             future: Some(future),
             transport: None,
             state: Some(state),
             request_id: request_id,
-            next_state: None,
+            next_state: next_state,
             responses: Some(ServerMessages::new()),
         }
     }
