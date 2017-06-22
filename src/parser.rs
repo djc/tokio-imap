@@ -368,7 +368,16 @@ named!(tag<RequestId>, map!(take_while1_s!(tag_char),
 named!(resp_text<(Option<ResponseCode>, Option<&str>)>, do_parse!(
     code: opt!(resp_text_code) >>
     text: text >>
-    ((code, if text.len() > 0 { Some(&text[1..]) } else { None }))
+    ({
+        let res = if text.len() < 1 {
+            None
+        } else if code.is_some() {
+            Some(&text[1..])
+        } else {
+            Some(text)
+        };
+        (code, res)
+    })
 ));
 
 named!(response_tagged<Response>, do_parse!(
