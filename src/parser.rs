@@ -424,7 +424,7 @@ named!(response<Response>, alt!(
 pub fn parse(msg: &str) -> Response {
     match response(msg.as_bytes()) {
         IResult::Done(_, res) => res,
-        IResult::Error(err) => panic!("problems parsing template source: {}", err),
+        IResult::Error(err) => panic!("error {} during parsing of {:?}", err, msg),
         IResult::Incomplete(_) => panic!("parsing incomplete: {:?}", msg),
     }
 }
