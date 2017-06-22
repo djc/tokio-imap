@@ -245,6 +245,7 @@ pub enum Attribute<'a> {
     Envelope(Envelope<'a>),
     Flags(Vec<&'a str>),
     InternalDate(&'a str),
+    ModSeq(u64), // RFC 4551, section 3.3.2
     Rfc822Size(u32),
 }
 

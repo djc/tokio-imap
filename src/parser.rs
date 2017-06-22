@@ -319,10 +319,18 @@ named!(msg_att_rfc822_size<Attribute>, do_parse!(
     (Attribute::Rfc822Size(num))
 ));
 
+named!(msg_att_mod_seq<Attribute>, do_parse!(
+    tag_s!("MODSEQ (") >>
+    num: number_64 >>
+    tag_s!(")") >>
+    (Attribute::ModSeq(num))
+));
+
 named!(msg_att<Attribute>, alt!(
     msg_att_envelope |
     msg_att_internal_date |
     msg_att_flags |
+    msg_att_mod_seq |
     msg_att_rfc822_size
 ));
 
