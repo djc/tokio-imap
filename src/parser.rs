@@ -394,6 +394,7 @@ named!(response_tagged<Response>, do_parse!(
     status: status >>
     tag_s!(" ") >>
     text: resp_text >>
+    tag_s!("\r\n") >>
     (Response::Done(tag, status, text.0, text.1))
 ));
 
@@ -413,6 +414,7 @@ named!(response_data<Response>, do_parse!(
         message_data_fetch |
         capability_data
     ) >>
+    tag_s!("\r\n") >>
     (contents)
 ));
 

@@ -20,8 +20,7 @@ impl<'a> Decoder for ImapCodec {
     fn decode(&mut self, buf: &mut BytesMut)
              -> Result<Option<Self::Item>, io::Error> {
         if let Some(n) = buf.iter().position(|b| *b == b'\n') {
-            let msg = buf.split_to(n - 1);
-            buf.split_to(2);
+            let msg = buf.split_to(n + 1);
             let owned = str::from_utf8(&msg).unwrap().to_string();
             Ok(Some(ResponseData::new(owned)))
         } else {
