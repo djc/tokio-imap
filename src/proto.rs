@@ -207,7 +207,7 @@ pub enum Response<'a> {
     Done(RequestId, Status, Option<ResponseCode<'a>>, Option<&'a str>),
     Data(Status, Option<ResponseCode<'a>>, Option<&'a str>),
     Expunge(u32),
-    Fetch(u32, Vec<Attribute<'a>>),
+    Fetch(u32, Vec<AttributeValue<'a>>),
     MailboxData(MailboxDatum<'a>),
 }
 
@@ -240,7 +240,7 @@ pub enum MailboxDatum<'a> {
 }
 
 #[derive(Debug)]
-pub enum Attribute<'a> {
+pub enum AttributeValue<'a> {
     Envelope(Envelope<'a>),
     Flags(Vec<&'a str>),
     InternalDate(&'a str),

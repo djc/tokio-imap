@@ -1,6 +1,6 @@
 use nom::{self, IResult};
 use std::str;
-use proto::{Address, Attribute, Envelope, MailboxDatum};
+use proto::{Address, AttributeValue, Envelope, MailboxDatum};
 use proto::{RequestId, Response, ResponseCode, Status};
 
 fn crlf(c: u8) -> bool {
@@ -273,7 +273,7 @@ named!(opt_addresses<Option<Vec<Address>>>, alt!(
     )
 ));
 
-named!(msg_att_envelope<Attribute>, do_parse!(
+named!(msg_att_envelope<AttributeValue>, do_parse!(
     tag_s!("ENVELOPE (") >>
     date: nstring >>
     tag_s!(" ") >>
@@ -295,38 +295,38 @@ named!(msg_att_envelope<Attribute>, do_parse!(
     tag_s!(" ") >>
     message_id: nstring >>
     tag_s!(")") >> ({
-        Attribute::Envelope(Envelope {
+        AttributeValue::Envelope(Envelope {
             date, subject, from, sender, reply_to, to, cc, bcc, in_reply_to, message_id
         })
     })
 ));
 
-named!(msg_att_internal_date<Attribute>, do_parse!(
+named!(msg_att_internal_date<AttributeValue>, do_parse!(
     tag_s!("INTERNALDATE ") >>
     date: nstring >>
-    (Attribute::InternalDate(date.unwrap()))
+    (AttributeValue::InternalDate(date.unwrap()))
 ));
 
-named!(msg_att_flags<Attribute>, do_parse!(
+named!(msg_att_flags<AttributeValue>, do_parse!(
     tag_s!("FLAGS ") >>
     flags: flag_list >>
-    (Attribute::Flags(flags))
+    (AttributeValue::Flags(flags))
 ));
 
-named!(msg_att_rfc822_size<Attribute>, do_parse!(
+named!(msg_att_rfc822_size<AttributeValue>, do_parse!(
     tag_s!("RFC822.SIZE ") >>
     num: number >>
-    (Attribute::Rfc822Size(num))
+    (AttributeValue::Rfc822Size(num))
 ));
 
-named!(msg_att_mod_seq<Attribute>, do_parse!(
+named!(msg_att_mod_seq<AttributeValue>, do_parse!(
     tag_s!("MODSEQ (") >>
     num: number_64 >>
     tag_s!(")") >>
-    (Attribute::ModSeq(num))
+    (AttributeValue::ModSeq(num))
 ));
 
-named!(msg_att<Attribute>, alt!(
+named!(msg_att<AttributeValue>, alt!(
     msg_att_envelope |
     msg_att_internal_date |
     msg_att_flags |
@@ -334,7 +334,7 @@ named!(msg_att<Attribute>, alt!(
     msg_att_rfc822_size
 ));
 
-named!(msg_att_list<Vec<Attribute>>, do_parse!(
+named!(msg_att_list<Vec<AttributeValue>>, do_parse!(
     tag_s!("(") >>
     elements: do_parse!(
         attr0: msg_att >>
