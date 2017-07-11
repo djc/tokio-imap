@@ -134,7 +134,7 @@ impl FetchBuilderMessages {
         self
     }
 
-    pub fn attr_macro(self, named: AttrMacro) -> Result<FetchBuilderModifiers, ()> {
+    pub fn attr_macro(self, named: AttrMacro) -> Result<FetchCommand, ()> {
         let FetchBuilderMessages { mut args, empty } = self;
         if empty {
             return Err(())
@@ -145,25 +145,72 @@ impl FetchBuilderMessages {
             AttrMacro::Fast => { args.extend("FAST".as_bytes()); },
             AttrMacro::Full => { args.extend("FULL".as_bytes()); },
         }
-        Ok(FetchBuilderModifiers { args })
+        Ok(FetchCommand { args })
+    }
+
+    pub fn attr(self, attr: Attribute) -> Result<FetchBuilderAttributes, ()> {
+        let FetchBuilderMessages { mut args, empty } = self;
+        if empty {
+            return Err(())
+        }
+        args.extend(" (".as_bytes());
+        let new = FetchBuilderAttributes { args, first: true };
+        Ok(new.attr(attr))
     }
 }
 
-pub struct FetchBuilderModifiers {
+pub struct FetchBuilderAttributes {
+    args: Vec<u8>,
+    first: bool,
+}
+
+impl FetchBuilderAttributes {
+    pub fn attr(mut self, attr: Attribute) -> FetchBuilderAttributes {
+        if self.first {
+            self.first = false;
+        } else {
+            self.args.push(b' ')
+        }
+        self.args.extend(match attr {
+            Attribute::Envelope => "ENVELOPE",
+            Attribute::Flags => "FLAGS",
+            Attribute::InternalDate => "INTERNALDATE",
+            Attribute::ModSeq => "MODSEQ",
+            Attribute::Rfc822Size => "RFC822.SIZE",
+        }.as_bytes());
+        self
+    }
+}
+
+pub struct FetchCommand {
     args: Vec<u8>,
 }
 
-impl FetchBuilderModifiers {
-    pub fn build(self) -> Command {
-        let FetchBuilderModifiers { args } = self;
+pub trait FetchBuilderModifiers where Self: Sized {
+    fn prepare(self) -> FetchCommand;
+    fn build(self) -> Command {
+        let FetchCommand { args } = self.prepare();
         Command { args, next_state: None }
     }
-    pub fn changed_since(mut self, seq: u64) -> FetchBuilderModifiers {
-        self.args.extend(" (CHANGEDSINCE ".as_bytes());
-        self.args.extend(seq.to_string().as_bytes());
-        self.args.push(b')');
-        self
+    fn changed_since(self, seq: u64) -> FetchCommand {
+        let FetchCommand { mut args } = self.prepare();
+        args.extend(" (CHANGEDSINCE ".as_bytes());
+        args.extend(seq.to_string().as_bytes());
+        args.push(b')');
+        FetchCommand { args }
     }
+}
+
+impl FetchBuilderModifiers for FetchBuilderAttributes {
+    fn prepare(self) -> FetchCommand {
+        let FetchBuilderAttributes { mut args, .. } = self;
+        args.push(b')');
+        FetchCommand { args }
+    }
+}
+
+impl FetchBuilderModifiers for FetchCommand {
+    fn prepare(self) -> FetchCommand { self }
 }
 
 #[derive(Debug)]
@@ -237,6 +284,15 @@ pub enum MailboxDatum<'a> {
     Exists(u32),
     Flags(Vec<&'a str>),
     Recent(u32),
+}
+
+#[derive(Debug)]
+pub enum Attribute {
+    Envelope,
+    Flags,
+    InternalDate,
+    ModSeq, // RFC 4551, section 3.3.2
+    Rfc822Size,
 }
 
 #[derive(Debug)]
