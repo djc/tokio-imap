@@ -36,11 +36,24 @@ fn tag_char(c: u8) -> bool {
     c != b'+' && astring_char(c)
 }
 
-named!(quoted_data<&[u8], &str, u32>, map!(
-    //escaped!(take_till_s!(quoted_specials), '\\', one_of!("\"\\")),
-    take_till_s!(quoted_specials),
-    |s| str::from_utf8(s).unwrap()
-));
+// Ideally this should use nom's `escaped` macro, but it suffers from broken
+// type inference unless compiled with the verbose-errors feature enabled.
+fn quoted_data(i: &[u8]) -> IResult<&[u8], &str> {
+    let mut escape = false;
+    let mut len = 0;
+    for c in i {
+        if *c == b'"' && !escape {
+            break;
+        }
+        len += 1;
+        if *c == b'\\' && !escape {
+            escape = true
+        } else if escape {
+            escape = false;
+        }
+    }
+    IResult::Done(&i[len..], str::from_utf8(&i[..len]).unwrap())
+}
 
 named!(quoted<&str>, do_parse!(
     tag_s!("\"") >>
