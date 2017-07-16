@@ -423,10 +423,12 @@ named!(response<Response>, alt!(
     response_tagged
 ));
 
-pub fn parse(msg: &str) -> Response {
-    match response(msg.as_bytes()) {
-        IResult::Done(_, res) => res,
-        IResult::Error(err) => panic!("error {} during parsing of {:?}", err, msg),
-        IResult::Incomplete(_) => panic!("parsing incomplete: {:?}", msg),
+pub fn parse(msg: &[u8]) -> Option<(Response, usize)> {
+    match response(msg) {
+        IResult::Done(remaining, res) =>
+            Some((res, msg.len() - remaining.len())),
+        IResult::Incomplete(_) => None,
+        IResult::Error(err) =>
+            panic!("error {} during parsing of {:?}", err, msg),
     }
 }

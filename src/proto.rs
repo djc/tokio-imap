@@ -19,13 +19,21 @@ impl<'a> Decoder for ImapCodec {
     type Error = io::Error;
     fn decode(&mut self, buf: &mut BytesMut)
              -> Result<Option<Self::Item>, io::Error> {
-        if let Some(n) = buf.iter().position(|b| *b == b'\n') {
-            let msg = buf.split_to(n + 1);
-            let owned = str::from_utf8(&msg).unwrap().to_string();
-            Ok(Some(ResponseData::new(owned)))
-        } else {
-            Ok(None)
-        }
+        let res = match parser::parse(buf) {
+            None => { return Ok(None); },
+            Some((response, rsp_len)) => {
+                // This SHOULD be acceptable/safe: BytesMut storage memory is
+                // allocated on the heap and should not move. It will not be
+                // freed as long as we keep a reference alive, which we do
+                // by retaining a reference to the split buffer, below.
+                let response = unsafe { mem::transmute(response) };
+                println!("parsed: {:?}", response);
+                Some((response, rsp_len))
+            },
+        };
+        let (response, rsp_len) = res.unwrap();
+        let raw = buf.split_to(rsp_len);
+        Ok(Some(ResponseData { raw, response }))
     }
 }
 
@@ -222,21 +230,16 @@ pub enum AttrMacro {
 
 #[derive(Debug)]
 pub struct ResponseData {
-    raw: String,
+    raw: BytesMut,
+    // This reference is really scoped to the lifetime of the `raw`
+    // member, but unfortunately Rust does not allow that yet. It
+    // is transmuted to `'static` by the `Decoder`, instead, and
+    // references returned to callers of `ResponseData` are limited
+    // to the lifetime of the `ResponseData` struct.
     pub response: Response<'static>,
 }
 
 impl ResponseData {
-    fn new<'a>(raw: String) -> ResponseData {
-        // This SHOULD be acceptable/safe: the String memory is allocated on
-        // the heap, so that moving the String itself does not invalidate
-        // references to the string data contained in the parsed Response.
-        let rsp = unsafe { mem::transmute(parser::parse(&raw)) };
-        ResponseData {
-            raw: raw,
-            response: rsp,
-        }
-    }
     pub fn request_id(&self) -> Option<&RequestId> {
         match self.response {
             Response::Done(ref req_id, ..) => Some(req_id),
