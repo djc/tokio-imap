@@ -208,9 +208,8 @@ impl<'a> Iterator for ResponseIterator<'a> {
         if self.cur >= self.inner.len() {
             None
         } else {
-            let val = self.inner[self.cur].parsed();
             self.cur += 1;
-            Some(val)
+            Some(self.inner[self.cur - 1].parsed())
         }
     }
 }
