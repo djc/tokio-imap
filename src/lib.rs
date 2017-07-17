@@ -8,7 +8,7 @@ extern crate tokio_core;
 extern crate tokio_io;
 extern crate tokio_tls;
 
-mod client;
+pub mod client;
 mod parser;
 pub mod proto;
 
