@@ -57,7 +57,7 @@ pub struct CommandBuilder { }
 impl CommandBuilder {
     pub fn check() -> Command {
         let mut args = vec![];
-        args.extend("CHECK".as_bytes());
+        args.extend(b"CHECK");
         Command {
             args: args,
             next_state: None,
@@ -66,15 +66,15 @@ impl CommandBuilder {
 
     pub fn fetch() -> FetchCommandEmpty {
         let mut args = vec![];
-        args.extend("FETCH ".as_bytes());
+        args.extend(b"FETCH ");
         FetchCommandEmpty { args: args }
     }
 
     pub fn login(user_name: &str, password: &str) -> Command {
         let mut args = vec![];
-        args.extend("LOGIN ".as_bytes());
+        args.extend(b"LOGIN ");
         args.extend(user_name.as_bytes());
-        args.extend(" ".as_bytes());
+        args.push(b' ');
         args.extend(password.as_bytes());
         Command {
             args: args,
@@ -84,7 +84,7 @@ impl CommandBuilder {
 
     pub fn select(mailbox: &str) -> Command {
         let mut args = vec![];
-        args.extend("SELECT ".as_bytes());
+        args.extend(b"SELECT ");
         args.extend(mailbox.as_bytes());
         Command {
             args: args,
@@ -133,9 +133,9 @@ impl FetchCommandMessages {
         let FetchCommandMessages { mut args } = self;
         args.push(b' ');
         match named {
-            AttrMacro::All => { args.extend("ALL".as_bytes()); },
-            AttrMacro::Fast => { args.extend("FAST".as_bytes()); },
-            AttrMacro::Full => { args.extend("FULL".as_bytes()); },
+            AttrMacro::All => { args.extend(b"ALL"); },
+            AttrMacro::Fast => { args.extend(b"FAST"); },
+            AttrMacro::Full => { args.extend(b"FULL"); },
         }
         FetchCommand { args }
     }
@@ -161,7 +161,7 @@ pub trait FetchBuilderMessages where Self: Sized {
     fn all_after(self, start: u32) -> FetchCommandMessages {
         let FetchCommandMessages { mut args } = self.prepare();
         args.extend(start.to_string().as_bytes());
-        args.extend(":*".as_bytes());
+        args.extend(b":*");
         FetchCommandMessages { args }
     }
 }
@@ -173,7 +173,7 @@ pub struct FetchCommandAttributes {
 impl FetchBuilderAttributes for FetchCommandMessages {
     fn prepare(self) -> FetchCommandAttributes {
         let FetchCommandMessages { mut args } = self;
-        args.extend(" (".as_bytes());
+        args.extend(b" (");
         FetchCommandAttributes { args }
     }
 }
@@ -213,7 +213,7 @@ pub trait FetchBuilderModifiers where Self: Sized {
     }
     fn changed_since(self, seq: u64) -> FetchCommand {
         let FetchCommand { mut args } = self.prepare();
-        args.extend(" (CHANGEDSINCE ".as_bytes());
+        args.extend(b" (CHANGEDSINCE ");
         args.extend(seq.to_string().as_bytes());
         args.push(b')');
         FetchCommand { args }
