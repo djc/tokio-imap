@@ -27,7 +27,6 @@ impl<'a> Decoder for ImapCodec {
                 // freed as long as we keep a reference alive, which we do
                 // by retaining a reference to the split buffer, below.
                 let response = unsafe { mem::transmute(response) };
-                println!("parsed: {:?}", response);
                 Some((response, rsp_len))
             },
         };
