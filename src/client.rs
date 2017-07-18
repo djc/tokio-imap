@@ -111,10 +111,7 @@ impl Future for CommandFuture {
                     let responses = self.responses.take().unwrap();
                     return Ok(Async::Ready((client, responses)));
                 },
-                Ok(Async::Ready(None)) => {
-                    break;
-                },
-                Ok(Async::NotReady) => {
+                Ok(Async::Ready(None)) | Ok(Async::NotReady) => {
                     break;
                 },
                 Err(e) => {
@@ -144,7 +141,7 @@ impl Future for ConnectFuture {
         if let ConnectFuture::TcpConnecting(ref mut future, ref domain) = *self {
             let stream = try_ready!(future.poll());
             let ctx = TlsConnector::builder().unwrap().build().unwrap();
-            let future = ctx.connect_async(&domain, stream);
+            let future = ctx.connect_async(domain, stream);
             new = Some(ConnectFuture::TlsHandshake(future));
         }
         if new.is_some() {
@@ -192,7 +189,7 @@ impl ServerMessages {
     fn new() -> ServerMessages {
         ServerMessages { frames: Vec::new() }
     }
-    pub fn iter<'a>(&'a self) -> ResponseIterator<'a> {
+    pub fn iter(&self) -> ResponseIterator {
         ResponseIterator { inner: &self.frames, cur: 0 }
     }
 }
