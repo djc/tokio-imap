@@ -65,10 +65,10 @@ impl CommandBuilder {
         }
     }
 
-    pub fn fetch() -> FetchBuilderMessages {
+    pub fn fetch() -> FetchCommandEmpty {
         let mut args = vec![];
         args.extend("FETCH ".as_bytes());
-        FetchBuilderMessages { args: args, empty: true }
+        FetchCommandEmpty { args: args }
     }
 
     pub fn login(user_name: &str, password: &str) -> Command {
@@ -106,87 +106,99 @@ impl Command {
     }
 }
 
-pub struct FetchBuilderMessages {
+pub struct FetchCommandEmpty {
     args: Vec<u8>,
-    empty: bool,
 }
 
-impl FetchBuilderMessages {
-    pub fn uid(mut self, uid: u32) -> FetchBuilderMessages {
-        if !self.empty {
-            self.args.push(b',');
-        }
-        self.args.extend(uid.to_string().as_bytes());
-        self.empty = false;
-        self
+impl FetchBuilderMessages for FetchCommandEmpty {
+    fn prepare(self) -> FetchCommandMessages {
+        let FetchCommandEmpty { args } = self;
+        FetchCommandMessages { args }
     }
+}
 
-    pub fn range(mut self, start: u32, stop: u32) -> FetchBuilderMessages {
-        if !self.empty {
-            self.args.push(b',');
-        }
-        self.args.extend(start.to_string().as_bytes());
-        self.args.push(b':');
-        self.args.extend(stop.to_string().as_bytes());
-        self.empty = false;
-        self
+pub struct FetchCommandMessages {
+    args: Vec<u8>,
+}
+
+impl FetchBuilderMessages for FetchCommandMessages {
+    fn prepare(self) -> FetchCommandMessages {
+        let FetchCommandMessages { mut args } = self;
+        args.push(b',');
+        FetchCommandMessages { args }
     }
+}
 
-    pub fn all_after(mut self, start: u32) -> FetchBuilderMessages {
-        if !self.empty {
-            self.args.push(b',');
-        }
-        self.args.extend(start.to_string().as_bytes());
-        self.args.extend(":*".as_bytes());
-        self.empty = false;
-        self
-    }
-
-    pub fn attr_macro(self, named: AttrMacro) -> Result<FetchCommand, ()> {
-        let FetchBuilderMessages { mut args, empty } = self;
-        if empty {
-            return Err(())
-        }
+impl FetchCommandMessages {
+    pub fn attr_macro(self, named: AttrMacro) -> FetchCommand {
+        let FetchCommandMessages { mut args } = self;
         args.push(b' ');
         match named {
             AttrMacro::All => { args.extend("ALL".as_bytes()); },
             AttrMacro::Fast => { args.extend("FAST".as_bytes()); },
             AttrMacro::Full => { args.extend("FULL".as_bytes()); },
         }
-        Ok(FetchCommand { args })
-    }
-
-    pub fn attr(self, attr: Attribute) -> Result<FetchBuilderAttributes, ()> {
-        let FetchBuilderMessages { mut args, empty } = self;
-        if empty {
-            return Err(())
-        }
-        args.extend(" (".as_bytes());
-        let new = FetchBuilderAttributes { args, first: true };
-        Ok(new.attr(attr))
+        FetchCommand { args }
     }
 }
 
-pub struct FetchBuilderAttributes {
+pub trait FetchBuilderMessages where Self: Sized {
+    fn prepare(self) -> FetchCommandMessages;
+
+    fn uid(self, uid: u32) -> FetchCommandMessages {
+        let FetchCommandMessages { mut args } = self.prepare();
+        args.extend(uid.to_string().as_bytes());
+        FetchCommandMessages { args }
+    }
+
+    fn range(self, start: u32, stop: u32) -> FetchCommandMessages {
+        let FetchCommandMessages { mut args } = self.prepare();
+        args.extend(start.to_string().as_bytes());
+        args.push(b':');
+        args.extend(stop.to_string().as_bytes());
+        FetchCommandMessages { args }
+    }
+
+    fn all_after(self, start: u32) -> FetchCommandMessages {
+        let FetchCommandMessages { mut args } = self.prepare();
+        args.extend(start.to_string().as_bytes());
+        args.extend(":*".as_bytes());
+        FetchCommandMessages { args }
+    }
+}
+
+pub struct FetchCommandAttributes {
     args: Vec<u8>,
-    first: bool,
 }
 
-impl FetchBuilderAttributes {
-    pub fn attr(mut self, attr: Attribute) -> FetchBuilderAttributes {
-        if self.first {
-            self.first = false;
-        } else {
-            self.args.push(b' ')
-        }
-        self.args.extend(match attr {
+impl FetchBuilderAttributes for FetchCommandMessages {
+    fn prepare(self) -> FetchCommandAttributes {
+        let FetchCommandMessages { mut args } = self;
+        args.extend(" (".as_bytes());
+        FetchCommandAttributes { args }
+    }
+}
+
+impl FetchBuilderAttributes for FetchCommandAttributes {
+    fn prepare(self) -> FetchCommandAttributes {
+        let FetchCommandAttributes { mut args } = self;
+        args.push(b' ');
+        FetchCommandAttributes { args }
+    }
+}
+
+pub trait FetchBuilderAttributes where Self: Sized {
+    fn prepare(self) -> FetchCommandAttributes;
+    fn attr(self, attr: Attribute) -> FetchCommandAttributes {
+        let FetchCommandAttributes { mut args } = self.prepare();
+        args.extend(match attr {
             Attribute::Envelope => "ENVELOPE",
             Attribute::Flags => "FLAGS",
             Attribute::InternalDate => "INTERNALDATE",
             Attribute::ModSeq => "MODSEQ",
             Attribute::Rfc822Size => "RFC822.SIZE",
         }.as_bytes());
-        self
+        FetchCommandAttributes { args }
     }
 }
 
@@ -209,9 +221,9 @@ pub trait FetchBuilderModifiers where Self: Sized {
     }
 }
 
-impl FetchBuilderModifiers for FetchBuilderAttributes {
+impl FetchBuilderModifiers for FetchCommandAttributes {
     fn prepare(self) -> FetchCommand {
-        let FetchBuilderAttributes { mut args, .. } = self;
+        let FetchCommandAttributes { mut args, .. } = self;
         args.push(b')');
         FetchCommand { args }
     }
