@@ -337,6 +337,12 @@ named!(msg_att_flags<AttributeValue>, do_parse!(
     (AttributeValue::Flags(flags))
 ));
 
+named!(msg_att_rfc822<AttributeValue>, do_parse!(
+    tag_s!("RFC822 ") >>
+    raw: nstring >>
+    (AttributeValue::Rfc822(raw))
+));
+
 named!(msg_att_rfc822_size<AttributeValue>, do_parse!(
     tag_s!("RFC822.SIZE ") >>
     num: number >>
@@ -355,6 +361,7 @@ named!(msg_att<AttributeValue>, alt!(
     msg_att_internal_date |
     msg_att_flags |
     msg_att_mod_seq |
+    msg_att_rfc822 |
     msg_att_rfc822_size
 ));
 
