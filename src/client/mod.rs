@@ -15,6 +15,9 @@ use tokio_tls::{ConnectAsync, TlsConnectorExt};
 
 use proto::*;
 
+pub mod builder;
+use self::builder::Command;
+
 pub struct Client {
     transport: ImapTransport,
     state: ClientState,
