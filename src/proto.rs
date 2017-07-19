@@ -169,24 +169,6 @@ impl RequestId {
     }
 }
 
-pub struct IdGenerator {
-    next: u64,
-}
-
-impl IdGenerator {
-    pub fn new() -> IdGenerator {
-        IdGenerator { next: 0 }
-    }
-}
-
-impl Iterator for IdGenerator {
-    type Item = RequestId;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.next += 1;
-        Some(RequestId(format!("A{:04}", self.next % 10000)))
-    }
-}
-
 #[allow(dead_code)]
 pub enum State {
     NotAuthenticated,
