@@ -139,10 +139,12 @@ pub trait FetchBuilderAttributes where Self: Sized {
     fn attr(self, attr: Attribute) -> FetchCommandAttributes {
         let FetchCommandAttributes { mut args } = self.prepare();
         args.extend(match attr {
+            Attribute::Body => "BODY",
             Attribute::Envelope => "ENVELOPE",
             Attribute::Flags => "FLAGS",
             Attribute::InternalDate => "INTERNALDATE",
             Attribute::ModSeq => "MODSEQ",
+            Attribute::Rfc822 => "RFC822",
             Attribute::Rfc822Size => "RFC822.SIZE",
         }.as_bytes());
         FetchCommandAttributes { args }

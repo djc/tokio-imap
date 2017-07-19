@@ -122,10 +122,12 @@ pub enum MailboxDatum<'a> {
 
 #[derive(Debug)]
 pub enum Attribute {
+    Body,
     Envelope,
     Flags,
     InternalDate,
     ModSeq, // RFC 4551, section 3.3.2
+    Rfc822,
     Rfc822Size,
 }
 
