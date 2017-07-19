@@ -62,6 +62,17 @@ named!(quoted<&str>, do_parse!(
     (data)
 ));
 
+named!(literal<&str>, do_parse!(
+    tag_s!("{") >>
+    len: number >>
+    tag_s!("}") >>
+    tag_s!("\r\n") >>
+    data: take!(len) >>
+    (str::from_utf8(data).unwrap())
+));
+
+named!(string<&str>, alt!(quoted | literal));
+
 named!(status_ok<Status>, map!(tag_no_case!("OK"),
     |s| Status::Ok
 ));
@@ -258,7 +269,7 @@ named!(mailbox_data<Response>, alt!(
 named!(nstring<Option<&str>>, map!(
     alt!(
         map!(tag_s!("NIL"), |s| str::from_utf8(s).unwrap()) |
-        quoted
+        string
     ),
     |s| if s == "NIL" { None } else { Some(s) }
 ));
