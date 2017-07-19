@@ -28,16 +28,16 @@ impl Client {
         ConnectFuture::TcpConnecting(stream, server.to_string())
     }
 
-    pub fn call(self, cmd: Command) -> CommandFuture {
+    pub fn call(self, cmd: Command) -> ResponseStream {
         let Client { transport, mut state } = self;
         let request_id = state.request_ids.next().unwrap();
         let (cmd_bytes, next_state) = cmd.to_parts();
         let future = transport.send(Request(request_id.clone(), cmd_bytes));
-        CommandFuture::new(future, state, request_id, next_state)
+        ResponseStream::new(future, state, request_id, next_state)
     }
 }
 
-pub struct CommandFuture {
+pub struct ResponseStream {
     future: Option<Send<ImapTransport>>,
     transport: Option<ImapTransport>,
     state: Option<ClientState>,
@@ -46,10 +46,10 @@ pub struct CommandFuture {
     done: bool,
 }
 
-impl CommandFuture {
+impl ResponseStream {
     pub fn new(future: Send<ImapTransport>, state: ClientState,
-               request_id: RequestId, next_state: Option<State>) -> CommandFuture {
-        CommandFuture {
+               request_id: RequestId, next_state: Option<State>) -> ResponseStream {
+        ResponseStream {
             future: Some(future),
             transport: None,
             state: Some(state),
@@ -60,7 +60,7 @@ impl CommandFuture {
     }
 }
 
-impl StateStream for CommandFuture {
+impl StateStream for ResponseStream {
     type Item = ResponseData;
     type State = Client;
     type Error = io::Error;
