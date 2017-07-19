@@ -14,6 +14,7 @@ readme = "README.md"
 [dependencies]
 bytes = "0.4"
 futures = "0.1"
+futures-state-stream = "*"
 native-tls = "0.1"
 nom = "3.1"
 tokio-core = "0.1"

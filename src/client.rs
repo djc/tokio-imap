@@ -1,6 +1,7 @@
 use futures::{Async, Future, Poll, Sink};
 use futures::stream::Stream;
 use futures::sink::Send;
+use futures_state_stream::{StateStream, StreamEvent};
 
 use native_tls::TlsConnector;
 
@@ -42,7 +43,7 @@ pub struct CommandFuture {
     state: Option<ClientState>,
     request_id: RequestId,
     next_state: Option<State>,
-    responses: Option<ServerMessages>,
+    done: bool,
 }
 
 impl CommandFuture {
@@ -54,24 +55,16 @@ impl CommandFuture {
             state: Some(state),
             request_id: request_id,
             next_state: next_state,
-            responses: Some(ServerMessages::new()),
-        }
-    }
-
-    fn push_frame(&mut self, frame: ResponseData) {
-        match self.responses {
-            Some(ref mut responses) => {
-                responses.frames.push(frame);
-            },
-            None => panic!("unpossible"),
+            done: false,
         }
     }
 }
 
-impl Future for CommandFuture {
-    type Item = (Client, ServerMessages);
+impl StateStream for CommandFuture {
+    type Item = ResponseData;
+    type State = Client;
     type Error = io::Error;
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+    fn poll(&mut self) -> Poll<StreamEvent<Self::Item, Self::State>, Self::Error> {
         if self.future.is_some() {
             let mut future = self.future.take().unwrap();
             match future.poll() {
@@ -91,25 +84,22 @@ impl Future for CommandFuture {
             return Ok(Async::NotReady);
         }
         let mut transport = self.transport.take().unwrap();
+        if self.done {
+            let mut state = self.state.take().unwrap();
+            if self.next_state.is_some() {
+                state.state = self.next_state.take().unwrap();
+            }
+            let client = Client { transport, state };
+            return Ok(Async::Ready(StreamEvent::Done(client)));
+        }
         loop {
             match transport.poll() {
                 Ok(Async::Ready(Some(rsp))) => {
-                    let expected = if let Some(req_id) = rsp.request_id() {
-                        *req_id == self.request_id
-                    } else {
-                        false
+                    if let Some(req_id) = rsp.request_id() {
+                        self.done = *req_id == self.request_id;
                     };
-                    self.push_frame(rsp);
-                    if !expected {
-                        continue;
-                    }
-                    let mut state = self.state.take().unwrap();
-                    if self.next_state.is_some() {
-                        state.state = self.next_state.take().unwrap();
-                    }
-                    let client = Client { transport, state };
-                    let responses = self.responses.take().unwrap();
-                    return Ok(Async::Ready((client, responses)));
+                    self.transport = Some(transport);
+                    return Ok(Async::Ready(StreamEvent::Next(rsp)));
                 },
                 Ok(Async::Ready(None)) | Ok(Async::NotReady) => {
                     break;
@@ -177,36 +167,6 @@ impl ClientState {
         ClientState {
             state: State::NotAuthenticated,
             request_ids: IdGenerator::new(),
-        }
-    }
-}
-
-pub struct ServerMessages {
-    frames: Vec<ResponseData>,
-}
-
-impl ServerMessages {
-    fn new() -> ServerMessages {
-        ServerMessages { frames: Vec::new() }
-    }
-    pub fn iter(&self) -> ResponseIterator {
-        ResponseIterator { inner: &self.frames, cur: 0 }
-    }
-}
-
-pub struct ResponseIterator<'a> {
-    inner: &'a [ResponseData],
-    cur: usize,
-}
-
-impl<'a> Iterator for ResponseIterator<'a> {
-    type Item = &'a Response<'a>;
-    fn next(&mut self) -> Option<&'a Response<'a>> {
-        if self.cur >= self.inner.len() {
-            None
-        } else {
-            self.cur += 1;
-            Some(self.inner[self.cur - 1].parsed())
         }
     }
 }

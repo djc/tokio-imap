@@ -1,6 +1,7 @@
 extern crate bytes;
 #[macro_use]
 extern crate futures;
+extern crate futures_state_stream;
 extern crate native_tls;
 #[macro_use]
 extern crate nom;
