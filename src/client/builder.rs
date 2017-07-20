@@ -97,9 +97,9 @@ impl FetchCommandMessages {
 pub trait FetchBuilderMessages where Self: Sized {
     fn prepare(self) -> FetchCommandMessages;
 
-    fn uid(self, uid: u32) -> FetchCommandMessages {
+    fn num(self, num: u32) -> FetchCommandMessages {
         let FetchCommandMessages { mut args } = self.prepare();
-        args.extend(uid.to_string().as_bytes());
+        args.extend(num.to_string().as_bytes());
         FetchCommandMessages { args }
     }
 
