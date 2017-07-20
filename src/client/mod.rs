@@ -143,7 +143,7 @@ impl Future for ConnectFuture {
         if let ConnectFuture::TlsHandshake(ref mut future) = *self {
             let transport = try_ready!(future.map_err(|e| {
                 io::Error::new(io::ErrorKind::Other, e)
-            }).poll()).framed(ImapCodec);
+            }).poll()).framed(ImapCodec::default());
             new = Some(ConnectFuture::ServerGreeting(Some(transport)));
         }
         if new.is_some() {

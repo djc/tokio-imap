@@ -1,5 +1,7 @@
 use bytes::{BufMut, BytesMut};
 
+use nom::{IResult, Needed};
+
 use std::io;
 use std::mem;
 use std::str;
@@ -12,26 +14,47 @@ use parser;
 
 pub type ImapTransport = Framed<TlsStream<TcpStream>, ImapCodec>;
 
-pub struct ImapCodec;
+pub struct ImapCodec {
+    decode_need_message_bytes: usize,
+}
+
+impl Default for ImapCodec {
+    fn default() -> ImapCodec {
+        ImapCodec { decode_need_message_bytes: 0 }
+    }
+}
 
 impl<'a> Decoder for ImapCodec {
     type Item = ResponseData;
     type Error = io::Error;
     fn decode(&mut self, buf: &mut BytesMut)
              -> Result<Option<Self::Item>, io::Error> {
-        let res = match parser::parse(buf) {
-            None => { return Ok(None); },
-            Some((response, rsp_len)) => {
+        if self.decode_need_message_bytes > buf.len() {
+            return Ok(None);
+        }
+        let res = match parser::parse_response(buf) {
+            IResult::Done(remaining, response) => {
                 // This SHOULD be acceptable/safe: BytesMut storage memory is
                 // allocated on the heap and should not move. It will not be
                 // freed as long as we keep a reference alive, which we do
                 // by retaining a reference to the split buffer, below.
                 let response = unsafe { mem::transmute(response) };
-                Some((response, rsp_len))
+                Some((response, buf.len() - remaining.len()))
+            },
+            IResult::Incomplete(Needed::Size(min)) => {
+                self.decode_need_message_bytes = min;
+                return Ok(None);
+            },
+            IResult::Incomplete(_) => {
+                return Ok(None);
+            },
+            IResult::Error(err) => {
+                panic!("error {} during parsing of {:?}", err, buf);
             },
         };
         let (response, rsp_len) = res.unwrap();
         let raw = buf.split_to(rsp_len);
+        self.decode_need_message_bytes = 0;
         Ok(Some(ResponseData { raw, response }))
     }
 }

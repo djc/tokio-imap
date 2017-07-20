@@ -461,12 +461,9 @@ named!(response<Response>, alt!(
     response_tagged
 ));
 
-pub fn parse(msg: &[u8]) -> Option<(Response, usize)> {
-    match response(msg) {
-        IResult::Done(remaining, res) =>
-            Some((res, msg.len() - remaining.len())),
-        IResult::Incomplete(_) => None,
-        IResult::Error(err) =>
-            panic!("error {} during parsing of {:?}", err, msg),
-    }
+pub type ParseResult<'a> = IResult<&'a [u8], Response<'a>>;
+pub use nom::Needed as Needed;
+
+pub fn parse_response(msg: &[u8]) -> ParseResult {
+    response(msg)
 }
