@@ -146,6 +146,7 @@ pub trait FetchBuilderAttributes where Self: Sized {
             Attribute::ModSeq => "MODSEQ",
             Attribute::Rfc822 => "RFC822",
             Attribute::Rfc822Size => "RFC822.SIZE",
+            Attribute::Uid => "UID",
         }.as_bytes());
         FetchCommandAttributes { args }
     }

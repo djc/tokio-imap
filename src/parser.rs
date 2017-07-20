@@ -356,13 +356,20 @@ named!(msg_att_mod_seq<AttributeValue>, do_parse!(
     (AttributeValue::ModSeq(num))
 ));
 
+named!(msg_att_uid<AttributeValue>, do_parse!(
+    tag_s!("UID ") >>
+    num: number >>
+    (AttributeValue::Uid(num))
+));
+
 named!(msg_att<AttributeValue>, alt!(
     msg_att_envelope |
     msg_att_internal_date |
     msg_att_flags |
     msg_att_mod_seq |
     msg_att_rfc822 |
-    msg_att_rfc822_size
+    msg_att_rfc822_size |
+    msg_att_uid
 ));
 
 named!(msg_att_list<Vec<AttributeValue>>, do_parse!(
