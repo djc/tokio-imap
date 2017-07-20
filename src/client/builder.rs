@@ -12,6 +12,11 @@ impl CommandBuilder {
         }
     }
 
+    pub fn close() -> Command {
+        let args = b"CLOSE".to_vec();
+        Command { args, next_state: Some(State::Authenticated) }
+    }
+
     pub fn fetch() -> FetchCommandEmpty {
         let mut args = vec![];
         args.extend(b"FETCH ");
