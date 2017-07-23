@@ -17,6 +17,16 @@ impl CommandBuilder {
         Command { args, next_state: Some(State::Authenticated) }
     }
 
+    pub fn examine(mailbox: &str) -> Command {
+        let mut args = vec![];
+        args.extend(b"EXAMINE ");
+        args.extend(mailbox.as_bytes());
+        Command {
+            args: args,
+            next_state: Some(State::Selected),
+        }
+    }
+
     pub fn fetch() -> FetchCommandEmpty {
         let mut args = vec![];
         args.extend(b"FETCH ");
