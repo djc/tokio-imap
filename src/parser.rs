@@ -113,6 +113,16 @@ named!(atom<&str>, map!(take_while1_s!(atom_char),
     |s| str::from_utf8(s).unwrap()
 ));
 
+named!(astring<&str>, alt!(
+    map!(take_while1_s!(astring_char), |s| str::from_utf8(s).unwrap()) |
+    string
+));
+
+named!(mailbox<&str>, alt!(
+    map!(tag_s!("INBOX"), |s| "INBOX") |
+    astring
+));
+
 fn flag_extension(i: &[u8]) -> IResult<&[u8], &str> {
     if i.len() < 1 || i[0] != b'\\' {
         return IResult::Error(nom::ErrorKind::Custom(0));
@@ -254,6 +264,16 @@ named!(mailbox_data_exists<Response>, do_parse!(
     (Response::MailboxData(MailboxDatum::Exists(num)))
 ));
 
+named!(mailbox_data_list<Response>, do_parse!(
+    tag_s!("LIST ") >>
+    flags: flag_list >>
+    tag_s!(" ") >>
+    path: quoted >>
+    tag_s!(" ") >>
+    name: mailbox >>
+    (Response::MailboxData(MailboxDatum::List(flags, path, name)))
+));
+
 named!(mailbox_data_recent<Response>, do_parse!(
     num: number >>
     tag_s!(" RECENT") >>
@@ -263,6 +283,7 @@ named!(mailbox_data_recent<Response>, do_parse!(
 named!(mailbox_data<Response>, alt!(
     mailbox_data_flags |
     mailbox_data_exists |
+    mailbox_data_list |
     mailbox_data_recent
 ));
 

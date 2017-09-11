@@ -34,6 +34,12 @@ impl CommandBuilder {
         FetchCommandEmpty { args: args }
     }
 
+    pub fn list(reference: &str, glob: &str) -> Command {
+        let mut args = vec![];
+        args.extend(format!("LIST \"{}\" \"{}\"", reference, glob).as_bytes());
+        Command { args, next_state: None }
+    }
+
     pub fn login(user_name: &str, password: &str) -> Command {
         let mut args = vec![];
         args.extend(b"LOGIN ");

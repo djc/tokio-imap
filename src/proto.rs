@@ -140,6 +140,7 @@ pub enum ResponseCode<'a> {
 pub enum MailboxDatum<'a> {
     Exists(u32),
     Flags(Vec<&'a str>),
+    List(Vec<&'a str>, &'a str, &'a str),
     Recent(u32),
 }
 
