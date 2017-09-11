@@ -19,8 +19,9 @@ impl CommandBuilder {
 
     pub fn examine(mailbox: &str) -> Command {
         let mut args = vec![];
-        args.extend(b"EXAMINE ");
+        args.extend(b"EXAMINE \"");
         args.extend(mailbox.as_bytes());
+        args.push(b'"');
         Command {
             args: args,
             next_state: Some(State::Selected),
@@ -47,8 +48,9 @@ impl CommandBuilder {
 
     pub fn select(mailbox: &str) -> Command {
         let mut args = vec![];
-        args.extend(b"SELECT ");
+        args.extend(b"SELECT \"");
         args.extend(mailbox.as_bytes());
+        args.push(b'"');
         Command {
             args: args,
             next_state: Some(State::Selected),
