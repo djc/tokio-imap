@@ -62,6 +62,12 @@ impl CommandBuilder {
             next_state: Some(State::Selected),
         }
     }
+
+    pub fn uid_fetch() -> FetchCommandEmpty {
+        let mut args = vec![];
+        args.extend(b"UID FETCH ");
+        FetchCommandEmpty { args }
+    }
 }
 
 pub struct Command {
