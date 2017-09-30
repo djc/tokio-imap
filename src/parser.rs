@@ -38,7 +38,7 @@ fn tag_char(c: u8) -> bool {
 
 // Ideally this should use nom's `escaped` macro, but it suffers from broken
 // type inference unless compiled with the verbose-errors feature enabled.
-fn quoted_data(i: &[u8]) -> IResult<&[u8], &str> {
+fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
     let mut escape = false;
     let mut len = 0;
     for c in i {
@@ -52,26 +52,26 @@ fn quoted_data(i: &[u8]) -> IResult<&[u8], &str> {
             escape = false;
         }
     }
-    IResult::Done(&i[len..], str::from_utf8(&i[..len]).unwrap())
+    IResult::Done(&i[len..], &i[..len])
 }
 
-named!(quoted<&str>, do_parse!(
+named!(quoted<&[u8]>, do_parse!(
     tag_s!("\"") >>
     data: quoted_data >>
     tag_s!("\"") >>
     (data)
 ));
 
-named!(literal<&str>, do_parse!(
+named!(literal<&[u8]>, do_parse!(
     tag_s!("{") >>
     len: number >>
     tag_s!("}") >>
     tag_s!("\r\n") >>
     data: take!(len) >>
-    (str::from_utf8(data).unwrap())
+    (data)
 ));
 
-named!(string<&str>, alt!(quoted | literal));
+named!(string<&[u8]>, alt!(quoted | literal));
 
 named!(status_ok<Status>, map!(tag_no_case!("OK"),
     |s| Status::Ok
@@ -113,14 +113,14 @@ named!(atom<&str>, map!(take_while1_s!(atom_char),
     |s| str::from_utf8(s).unwrap()
 ));
 
-named!(astring<&str>, alt!(
-    map!(take_while1_s!(astring_char), |s| str::from_utf8(s).unwrap()) |
+named!(astring<&[u8]>, alt!(
+    take_while1_s!(astring_char) |
     string
 ));
 
 named!(mailbox<&str>, alt!(
     map!(tag_s!("INBOX"), |s| "INBOX") |
-    astring
+    map!(astring, |s| str::from_utf8(s).unwrap())
 ));
 
 fn flag_extension(i: &[u8]) -> IResult<&[u8], &str> {
@@ -271,7 +271,7 @@ named!(mailbox_data_list<Response>, do_parse!(
     path: quoted >>
     tag_s!(" ") >>
     name: mailbox >>
-    (Response::MailboxData(MailboxDatum::List(flags, path, name)))
+    (Response::MailboxData(MailboxDatum::List(flags, str::from_utf8(path).unwrap(), name)))
 ));
 
 named!(mailbox_data_recent<Response>, do_parse!(
@@ -287,12 +287,9 @@ named!(mailbox_data<Response>, alt!(
     mailbox_data_recent
 ));
 
-named!(nstring<Option<&str>>, map!(
-    alt!(
-        map!(tag_s!("NIL"), |s| str::from_utf8(s).unwrap()) |
-        string
-    ),
-    |s| if s == "NIL" { None } else { Some(s) }
+named!(nstring<Option<&[u8]>>, map!(
+    alt!(tag_s!("NIL") | string),
+    |s| if s == b"NIL" { None } else { Some(s) }
 ));
 
 named!(address<Address>, do_parse!(
@@ -305,7 +302,12 @@ named!(address<Address>, do_parse!(
     tag_s!(" ") >>
     host: nstring >>
     tag_s!(")") >>
-    (Address { name, adl, mailbox, host })
+    (Address {
+        name: name.map(|s| str::from_utf8(s).unwrap()),
+        adl: adl.map(|s| str::from_utf8(s).unwrap()),
+        mailbox: mailbox.map(|s| str::from_utf8(s).unwrap()),
+        host: host.map(|s| str::from_utf8(s).unwrap()),
+    })
 ));
 
 named!(opt_addresses<Option<Vec<Address>>>, alt!(
@@ -341,7 +343,16 @@ named!(msg_att_envelope<AttributeValue>, do_parse!(
     message_id: nstring >>
     tag_s!(")") >> ({
         AttributeValue::Envelope(Envelope {
-            date, subject, from, sender, reply_to, to, cc, bcc, in_reply_to, message_id
+            date: date.map(|s| str::from_utf8(s).unwrap()),
+            subject: subject.map(|s| str::from_utf8(s).unwrap()),
+            from,
+            sender,
+            reply_to,
+            to,
+            cc,
+            bcc,
+            in_reply_to: in_reply_to.map(|s| str::from_utf8(s).unwrap()),
+            message_id: message_id.map(|s| str::from_utf8(s).unwrap()),
         })
     })
 ));
@@ -349,7 +360,7 @@ named!(msg_att_envelope<AttributeValue>, do_parse!(
 named!(msg_att_internal_date<AttributeValue>, do_parse!(
     tag_s!("INTERNALDATE ") >>
     date: nstring >>
-    (AttributeValue::InternalDate(date.unwrap()))
+    (AttributeValue::InternalDate(str::from_utf8(date.unwrap()).unwrap()))
 ));
 
 named!(msg_att_flags<AttributeValue>, do_parse!(
