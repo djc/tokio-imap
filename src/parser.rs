@@ -123,19 +123,10 @@ named!(mailbox<&str>, alt!(
     map!(astring, |s| str::from_utf8(s).unwrap())
 ));
 
-fn flag_extension(i: &[u8]) -> IResult<&[u8], &str> {
-    if i.len() < 1 || i[0] != b'\\' {
-        return IResult::Error(nom::ErrorKind::Custom(0));
-    }
-    let mut last = 0;
-    for (idx, c) in i[1..].iter().enumerate() {
-        last = idx;
-        if !atom_char(*c) {
-            break;
-        }
-    }
-    IResult::Done(&i[last + 1..], str::from_utf8(&i[..last + 1]).unwrap())
-}
+named!(flag_extension<&str>, map_res!(
+    recognize!(pair!(tag!("\\"), take_while!(atom_char))),
+    str::from_utf8
+));
 
 named!(flag<&str>, alt!(flag_extension | atom));
 
