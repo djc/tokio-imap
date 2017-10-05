@@ -169,7 +169,7 @@ named!(flag_perm<&str>, alt!(
 
 named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
     tag_s!("PERMANENTFLAGS (") >>
-    elements: dbg_dmp!(opt!(do_parse!(
+    elements: opt!(do_parse!(
         flag0: flag_perm >>
         flags: many0!(do_parse!(
             tag_s!(" ") >>
@@ -180,7 +180,7 @@ named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
             res.extend(flags);
             res
         })
-    ))) >>
+    )) >>
     tag_s!(")") >> ({
         ResponseCode::PermanentFlags(if elements.is_some() {
             elements.unwrap()
@@ -190,11 +190,11 @@ named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
     })
 ));
 
-named!(resp_text_code_highest_mod_seq<ResponseCode>, dbg_dmp!(do_parse!(
+named!(resp_text_code_highest_mod_seq<ResponseCode>, do_parse!(
     tag_s!("HIGHESTMODSEQ ") >>
     num: number_64 >>
     (ResponseCode::HighestModSeq(num))
-)));
+));
 
 named!(resp_text_code_read_only<ResponseCode>, do_parse!(
     tag_s!("READ-ONLY") >>
