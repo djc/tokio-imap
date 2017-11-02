@@ -1,0 +1,14 @@
+[package]
+name = "imap-proto"
+version = "0.1.0"
+authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>"]
+description = "IMAP protocol parser and data structures"
+documentation = "https://docs.rs/imap-proto"
+keywords = ["imap"]
+categories = ["email"]
+homepage = "https://github.com/djc/imap-proto"
+repository = "https://github.com/djc/imap-proto"
+license = "MIT/Apache-2.0"
+
+[dependencies]
+nom = "3.1"
