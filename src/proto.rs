@@ -2,6 +2,8 @@ use bytes::{BufMut, BytesMut};
 
 use nom::{IResult, Needed};
 
+use imap_proto::{self, Request, RequestId, Response};
+
 use std::io;
 use std::mem;
 use std::str;
@@ -10,7 +12,6 @@ use tokio_core::net::TcpStream;
 use tokio_io::codec::{Decoder, Encoder, Framed};
 use tokio_tls::TlsStream;
 
-use parser;
 
 pub type ImapTransport = Framed<TlsStream<TcpStream>, ImapCodec>;
 
@@ -32,7 +33,7 @@ impl<'a> Decoder for ImapCodec {
         if self.decode_need_message_bytes > buf.len() {
             return Ok(None);
         }
-        let res = match parser::parse_response(buf) {
+        let res = match imap_proto::parse_response(buf) {
             IResult::Done(remaining, response) => {
                 // This SHOULD be acceptable/safe: BytesMut storage memory is
                 // allocated on the heap and should not move. It will not be
@@ -73,16 +74,6 @@ impl Encoder for ImapCodec {
 }
 
 #[derive(Debug)]
-pub struct Request(pub RequestId, pub Vec<u8>);
-
-#[derive(Debug)]
-pub enum AttrMacro {
-    All,
-    Fast,
-    Full,
-}
-
-#[derive(Debug)]
 pub struct ResponseData {
     raw: BytesMut,
     // This reference is really scoped to the lifetime of the `raw`
@@ -103,105 +94,4 @@ impl ResponseData {
     pub fn parsed(&self) -> &Response {
         unsafe { mem::transmute(&self.response) }
     }
-}
-
-#[derive(Debug)]
-pub enum Response<'a> {
-    Capabilities(Vec<&'a str>),
-    Done(RequestId, Status, Option<ResponseCode<'a>>, Option<&'a str>),
-    Data(Status, Option<ResponseCode<'a>>, Option<&'a str>),
-    Expunge(u32),
-    Fetch(u32, Vec<AttributeValue<'a>>),
-    MailboxData(MailboxDatum<'a>),
-}
-
-#[allow(dead_code)]
-#[derive(Debug)]
-pub enum Status {
-    Ok,
-    No,
-    Bad,
-    PreAuth,
-    Bye,
-}
-
-#[derive(Debug)]
-pub enum ResponseCode<'a> {
-    HighestModSeq(u64), // RFC 4551, section 3.1.1
-    PermanentFlags(Vec<&'a str>),
-    ReadOnly,
-    ReadWrite,
-    TryCreate,
-    UidNext(u32),
-    UidValidity(u32),
-}
-
-#[derive(Debug)]
-pub enum MailboxDatum<'a> {
-    Exists(u32),
-    Flags(Vec<&'a str>),
-    List(Vec<&'a str>, &'a str, &'a str),
-    Recent(u32),
-}
-
-#[derive(Debug)]
-pub enum Attribute {
-    Body,
-    Envelope,
-    Flags,
-    InternalDate,
-    ModSeq, // RFC 4551, section 3.3.2
-    Rfc822,
-    Rfc822Size,
-    Uid,
-}
-
-#[derive(Debug)]
-pub enum AttributeValue<'a> {
-    Envelope(Envelope<'a>),
-    Flags(Vec<&'a str>),
-    InternalDate(&'a str),
-    ModSeq(u64), // RFC 4551, section 3.3.2
-    Rfc822(Option<&'a [u8]>),
-    Rfc822Size(u32),
-    Uid(u32),
-}
-
-#[derive(Debug)]
-pub struct Envelope<'a> {
-    pub date: Option<&'a str>,
-    pub subject: Option<&'a str>,
-    pub from: Option<Vec<Address<'a>>>,
-    pub sender: Option<Vec<Address<'a>>>,
-    pub reply_to: Option<Vec<Address<'a>>>,
-    pub to: Option<Vec<Address<'a>>>,
-    pub cc: Option<Vec<Address<'a>>>,
-    pub bcc: Option<Vec<Address<'a>>>,
-    pub in_reply_to: Option<&'a str>,
-    pub message_id: Option<&'a str>,
-}
-
-#[derive(Debug)]
-pub struct Address<'a> {
-    pub name: Option<&'a str>,
-    pub adl: Option<&'a str>,
-    pub mailbox: Option<&'a str>,
-    pub host: Option<&'a str>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct RequestId(pub String);
-
-impl RequestId {
-    fn as_bytes(&self) -> &[u8] {
-        self.0.as_bytes()
-    }
-}
-
-#[allow(dead_code)]
-pub enum State {
-    NotAuthenticated,
-    Authenticated,
-    Selected,
-    Logout,
 }

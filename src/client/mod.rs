@@ -13,10 +13,10 @@ use tokio_io::AsyncRead;
 use tokio_core::reactor::Handle;
 use tokio_tls::{ConnectAsync, TlsConnectorExt};
 
+use imap_proto::*;
+use imap_proto::builders::command::Command;
 use proto::*;
 
-pub mod builder;
-use self::builder::Command;
 
 pub struct Client {
     transport: ImapTransport,
