@@ -1,14 +1,14 @@
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Request(pub RequestId, pub Vec<u8>);
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum AttrMacro {
     All,
     Fast,
     Full,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Response<'a> {
     Capabilities(Vec<&'a str>),
     Done(RequestId, Status, Option<ResponseCode<'a>>, Option<&'a str>),
@@ -18,7 +18,7 @@ pub enum Response<'a> {
     MailboxData(MailboxDatum<'a>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Status {
     Ok,
     No,
@@ -27,7 +27,7 @@ pub enum Status {
     Bye,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum ResponseCode<'a> {
     HighestModSeq(u64), // RFC 4551, section 3.1.1
     PermanentFlags(Vec<&'a str>),
@@ -38,7 +38,7 @@ pub enum ResponseCode<'a> {
     UidValidity(u32),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum MailboxDatum<'a> {
     Exists(u32),
     Flags(Vec<&'a str>),
@@ -46,7 +46,7 @@ pub enum MailboxDatum<'a> {
     Recent(u32),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Attribute {
     Body,
     Envelope,
@@ -58,7 +58,7 @@ pub enum Attribute {
     Uid,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum AttributeValue<'a> {
     Envelope(Envelope<'a>),
     Flags(Vec<&'a str>),
@@ -69,7 +69,7 @@ pub enum AttributeValue<'a> {
     Uid(u32),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Envelope<'a> {
     pub date: Option<&'a str>,
     pub subject: Option<&'a str>,
@@ -83,7 +83,7 @@ pub struct Envelope<'a> {
     pub message_id: Option<&'a str>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Address<'a> {
     pub name: Option<&'a str>,
     pub adl: Option<&'a str>,
@@ -100,6 +100,7 @@ impl RequestId {
     }
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub enum State {
     NotAuthenticated,
     Authenticated,
