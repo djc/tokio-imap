@@ -265,7 +265,11 @@ named!(mailbox_data_list<Response>, do_parse!(
     path: quoted >>
     tag_s!(" ") >>
     name: mailbox >>
-    (Response::MailboxData(MailboxDatum::List(flags, str::from_utf8(path).unwrap(), name)))
+    (Response::MailboxData(MailboxDatum::List {
+        flags,
+        delimiter: str::from_utf8(path).unwrap(),
+        name
+    }))
 ));
 
 named!(mailbox_data_recent<Response>, do_parse!(
@@ -459,14 +463,23 @@ named!(response_tagged<Response>, do_parse!(
     tag_s!(" ") >>
     text: resp_text >>
     tag_s!("\r\n") >>
-    (Response::Done(tag, status, text.0, text.1))
+    (Response::Done {
+        tag,
+        status,
+        code: text.0,
+        information: text.1,
+    })
 ));
 
 named!(resp_cond<Response>, do_parse!(
     status: status >>
     tag_s!(" ") >>
     text: resp_text >>
-    (Response::Data(status, text.0, text.1))
+    (Response::Data {
+        status,
+        code: text.0,
+        information: text.1,
+    })
 ));
 
 named!(response_data<Response>, do_parse!(

@@ -11,8 +11,17 @@ pub enum AttrMacro {
 #[derive(Debug, Eq, PartialEq)]
 pub enum Response<'a> {
     Capabilities(Vec<&'a str>),
-    Done(RequestId, Status, Option<ResponseCode<'a>>, Option<&'a str>),
-    Data(Status, Option<ResponseCode<'a>>, Option<&'a str>),
+    Done {
+        tag: RequestId,
+        status: Status,
+        code: Option<ResponseCode<'a>>,
+        information: Option<&'a str>,
+    },
+    Data {
+        status: Status,
+        code: Option<ResponseCode<'a>>,
+        information: Option<&'a str>,
+    },
     Expunge(u32),
     Fetch(u32, Vec<AttributeValue<'a>>),
     MailboxData(MailboxDatum<'a>),
@@ -42,7 +51,11 @@ pub enum ResponseCode<'a> {
 pub enum MailboxDatum<'a> {
     Exists(u32),
     Flags(Vec<&'a str>),
-    List(Vec<&'a str>, &'a str, &'a str),
+    List {
+        flags: Vec<&'a str>,
+        delimiter: &'a str,
+        name: &'a str,
+    },
     Recent(u32),
 }
 
