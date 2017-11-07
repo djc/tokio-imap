@@ -88,7 +88,7 @@ pub struct ResponseData {
 impl ResponseData {
     pub fn request_id(&self) -> Option<&RequestId> {
         match self.response {
-            Response::Done(ref req_id, ..) => Some(req_id),
+            Response::Done{ ref tag, .. } => Some(tag),
             _ => None,
         }
     }
