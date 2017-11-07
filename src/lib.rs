@@ -13,3 +13,7 @@ pub mod client;
 pub mod proto;
 
 pub use client::Client;
+
+pub mod types {
+    pub use imap_proto::types::*;
+}

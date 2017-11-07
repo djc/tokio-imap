@@ -17,6 +17,10 @@ use imap_proto::*;
 use imap_proto::builders::command::Command;
 use proto::*;
 
+pub mod builder {
+    pub use imap_proto::builders::command::*;
+}
+
 
 pub struct Client {
     transport: ImapTransport,
