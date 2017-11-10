@@ -1,8 +1,15 @@
 # tokio-imap
 
-[![Latest version](https://img.shields.io/crates/v/tokio-imap.svg)](https://crates.io/crates/tokio-imap)
+[![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE-MIT)
+[![Apache License 2.0](https://img.shields.io/badge/license-ALv2-blue.svg)](./LICENSE-APACHE)
 
-A tokio-based, fully asynchronous IMAP library, with strong focus on following
+[![crates.io, downloads](https://img.shields.io/crates/d/tokio-imap.svg)](https://crates.io/crates/tokio-imap)
+[![crates.io, latest release](https://img.shields.io/crates/v/tokio-imap.svg)](https://crates.io/crates/tokio-imap)
+
+[![API docs, latest release](https://docs.rs/hyper/badge.svg)](http://docs.rs/tokio-imap)
+[![Join the chat at https://gitter.im/djc/tokio-imap](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/djc/tokio-imap?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+A [Tokio stack-based][Tokio_stack], fully asynchronous IMAP library, with strong focus on following
 the relevant specs, mainly [IMAP4rev1][rfc3501], but with limited support for
 the [Conditional STORE][rfc4551] extension. The type system is used to help
 enforce correctness where possible. So far, there is only client code and lots
@@ -31,6 +38,7 @@ any other feedback to the [issue tracker][issues] or [tweet me][twitter].
 [twitter]: https://twitter.com/djco/
 [tokio-core]: https://github.com/tokio-rs/tokio-core
 [tokio-io]: https://github.com/tokio-rs/tokio-io
+[Tokio_stack]: https://tokio.rs
 [nom]: https://github.com/Geal/nom
 
 
