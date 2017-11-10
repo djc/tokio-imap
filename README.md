@@ -6,7 +6,7 @@
 [![crates.io, downloads](https://img.shields.io/crates/d/tokio-imap.svg)](https://crates.io/crates/tokio-imap)
 [![crates.io, latest release](https://img.shields.io/crates/v/tokio-imap.svg)](https://crates.io/crates/tokio-imap)
 
-[![API docs, latest release](https://docs.rs/hyper/badge.svg)](http://docs.rs/tokio-imap)
+[![API docs, latest release](https://docs.rs/tokio-imap/badge.svg)](http://docs.rs/tokio-imap)
 [![Join the chat at https://gitter.im/djc/tokio-imap](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/djc/tokio-imap?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 A [Tokio stack-based][Tokio_stack], fully asynchronous IMAP library, with strong focus on following
