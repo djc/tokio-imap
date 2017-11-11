@@ -57,6 +57,11 @@ pub enum MailboxDatum<'a> {
         delimiter: &'a str,
         name: &'a str,
     },
+    SubList {
+        flags: Vec<&'a str>,
+        delimiter: &'a str,
+        name: &'a str,
+    },
     Recent(u32),
 }
 

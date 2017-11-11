@@ -281,6 +281,20 @@ named!(mailbox_data_list<Response>, do_parse!(
     }))
 ));
 
+named!(mailbox_data_lsub<Response>, do_parse!(
+    tag_s!("LSUB ") >>
+    flags: flag_list >>
+    tag_s!(" ") >>
+    path: quoted >>
+    tag_s!(" ") >>
+    name: mailbox >>
+    (Response::MailboxData(MailboxDatum::SubList {
+        flags,
+        delimiter: str::from_utf8(path).unwrap(),
+        name
+    }))
+));
+
 named!(mailbox_data_recent<Response>, do_parse!(
     num: number >>
     tag_s!(" RECENT") >>
@@ -291,6 +305,7 @@ named!(mailbox_data<Response>, alt!(
     mailbox_data_flags |
     mailbox_data_exists |
     mailbox_data_list |
+    mailbox_data_lsub |
     mailbox_data_recent
 ));
 
