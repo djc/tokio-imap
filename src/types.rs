@@ -45,6 +45,7 @@ pub enum ResponseCode<'a> {
     TryCreate,
     UidNext(u32),
     UidValidity(u32),
+    Unseen(u32),
 }
 
 #[derive(Debug, Eq, PartialEq)]

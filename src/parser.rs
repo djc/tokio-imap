@@ -219,12 +219,19 @@ named!(resp_text_code_uid_next<ResponseCode>, do_parse!(
     (ResponseCode::UidNext(num))
 ));
 
+named!(resp_text_code_unseen<ResponseCode>, do_parse!(
+    tag_s!("UNSEEN ") >>
+    num: number >>
+    (ResponseCode::Unseen(num))
+));
+
 named!(resp_text_code<ResponseCode>, do_parse!(
     tag_s!("[") >>
     coded: alt!(
         resp_text_code_permanent_flags |
         resp_text_code_uid_validity |
         resp_text_code_uid_next |
+        resp_text_code_unseen |
         resp_text_code_read_only |
         resp_text_code_read_write |
         resp_text_code_try_create |
@@ -511,12 +518,25 @@ pub fn parse_response(msg: &[u8]) -> ParseResult {
 
 #[cfg(test)]
 mod tests {
-    use super::{IResult, parse_response};
+    use super::{IResult, parse_response, Response, ResponseCode, Status};
+
     #[test]
     fn test_number_overflow() {
         match parse_response(b"* 2222222222222222222222222222222222222222222C\r\n") {
             IResult::Error(_) => {},
             _ => panic!("error required for integer overflow"),
+        }
+    }
+
+    #[test]
+    fn test_unseen() {
+        match parse_response(b"* OK [UNSEEN 3] Message 3 is first unseen\r\n").unwrap() {
+            (_, Response::Data {
+                status: Status::Ok,
+                code: Some(ResponseCode::Unseen(3)),
+                information: Some("Message 3 is first unseen"),
+            }) => {},
+            rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
     }
 }
