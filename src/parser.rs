@@ -100,12 +100,14 @@ named!(status<Status>, alt!(
     status_bye
 ));
 
-named!(number<u32>, map!(nom::digit,
-    |s| str::parse(str::from_utf8(s).unwrap()).unwrap()
+named!(number<u32>, map_res!(
+    map_res!(nom::digit, str::from_utf8),
+    str::parse
 ));
 
-named!(number_64<u64>, map!(nom::digit,
-    |s| str::parse(str::from_utf8(s).unwrap()).unwrap()
+named!(number_64<u64>, map_res!(
+    map_res!(nom::digit, str::from_utf8),
+    str::parse
 ));
 
 named!(text<&str>, map!(take_till_s!(crlf),
@@ -504,4 +506,17 @@ pub type ParseResult<'a> = IResult<&'a [u8], Response<'a>>;
 
 pub fn parse_response(msg: &[u8]) -> ParseResult {
     response(msg)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::{IResult, parse_response};
+    #[test]
+    fn test_number_overflow() {
+        match parse_response(b"* 2222222222222222222222222222222222222222222C\r\n") {
+            IResult::Error(_) => {},
+            _ => panic!("error required for integer overflow"),
+        }
+    }
 }
