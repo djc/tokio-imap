@@ -2,10 +2,8 @@
 
 [![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE-MIT)
 [![Apache License 2.0](https://img.shields.io/badge/license-ALv2-blue.svg)](./LICENSE-APACHE)
-
 [![crates.io, downloads](https://img.shields.io/crates/d/tokio-imap.svg)](https://crates.io/crates/tokio-imap)
 [![crates.io, latest release](https://img.shields.io/crates/v/tokio-imap.svg)](https://crates.io/crates/tokio-imap)
-
 [![API docs, latest release](https://docs.rs/tokio-imap/badge.svg)](http://docs.rs/tokio-imap)
 [![Join the chat at https://gitter.im/djc/tokio-imap](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/djc/tokio-imap?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
