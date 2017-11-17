@@ -164,6 +164,7 @@ impl Future for ConnectFuture {
     }
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(stutter))]
 pub struct ClientState {
     state: State,
     request_ids: IdGenerator,
