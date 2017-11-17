@@ -99,22 +99,18 @@ impl StateStream for ResponseStream {
             let client = Client { transport, state };
             return Ok(Async::Ready(StreamEvent::Done(client)));
         }
-        loop {
-            match transport.poll() {
-                Ok(Async::Ready(Some(rsp))) => {
-                    if let Some(req_id) = rsp.request_id() {
-                        self.done = *req_id == self.request_id;
-                    };
-                    self.transport = Some(transport);
-                    return Ok(Async::Ready(StreamEvent::Next(rsp)));
-                },
-                Ok(Async::Ready(None)) | Ok(Async::NotReady) => {
-                    break;
-                },
-                Err(e) => {
-                    return Err(e);
-                },
-            }
+        match transport.poll() {
+            Ok(Async::Ready(Some(rsp))) => {
+                if let Some(req_id) = rsp.request_id() {
+                    self.done = *req_id == self.request_id;
+                };
+                self.transport = Some(transport);
+                return Ok(Async::Ready(StreamEvent::Next(rsp)));
+            },
+            Err(e) => {
+                return Err(e);
+            },
+            _ => ()
         }
         self.transport = Some(transport);
         Ok(Async::NotReady)
