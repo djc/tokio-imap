@@ -1,3 +1,11 @@
+#![deny(warnings)]
+#![deny(unused)]
+#![deny(future_incompatible)]
+#![deny(bad_style)]
+#![cfg_attr(feature = "cargo-clippy", deny(clippy))]
+#![cfg_attr(feature = "cargo-clippy", deny(clippy_pedantic))]
+#![cfg_attr(feature = "cargo-clippy", warn(missing_docs_in_private_items))]
+
 extern crate bytes;
 #[macro_use]
 extern crate futures;
