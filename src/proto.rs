@@ -20,8 +20,8 @@ pub struct ImapCodec {
 }
 
 impl Default for ImapCodec {
-    fn default() -> ImapCodec {
-        ImapCodec { decode_need_message_bytes: 0 }
+    fn default() -> Self {
+        Self { decode_need_message_bytes: 0 }
     }
 }
 

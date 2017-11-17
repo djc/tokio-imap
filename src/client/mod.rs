@@ -36,7 +36,7 @@ impl Client {
     }
 
     pub fn call(self, cmd: Command) -> ResponseStream {
-        let Client { transport, mut state } = self;
+        let Self { transport, mut state } = self;
         let request_id = state.request_ids.next().unwrap();
         let (cmd_bytes, next_state) = cmd.to_parts();
         let future = transport.send(Request(request_id.clone(), cmd_bytes));
@@ -55,8 +55,8 @@ pub struct ResponseStream {
 
 impl ResponseStream {
     pub fn new(future: Send<ImapTransport>, state: ClientState,
-               request_id: RequestId, next_state: Option<State>) -> ResponseStream {
-        ResponseStream {
+               request_id: RequestId, next_state: Option<State>) -> Self {
+        Self {
             future: Some(future),
             transport: None,
             state: Some(state),
@@ -171,8 +171,8 @@ pub struct ClientState {
 }
 
 impl ClientState {
-    pub fn new() -> ClientState {
-        ClientState {
+    pub fn new() -> Self {
+        Self {
             state: State::NotAuthenticated,
             request_ids: IdGenerator::new(),
         }
@@ -188,8 +188,8 @@ pub struct IdGenerator {
 }
 
 impl IdGenerator {
-    pub fn new() -> IdGenerator {
-        IdGenerator { next: 0 }
+    pub fn new() -> Self {
+        Self { next: 0 }
     }
 }
 
