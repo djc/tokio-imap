@@ -178,6 +178,10 @@ impl ClientState {
     }
 }
 
+impl Default for ClientState {
+    fn default() -> Self { Self::new() }
+}
+
 pub struct IdGenerator {
     next: u64,
 }
@@ -186,6 +190,10 @@ impl IdGenerator {
     pub fn new() -> IdGenerator {
         IdGenerator { next: 0 }
     }
+}
+
+impl Default for IdGenerator {
+    fn default() -> Self { Self::new() }
 }
 
 impl Iterator for IdGenerator {
