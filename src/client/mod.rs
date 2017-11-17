@@ -201,6 +201,6 @@ impl Iterator for IdGenerator {
     type Item = RequestId;
     fn next(&mut self) -> Option<Self::Item> {
         self.next += 1;
-        Some(RequestId(format!("A{:04}", self.next % 10000)))
+        Some(RequestId(format!("A{:04}", self.next % 10_000)))
     }
 }
