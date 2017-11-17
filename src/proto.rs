@@ -50,7 +50,7 @@ impl<'a> Decoder for ImapCodec {
                 return Ok(None);
             },
             IResult::Error(err) => {
-                panic!("error {} during parsing of {:?}", err, buf);
+                panic!("error {} during parsing of {:?}", err, buf)
             },
         };
         let (response, rsp_len) = res.unwrap();
