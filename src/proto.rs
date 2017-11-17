@@ -7,7 +7,6 @@ pub use imap_proto::types::*;
 
 use std::io;
 use std::mem;
-use std::str;
 
 use tokio_core::net::TcpStream;
 use tokio_io::codec::{Decoder, Encoder, Framed};
