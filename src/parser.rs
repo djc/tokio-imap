@@ -2,8 +2,7 @@ use nom::{self, IResult};
 
 use std::str;
 
-use types::{Address, AttributeValue, Envelope, MailboxDatum};
-use types::{RequestId, Response, ResponseCode, Status};
+use types::*;
 
 
 fn crlf(c: u8) -> bool {
@@ -533,7 +532,8 @@ pub fn parse_response(msg: &[u8]) -> ParseResult {
 
 #[cfg(test)]
 mod tests {
-    use super::{IResult, parse_response, Response, ResponseCode, Status};
+    use types::*;
+    use super::{IResult, parse_response};
 
     #[test]
     fn test_number_overflow() {
