@@ -78,7 +78,25 @@ pub enum Attribute {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub enum MessageSection {
+    Header,
+    Mime,
+    Text,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum SectionPath {
+    Full(MessageSection),
+    Part(Vec<u32>, Option<MessageSection>),
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum AttributeValue<'a> {
+    BodySection {
+        section: Option<SectionPath>,
+        index: Option<u32>,
+        data: Option<&'a [u8]>,
+    },
     Envelope(Envelope<'a>),
     Flags(Vec<&'a str>),
     InternalDate(&'a str),

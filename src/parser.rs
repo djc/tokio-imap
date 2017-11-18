@@ -162,6 +162,53 @@ named!(flag_perm<&str>, alt!(
     flag
 ));
 
+named!(section_part<Vec<u32>>, do_parse!(
+    part: number >>
+    rest: many0!(do_parse!(
+        tag_s!(".") >>
+        part: number >>
+        (part)
+    ))  >> ({
+        let mut res = vec![part];
+        res.extend(rest);
+        res
+    })
+));
+
+named!(section_msgtext<MessageSection>, map!(
+    alt!(tag_s!("HEADER") | tag_s!("TEXT")),
+    |s| match s {
+        b"HEADER" => MessageSection::Header,
+        b"TEXT" => MessageSection::Text,
+        _ => panic!("cannot happen"),
+    }
+));
+
+named!(section_text<MessageSection>, alt!(
+    section_msgtext |
+    do_parse!(tag_s!("MIME") >> (MessageSection::Mime))
+));
+
+named!(section_spec<SectionPath>, alt!(
+    map!(section_msgtext, |val| SectionPath::Full(val)) |
+    do_parse!(
+        part: section_part >>
+        text: opt!(do_parse!(
+            tag_s!(".") >>
+            text: section_text >>
+            (text)
+        )) >>
+        (SectionPath::Part(part, text))
+    )
+));
+
+named!(section<Option<SectionPath>>, do_parse!(
+    tag_s!("[") >>
+    spec: opt!(section_spec) >>
+    tag_s!("]") >>
+    (spec)
+));
+
 named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
     tag_s!("PERMANENTFLAGS (") >>
     elements: opt!(do_parse!(
@@ -341,6 +388,20 @@ named!(opt_addresses<Option<Vec<Address>>>, alt!(
     )
 ));
 
+named!(msg_att_body_section<AttributeValue>, do_parse!(
+    tag_s!("BODY") >>
+    section: section >>
+    index: opt!(do_parse!(
+        tag_s!("<") >>
+        num: number >>
+        tag_s!(">") >>
+        (num)
+    )) >>
+    tag_s!(" ") >>
+    data: nstring >>
+    (AttributeValue::BodySection { section, index, data })
+));
+
 named!(msg_att_envelope<AttributeValue>, do_parse!(
     tag_s!("ENVELOPE (") >>
     date: nstring >>
@@ -416,6 +477,7 @@ named!(msg_att_uid<AttributeValue>, do_parse!(
 ));
 
 named!(msg_att<AttributeValue>, alt!(
+    msg_att_body_section |
     msg_att_envelope |
     msg_att_internal_date |
     msg_att_flags |
@@ -551,6 +613,21 @@ mod tests {
                 code: Some(ResponseCode::Unseen(3)),
                 information: Some("Message 3 is first unseen"),
             }) => {},
+            rsp @ _ => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_body_text() {
+        match parse_response(b"* 2 FETCH (BODY[TEXT] {3}\r\nfoo)\r\n") {
+            IResult::Done(_, Response::Fetch(_, attrs)) => {
+                let body = &attrs[0];
+                assert_eq!(body, &AttributeValue::BodySection {
+                    section: Some(SectionPath::Full(MessageSection::Text)),
+                    index: None,
+                    data: Some(b"foo"),
+                }, "body = {:?}", body);
+            },
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
     }
