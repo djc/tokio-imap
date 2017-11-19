@@ -6,10 +6,7 @@ impl CommandBuilder {
     pub fn check() -> Command {
         let mut args = vec![];
         args.extend(b"CHECK");
-        Command {
-            args: args,
-            next_state: None,
-        }
+        Command { args, next_state: None }
     }
 
     pub fn close() -> Command {
@@ -22,10 +19,7 @@ impl CommandBuilder {
         args.extend(b"EXAMINE \"");
         args.extend(mailbox.as_bytes());
         args.push(b'"');
-        Command {
-            args: args,
-            next_state: Some(State::Selected),
-        }
+        Command { args, next_state: Some(State::Selected) }
     }
 
     pub fn fetch() -> FetchCommandEmpty {
@@ -46,10 +40,7 @@ impl CommandBuilder {
         args.extend(user_name.as_bytes());
         args.push(b' ');
         args.extend(password.as_bytes());
-        Command {
-            args: args,
-            next_state: Some(State::Authenticated),
-        }
+        Command { args, next_state: Some(State::Authenticated) }
     }
 
     pub fn select(mailbox: &str) -> Command {
@@ -57,10 +48,7 @@ impl CommandBuilder {
         args.extend(b"SELECT \"");
         args.extend(mailbox.as_bytes());
         args.push(b'"');
-        Command {
-            args: args,
-            next_state: Some(State::Selected),
-        }
+        Command { args, next_state: Some(State::Selected) }
     }
 
     pub fn uid_fetch() -> FetchCommandEmpty {
