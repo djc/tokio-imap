@@ -98,9 +98,9 @@ impl FetchCommandMessages {
         let FetchCommandMessages { mut args } = self;
         args.push(b' ');
         match named {
-            AttrMacro::All => { args.extend(b"ALL"); },
-            AttrMacro::Fast => { args.extend(b"FAST"); },
-            AttrMacro::Full => { args.extend(b"FULL"); },
+            AttrMacro::All => args.extend(b"ALL"),
+            AttrMacro::Fast => args.extend(b"FAST"),
+            AttrMacro::Full => args.extend(b"FULL"),
         }
         FetchCommand { args }
     }
