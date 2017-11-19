@@ -7,7 +7,6 @@ pub use imap_proto::types::*;
 
 use std::io;
 use std::mem;
-use std::str;
 
 use tokio_core::net::TcpStream;
 use tokio_io::codec::{Decoder, Encoder, Framed};
@@ -21,8 +20,8 @@ pub struct ImapCodec {
 }
 
 impl Default for ImapCodec {
-    fn default() -> ImapCodec {
-        ImapCodec { decode_need_message_bytes: 0 }
+    fn default() -> Self {
+        Self { decode_need_message_bytes: 0 }
     }
 }
 
@@ -51,7 +50,7 @@ impl<'a> Decoder for ImapCodec {
                 return Ok(None);
             },
             IResult::Error(err) => {
-                panic!("error {} during parsing of {:?}", err, buf);
+                panic!("error {} during parsing of {:?}", err, buf)
             },
         };
         let (response, rsp_len) = res.unwrap();

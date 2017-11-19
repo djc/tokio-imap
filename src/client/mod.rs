@@ -36,7 +36,7 @@ impl Client {
     }
 
     pub fn call(self, cmd: Command) -> ResponseStream {
-        let Client { transport, mut state } = self;
+        let Self { transport, mut state } = self;
         let request_id = state.request_ids.next().unwrap();
         let (cmd_bytes, next_state) = cmd.to_parts();
         let future = transport.send(Request(request_id.clone(), cmd_bytes));
@@ -55,8 +55,8 @@ pub struct ResponseStream {
 
 impl ResponseStream {
     pub fn new(future: Send<ImapTransport>, state: ClientState,
-               request_id: RequestId, next_state: Option<State>) -> ResponseStream {
-        ResponseStream {
+               request_id: RequestId, next_state: Option<State>) -> Self {
+        Self {
             future: Some(future),
             transport: None,
             state: Some(state),
@@ -99,22 +99,18 @@ impl StateStream for ResponseStream {
             let client = Client { transport, state };
             return Ok(Async::Ready(StreamEvent::Done(client)));
         }
-        loop {
-            match transport.poll() {
-                Ok(Async::Ready(Some(rsp))) => {
-                    if let Some(req_id) = rsp.request_id() {
-                        self.done = *req_id == self.request_id;
-                    };
-                    self.transport = Some(transport);
-                    return Ok(Async::Ready(StreamEvent::Next(rsp)));
-                },
-                Ok(Async::Ready(None)) | Ok(Async::NotReady) => {
-                    break;
-                },
-                Err(e) => {
-                    return Err(e);
-                },
-            }
+        match transport.poll() {
+            Ok(Async::Ready(Some(rsp))) => {
+                if let Some(req_id) = rsp.request_id() {
+                    self.done = *req_id == self.request_id;
+                };
+                self.transport = Some(transport);
+                return Ok(Async::Ready(StreamEvent::Next(rsp)));
+            },
+            Err(e) => {
+                return Err(e);
+            },
+            _ => ()
         }
         self.transport = Some(transport);
         Ok(Async::NotReady)
@@ -164,18 +160,23 @@ impl Future for ConnectFuture {
     }
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(stutter))]
 pub struct ClientState {
     state: State,
     request_ids: IdGenerator,
 }
 
 impl ClientState {
-    pub fn new() -> ClientState {
-        ClientState {
+    pub fn new() -> Self {
+        Self {
             state: State::NotAuthenticated,
             request_ids: IdGenerator::new(),
         }
     }
+}
+
+impl Default for ClientState {
+    fn default() -> Self { Self::new() }
 }
 
 pub struct IdGenerator {
@@ -183,15 +184,19 @@ pub struct IdGenerator {
 }
 
 impl IdGenerator {
-    pub fn new() -> IdGenerator {
-        IdGenerator { next: 0 }
+    pub fn new() -> Self {
+        Self { next: 0 }
     }
+}
+
+impl Default for IdGenerator {
+    fn default() -> Self { Self::new() }
 }
 
 impl Iterator for IdGenerator {
     type Item = RequestId;
     fn next(&mut self) -> Option<Self::Item> {
         self.next += 1;
-        Some(RequestId(format!("A{:04}", self.next % 10000)))
+        Some(RequestId(format!("A{:04}", self.next % 10_000)))
     }
 }
