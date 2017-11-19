@@ -22,8 +22,8 @@ fn resp_specials(c: u8) -> bool {
 }
 
 fn atom_specials(c: u8) -> bool {
-    c == b'(' || c == b')' || c == b'{' || c == b' ' || c < 32 ||
-    list_wildcards(c) || quoted_specials(c) || resp_specials(c)
+    c == b'(' || c == b')' || c == b'{' || c == b' ' || c < 32 || list_wildcards(c)
+        || quoted_specials(c) || resp_specials(c)
 }
 
 fn atom_char(c: u8) -> bool {
@@ -595,7 +595,7 @@ pub fn parse_response(msg: &[u8]) -> ParseResult {
 #[cfg(test)]
 mod tests {
     use types::*;
-    use super::{IResult, parse_response};
+    use super::{parse_response, IResult};
 
     #[test]
     fn test_number_overflow() {

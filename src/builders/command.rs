@@ -1,6 +1,6 @@
-use types::{Attribute, AttrMacro, State};
+use types::{AttrMacro, Attribute, State};
 
-pub struct CommandBuilder { }
+pub struct CommandBuilder {}
 
 impl CommandBuilder {
     pub fn check() -> Command {
@@ -209,5 +209,7 @@ impl FetchBuilderModifiers for FetchCommandAttributes {
 }
 
 impl FetchBuilderModifiers for FetchCommand {
-    fn prepare(self) -> FetchCommand { self }
+    fn prepare(self) -> FetchCommand {
+        self
+    }
 }
