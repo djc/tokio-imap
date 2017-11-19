@@ -28,8 +28,7 @@ impl Default for ImapCodec {
 impl<'a> Decoder for ImapCodec {
     type Item = ResponseData;
     type Error = io::Error;
-    fn decode(&mut self, buf: &mut BytesMut)
-             -> Result<Option<Self::Item>, io::Error> {
+    fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, io::Error> {
         if self.decode_need_message_bytes > buf.len() {
             return Ok(None);
         }
@@ -49,9 +48,7 @@ impl<'a> Decoder for ImapCodec {
             IResult::Incomplete(_) => {
                 return Ok(None);
             },
-            IResult::Error(err) => {
-                panic!("error {} during parsing of {:?}", err, buf)
-            },
+            IResult::Error(err) => panic!("error {} during parsing of {:?}", err, buf),
         };
         let (response, rsp_len) = res.unwrap();
         let raw = buf.split_to(rsp_len);
@@ -63,8 +60,7 @@ impl<'a> Decoder for ImapCodec {
 impl Encoder for ImapCodec {
     type Item = Request;
     type Error = io::Error;
-    fn encode(&mut self, msg: Self::Item, dst: &mut BytesMut)
-             -> Result<(), io::Error> {
+    fn encode(&mut self, msg: Self::Item, dst: &mut BytesMut) -> Result<(), io::Error> {
         dst.put(msg.0.as_bytes());
         dst.put(b' ');
         dst.put(&msg.1);
@@ -87,7 +83,7 @@ pub struct ResponseData {
 impl ResponseData {
     pub fn request_id(&self) -> Option<&RequestId> {
         match self.response {
-            Response::Done{ ref tag, .. } => Some(tag),
+            Response::Done { ref tag, .. } => Some(tag),
             _ => None,
         }
     }

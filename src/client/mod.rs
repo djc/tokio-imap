@@ -110,7 +110,7 @@ impl StateStream for ResponseStream {
             Err(e) => {
                 return Err(e);
             },
-            _ => ()
+            _ => (),
         }
         self.transport = Some(transport);
         Ok(Async::NotReady)
@@ -118,12 +118,9 @@ impl StateStream for ResponseStream {
 }
 
 pub enum ConnectFuture {
-    #[doc(hidden)]
-    TcpConnecting(TcpStreamNew, String),
-    #[doc(hidden)]
-    TlsHandshake(ConnectAsync<TcpStream>),
-    #[doc(hidden)]
-    ServerGreeting(Option<ImapTransport>),
+    #[doc(hidden)] TcpConnecting(TcpStreamNew, String),
+    #[doc(hidden)] TlsHandshake(ConnectAsync<TcpStream>),
+    #[doc(hidden)] ServerGreeting(Option<ImapTransport>),
 }
 
 impl Future for ConnectFuture {
@@ -175,7 +172,9 @@ impl ClientState {
 }
 
 impl Default for ClientState {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub struct IdGenerator {
@@ -189,7 +188,9 @@ impl IdGenerator {
 }
 
 impl Default for IdGenerator {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Iterator for IdGenerator {
