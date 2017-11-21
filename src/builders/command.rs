@@ -97,11 +97,11 @@ impl FetchCommandMessages {
     pub fn attr_macro(self, named: AttrMacro) -> FetchCommand {
         let FetchCommandMessages { mut args } = self;
         args.push(b' ');
-        match named {
-            AttrMacro::All => args.extend(b"ALL"),
-            AttrMacro::Fast => args.extend(b"FAST"),
-            AttrMacro::Full => args.extend(b"FULL"),
-        }
+        args.extend(match named {
+            AttrMacro::All => "ALL",
+            AttrMacro::Fast => "FAST",
+            AttrMacro::Full => "FULL",
+        }.as_bytes());
         FetchCommand { args }
     }
 }
