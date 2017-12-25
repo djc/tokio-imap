@@ -97,16 +97,21 @@ impl FetchCommandMessages {
     pub fn attr_macro(self, named: AttrMacro) -> FetchCommand {
         let FetchCommandMessages { mut args } = self;
         args.push(b' ');
-        args.extend(match named {
-            AttrMacro::All => "ALL",
-            AttrMacro::Fast => "FAST",
-            AttrMacro::Full => "FULL",
-        }.as_bytes());
+        args.extend(
+            match named {
+                AttrMacro::All => "ALL",
+                AttrMacro::Fast => "FAST",
+                AttrMacro::Full => "FULL",
+            }.as_bytes(),
+        );
         FetchCommand { args }
     }
 }
 
-pub trait FetchBuilderMessages where Self: Sized {
+pub trait FetchBuilderMessages
+where
+    Self: Sized,
+{
     fn prepare(self) -> FetchCommandMessages;
 
     fn num(self, num: u32) -> FetchCommandMessages {
@@ -151,20 +156,25 @@ impl FetchBuilderAttributes for FetchCommandAttributes {
     }
 }
 
-pub trait FetchBuilderAttributes where Self: Sized {
+pub trait FetchBuilderAttributes
+where
+    Self: Sized,
+{
     fn prepare(self) -> FetchCommandAttributes;
     fn attr(self, attr: Attribute) -> FetchCommandAttributes {
         let FetchCommandAttributes { mut args } = self.prepare();
-        args.extend(match attr {
-            Attribute::Body => "BODY",
-            Attribute::Envelope => "ENVELOPE",
-            Attribute::Flags => "FLAGS",
-            Attribute::InternalDate => "INTERNALDATE",
-            Attribute::ModSeq => "MODSEQ",
-            Attribute::Rfc822 => "RFC822",
-            Attribute::Rfc822Size => "RFC822.SIZE",
-            Attribute::Uid => "UID",
-        }.as_bytes());
+        args.extend(
+            match attr {
+                Attribute::Body => "BODY",
+                Attribute::Envelope => "ENVELOPE",
+                Attribute::Flags => "FLAGS",
+                Attribute::InternalDate => "INTERNALDATE",
+                Attribute::ModSeq => "MODSEQ",
+                Attribute::Rfc822 => "RFC822",
+                Attribute::Rfc822Size => "RFC822.SIZE",
+                Attribute::Uid => "UID",
+            }.as_bytes(),
+        );
         FetchCommandAttributes { args }
     }
 }
@@ -173,7 +183,10 @@ pub struct FetchCommand {
     args: Vec<u8>,
 }
 
-pub trait FetchBuilderModifiers where Self: Sized {
+pub trait FetchBuilderModifiers
+where
+    Self: Sized,
+{
     fn prepare(self) -> FetchCommand;
     fn build(self) -> Command {
         let FetchCommand { args } = self.prepare();
