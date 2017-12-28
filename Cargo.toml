@@ -12,6 +12,7 @@ license = "MIT/Apache-2.0"
 
 [badges]
 maintenance = { status = "actively-developed" }
+travis-ci = { repository = "djc/imap-proto" }
 
 [dependencies]
 nom = "3.1"
