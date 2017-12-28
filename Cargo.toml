@@ -1,6 +1,6 @@
 [package]
 name = "imap-proto"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>"]
 description = "IMAP protocol parser and data structures"
 documentation = "https://docs.rs/imap-proto"
