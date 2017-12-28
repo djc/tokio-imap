@@ -1,5 +1,6 @@
 # imap-proto
 
+[![Build status](https://api.travis-ci.org/djc/imap-proto.svg?branch=master)](https://travis-ci.org/djc/imap-proto)
 [![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE-MIT)
 [![Apache License 2.0](https://img.shields.io/badge/license-ALv2-blue.svg)](./LICENSE-APACHE)
 [![crates.io, downloads](https://img.shields.io/crates/d/imap-proto.svg)](https://crates.io/crates/imap-proto)
