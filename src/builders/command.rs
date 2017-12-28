@@ -1,3 +1,4 @@
+use quoted_string;
 use types::{AttrMacro, Attribute, State};
 
 pub struct CommandBuilder {}
@@ -16,9 +17,7 @@ impl CommandBuilder {
 
     pub fn examine(mailbox: &str) -> Command {
         let mut args = vec![];
-        args.extend(b"EXAMINE \"");
-        args.extend(mailbox.as_bytes());
-        args.push(b'"');
+        args.extend(format!("EXAMINE \"{}\"", quoted_string(mailbox).unwrap()).as_bytes());
         Command { args, next_state: Some(State::Selected) }
     }
 
@@ -30,24 +29,31 @@ impl CommandBuilder {
 
     pub fn list(reference: &str, glob: &str) -> Command {
         let mut args = vec![];
-        args.extend(format!("LIST \"{}\" \"{}\"", reference, glob).as_bytes());
+        args.extend(
+            format!(
+                "LIST \"{}\" \"{}\"",
+                quoted_string(reference).unwrap(),
+                quoted_string(glob).unwrap()
+            ).as_bytes(),
+        );
         Command { args, next_state: None }
     }
 
     pub fn login(user_name: &str, password: &str) -> Command {
         let mut args = vec![];
-        args.extend(b"LOGIN ");
-        args.extend(user_name.as_bytes());
-        args.push(b' ');
-        args.extend(password.as_bytes());
+        args.extend(
+            format!(
+                "LOGIN \"{}\" \"{}\"",
+                quoted_string(user_name).unwrap(),
+                quoted_string(password).unwrap()
+            ).as_bytes(),
+        );
         Command { args, next_state: Some(State::Authenticated) }
     }
 
     pub fn select(mailbox: &str) -> Command {
         let mut args = vec![];
-        args.extend(b"SELECT \"");
-        args.extend(mailbox.as_bytes());
-        args.push(b'"');
+        args.extend(format!("SELECT \"{}\"", quoted_string(mailbox).unwrap()).as_bytes());
         Command { args, next_state: Some(State::Selected) }
     }
 
@@ -212,5 +218,21 @@ impl FetchBuilderModifiers for FetchCommandAttributes {
 impl FetchBuilderModifiers for FetchCommand {
     fn prepare(self) -> FetchCommand {
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::CommandBuilder;
+    #[test]
+    fn login() {
+        assert_eq!(
+            CommandBuilder::login("djc", "s3cr3t").to_parts().0,
+            b"LOGIN \"djc\" \"s3cr3t\""
+        );
+        assert_eq!(
+            CommandBuilder::login("djc", "domain\\password").to_parts().0,
+            b"LOGIN \"djc\" \"domain\\\\password\""
+        );
     }
 }
