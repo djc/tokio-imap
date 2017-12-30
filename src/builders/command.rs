@@ -6,26 +6,17 @@ pub struct CommandBuilder {}
 impl CommandBuilder {
     pub fn check() -> Command {
         let args = b"CHECK".to_vec();
-        Command {
-            args,
-            next_state: None,
-        }
+        Command { args, next_state: None }
     }
 
     pub fn close() -> Command {
         let args = b"CLOSE".to_vec();
-        Command {
-            args,
-            next_state: Some(State::Authenticated),
-        }
+        Command { args, next_state: Some(State::Authenticated) }
     }
 
     pub fn examine(mailbox: &str) -> Command {
         let args = format!("EXAMINE \"{}\"", quoted_string(mailbox).unwrap()).into_bytes();
-        Command {
-            args,
-            next_state: Some(State::Selected),
-        }
+        Command { args, next_state: Some(State::Selected) }
     }
 
     pub fn fetch() -> FetchCommandEmpty {
@@ -39,10 +30,7 @@ impl CommandBuilder {
             quoted_string(reference).unwrap(),
             quoted_string(glob).unwrap()
         ).into_bytes();
-        Command {
-            args,
-            next_state: None,
-        }
+        Command { args, next_state: None }
     }
 
     pub fn login(user_name: &str, password: &str) -> Command {
@@ -51,18 +39,12 @@ impl CommandBuilder {
             quoted_string(user_name).unwrap(),
             quoted_string(password).unwrap()
         ).into_bytes();
-        Command {
-            args,
-            next_state: Some(State::Authenticated),
-        }
+        Command { args, next_state: Some(State::Authenticated) }
     }
 
     pub fn select(mailbox: &str) -> Command {
         let args = format!("SELECT \"{}\"", quoted_string(mailbox).unwrap()).into_bytes();
-        Command {
-            args,
-            next_state: Some(State::Selected),
-        }
+        Command { args, next_state: Some(State::Selected) }
     }
 
     pub fn uid_fetch() -> FetchCommandEmpty {
