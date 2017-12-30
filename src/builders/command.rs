@@ -122,8 +122,7 @@ impl FetchCommandMessages {
 
 pub trait FetchBuilderMessages
 where
-    Self: Sized,
-{
+    Self: Sized, {
     fn prepare(self) -> FetchCommandMessages;
 
     fn num(self, num: u32) -> FetchCommandMessages {
@@ -170,8 +169,7 @@ impl FetchBuilderAttributes for FetchCommandAttributes {
 
 pub trait FetchBuilderAttributes
 where
-    Self: Sized,
-{
+    Self: Sized, {
     fn prepare(self) -> FetchCommandAttributes;
     fn attr(self, attr: Attribute) -> FetchCommandAttributes {
         let FetchCommandAttributes { mut args } = self.prepare();
@@ -197,8 +195,7 @@ pub struct FetchCommand {
 
 pub trait FetchBuilderModifiers
 where
-    Self: Sized,
-{
+    Self: Sized, {
     fn prepare(self) -> FetchCommand;
     fn build(self) -> Command {
         let FetchCommand { args } = self.prepare();
