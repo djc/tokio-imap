@@ -219,7 +219,9 @@ mod tests {
             b"LOGIN \"djc\" \"s3cr3t\""
         );
         assert_eq!(
-            CommandBuilder::login("djc", "domain\\password").to_parts().0,
+            CommandBuilder::login("djc", "domain\\password")
+                .to_parts()
+                .0,
             b"LOGIN \"djc\" \"domain\\\\password\""
         );
     }
