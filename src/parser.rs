@@ -344,6 +344,54 @@ named!(mailbox_data_lsub<Response>, do_parse!(
     }))
 ));
 
+// Unlike `status_att` in the RFC syntax, this includes the value,
+// so that it can return a valid enum object instead of just a key.
+named!(status_att<StatusAttribute>, do_parse!(
+    key: alt!(
+        tag_s!("MESSAGES") |
+        tag_s!("RECENT") |
+        tag_s!("UIDNEXT") |
+        tag_s!("UIDVALIDITY") |
+        tag_s!("UNSEEN")
+    ) >>
+    tag_s!(" ") >>
+    val: number >>
+    (match key {
+        b"MESSAGES" => StatusAttribute::Messages(val),
+        b"RECENT" => StatusAttribute::Recent(val),
+        b"UIDNEXT" => StatusAttribute::UidNext(val),
+        b"UIDVALIDITY" => StatusAttribute::UidValidity(val),
+        b"UNSEEN" => StatusAttribute::Unseen(val),
+        _ => panic!("invalid status key {}", str::from_utf8(key).unwrap()),
+    })
+));
+
+named!(status_att_list<Vec<StatusAttribute>>, do_parse!(
+    first: status_att >>
+    rest: many0!(do_parse!(
+        tag_s!(" ") >>
+        status: status_att >>
+        (status)
+    )) >>
+    ({
+        let mut res = rest;
+        res.insert(0, first);
+        res
+    })
+));
+
+named!(mailbox_data_status<Response>, do_parse!(
+    tag_s!("STATUS ") >>
+    mailbox: mailbox >>
+    tag_s!(" (") >>
+    status: status_att_list >>
+    tag_s!(")") >>
+    (Response::MailboxData(MailboxDatum::Status {
+        mailbox,
+        status,
+    }))
+));
+
 named!(mailbox_data_recent<Response>, do_parse!(
     num: number >>
     tag_s!(" RECENT") >>
@@ -355,6 +403,7 @@ named!(mailbox_data<Response>, alt!(
     mailbox_data_exists |
     mailbox_data_list |
     mailbox_data_lsub |
+    mailbox_data_status |
     mailbox_data_recent
 ));
 
@@ -630,6 +679,20 @@ mod tests {
                     index: None,
                     data: Some(b"foo"),
                 }, "body = {:?}", body);
+            },
+            rsp @ _ => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_status() {
+        match parse_response(b"* STATUS blurdybloop (MESSAGES 231 UIDNEXT 44292)\r\n") {
+            IResult::Done(_, Response::MailboxData(MailboxDatum::Status { mailbox, status })) => {
+                assert_eq!(mailbox, "blurdybloop");
+                assert_eq!(status, [
+                    StatusAttribute::Messages(231),
+                    StatusAttribute::UidNext(44292),
+                ]);
             },
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }

@@ -49,6 +49,15 @@ pub enum ResponseCode<'a> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub enum StatusAttribute {
+    Messages(u32),
+    Recent(u32),
+    UidNext(u32),
+    UidValidity(u32),
+    Unseen(u32),
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum MailboxDatum<'a> {
     Exists(u32),
     Flags(Vec<&'a str>),
@@ -56,6 +65,10 @@ pub enum MailboxDatum<'a> {
         flags: Vec<&'a str>,
         delimiter: &'a str,
         name: &'a str,
+    },
+    Status {
+        mailbox: &'a str,
+        status: Vec<StatusAttribute>,
     },
     SubList {
         flags: Vec<&'a str>,
