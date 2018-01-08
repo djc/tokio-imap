@@ -112,12 +112,12 @@ named!(number_64<u64>, map_res!(
     str::parse
 ));
 
-named!(text<&str>, map!(take_till_s!(crlf),
-    |s| str::from_utf8(s).unwrap()
+named!(text<&str>, map_res!(take_till_s!(crlf),
+    str::from_utf8
 ));
 
-named!(atom<&str>, map!(take_while1_s!(atom_char),
-    |s| str::from_utf8(s).unwrap()
+named!(atom<&str>, map_res!(take_while1_s!(atom_char),
+    str::from_utf8
 ));
 
 named!(astring<&[u8]>, alt!(
@@ -127,7 +127,7 @@ named!(astring<&[u8]>, alt!(
 
 named!(mailbox<&str>, alt!(
     map!(tag_s!("INBOX"), |s| "INBOX") |
-    map!(astring, |s| str::from_utf8(s).unwrap())
+    map_res!(astring, str::from_utf8)
 ));
 
 named!(flag_extension<&str>, map_res!(
@@ -161,7 +161,7 @@ named!(flag_list<Vec<&str>>, do_parse!(
 ));
 
 named!(flag_perm<&str>, alt!(
-    map!(tag_s!("\\*"), |s| str::from_utf8(s).unwrap()) |
+    map_res!(tag_s!("\\*"), str::from_utf8) |
     flag
 ));
 
@@ -294,8 +294,8 @@ named!(resp_text_code<ResponseCode>, do_parse!(
 
 named!(capability<&str>, do_parse!(
     tag_s!(" ") >>
-    atom: take_till1_s!(atom_specials) >>
-    (str::from_utf8(atom).unwrap())
+    atom: map_res!(take_till1_s!(atom_specials), str::from_utf8) >>
+    (atom)
 ));
 
 named!(capability_data<Response>, do_parse!(
@@ -320,12 +320,12 @@ named!(mailbox_data_list<Response>, do_parse!(
     tag_s!("LIST ") >>
     flags: flag_list >>
     tag_s!(" ") >>
-    path: quoted >>
+    delimiter: map_res!(quoted, str::from_utf8) >>
     tag_s!(" ") >>
     name: mailbox >>
     (Response::MailboxData(MailboxDatum::List {
         flags,
-        delimiter: str::from_utf8(path).unwrap(),
+        delimiter,
         name
     }))
 ));
@@ -334,12 +334,12 @@ named!(mailbox_data_lsub<Response>, do_parse!(
     tag_s!("LSUB ") >>
     flags: flag_list >>
     tag_s!(" ") >>
-    path: quoted >>
+    delimiter: map_res!(quoted, str::from_utf8) >>
     tag_s!(" ") >>
     name: mailbox >>
     (Response::MailboxData(MailboxDatum::SubList {
         flags,
-        delimiter: str::from_utf8(path).unwrap(),
+        delimiter,
         name
     }))
 ));
@@ -570,8 +570,9 @@ named!(message_data_expunge<Response>, do_parse!(
     (Response::Expunge(num))
 ));
 
-named!(tag<RequestId>, map!(take_while1_s!(tag_char),
-    |s| RequestId(str::from_utf8(s).unwrap().to_string())
+named!(tag<RequestId>, map!(
+    map_res!(take_while1_s!(tag_char), str::from_utf8),
+    |s| RequestId(s.to_string())
 ));
 
 // This is not quite according to spec, which mandates the following:
