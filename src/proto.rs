@@ -3,7 +3,7 @@ use bytes::{BufMut, BytesMut};
 use nom::{IResult, Needed};
 
 use imap_proto;
-pub use imap_proto::types::*;
+use imap_proto::types::{Request, RequestId, Response};
 
 use std::io;
 use std::mem;

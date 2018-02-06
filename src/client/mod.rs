@@ -13,12 +13,12 @@ use tokio_io::AsyncRead;
 use tokio_core::reactor::Handle;
 use tokio_tls::{ConnectAsync, TlsConnectorExt};
 
-use imap_proto::*;
+use imap_proto::{Request, RequestId, State};
 use imap_proto::builders::command::Command;
-use proto::*;
+use proto::{ImapCodec, ImapTransport, ResponseData};
 
 pub mod builder {
-    pub use imap_proto::builders::command::*;
+    pub use imap_proto::builders::command::CommandBuilder;
 }
 
 
