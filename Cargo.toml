@@ -15,7 +15,7 @@ readme = "README.md"
 bytes = "0.4"
 futures = "0.1"
 futures-state-stream = "0.1"
-imap-proto = { version = "0.2", path = "../imap-proto" }
+imap-proto = { version = "0.3", path = "../imap-proto" }
 native-tls = "0.1"
 nom = "3.1"
 tokio-core = "0.1"
