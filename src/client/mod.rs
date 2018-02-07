@@ -18,7 +18,10 @@ use imap_proto::builders::command::Command;
 use proto::{ImapCodec, ImapTransport, ResponseData};
 
 pub mod builder {
-    pub use imap_proto::builders::command::CommandBuilder;
+    pub use imap_proto::builders::command::{CommandBuilder, FetchBuilderAttributes,
+                                            FetchBuilderMessages, FetchBuilderModifiers,
+                                            FetchCommand, FetchCommandAttributes,
+                                            FetchCommandMessages};
 }
 
 
