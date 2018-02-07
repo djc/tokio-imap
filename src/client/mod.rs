@@ -38,7 +38,7 @@ impl Client {
     pub fn call(self, cmd: Command) -> ResponseStream {
         let Self { transport, mut state } = self;
         let request_id = state.request_ids.next().unwrap();
-        let (cmd_bytes, next_state) = cmd.to_parts();
+        let (cmd_bytes, next_state) = cmd.into_parts();
         let future = transport.send(Request(request_id.clone(), cmd_bytes));
         ResponseStream::new(future, state, request_id, next_state)
     }
