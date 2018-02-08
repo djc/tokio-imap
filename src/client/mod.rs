@@ -31,8 +31,7 @@ pub struct Client {
 
 impl Client {
     pub fn connect(server: &str) -> ImapConnectFuture {
-        let addr = format!("{}:993", server);
-        let addr = addr.to_socket_addrs().unwrap().next().unwrap();
+        let addr = (server, 993).to_socket_addrs().unwrap().next().unwrap();
         ImapConnectFuture::TcpConnecting(TcpStream::connect(&addr), server.to_string())
     }
 
