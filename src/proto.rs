@@ -8,7 +8,7 @@ use imap_proto::types::{Request, RequestId, Response};
 use std::io;
 use std::mem;
 
-use tokio_core::net::TcpStream;
+use tokio::net::TcpStream;
 use tokio_io::codec::{Decoder, Encoder, Framed};
 use tokio_tls::TlsStream;
 

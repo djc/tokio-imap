@@ -8,9 +8,8 @@ use native_tls::TlsConnector;
 use std::io;
 use std::net::ToSocketAddrs;
 
-use tokio_core::net::{TcpStream, TcpStreamNew};
+use tokio::net::{ConnectFuture, TcpStream};
 use tokio_io::AsyncRead;
-use tokio_core::reactor::Handle;
 use tokio_tls::{ConnectAsync, TlsConnectorExt};
 
 use imap_proto::{Request, RequestId, State};
@@ -31,11 +30,10 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn connect(server: &str, handle: &Handle) -> ConnectFuture {
+    pub fn connect(server: &str) -> ImapConnectFuture {
         let addr = format!("{}:993", server);
         let addr = addr.to_socket_addrs().unwrap().next().unwrap();
-        let stream = TcpStream::connect(&addr, handle);
-        ConnectFuture::TcpConnecting(stream, server.to_string())
+        ImapConnectFuture::TcpConnecting(TcpStream::connect(&addr), server.to_string())
     }
 
     pub fn call(self, cmd: Command) -> ResponseStream {
@@ -120,36 +118,36 @@ impl StateStream for ResponseStream {
     }
 }
 
-pub enum ConnectFuture {
-    #[doc(hidden)] TcpConnecting(TcpStreamNew, String),
+pub enum ImapConnectFuture {
+    #[doc(hidden)] TcpConnecting(ConnectFuture, String),
     #[doc(hidden)] TlsHandshake(ConnectAsync<TcpStream>),
     #[doc(hidden)] ServerGreeting(Option<ImapTransport>),
 }
 
-impl Future for ConnectFuture {
+impl Future for ImapConnectFuture {
     type Item = (Client, ResponseData);
     type Error = io::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let mut new = None;
-        if let ConnectFuture::TcpConnecting(ref mut future, ref domain) = *self {
+        if let ImapConnectFuture::TcpConnecting(ref mut future, ref domain) = *self {
             let stream = try_ready!(future.poll());
             let ctx = TlsConnector::builder().unwrap().build().unwrap();
             let future = ctx.connect_async(domain, stream);
-            new = Some(ConnectFuture::TlsHandshake(future));
+            new = Some(ImapConnectFuture::TlsHandshake(future));
         }
         if new.is_some() {
             *self = new.take().unwrap();
         }
-        if let ConnectFuture::TlsHandshake(ref mut future) = *self {
+        if let ImapConnectFuture::TlsHandshake(ref mut future) = *self {
             let transport = try_ready!(future.map_err(|e| {
                 io::Error::new(io::ErrorKind::Other, e)
             }).poll()).framed(ImapCodec::default());
-            new = Some(ConnectFuture::ServerGreeting(Some(transport)));
+            new = Some(ImapConnectFuture::ServerGreeting(Some(transport)));
         }
         if new.is_some() {
             *self = new.take().unwrap();
         }
-        if let ConnectFuture::ServerGreeting(ref mut wrapped) = *self {
+        if let ImapConnectFuture::ServerGreeting(ref mut wrapped) = *self {
             let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
             return Ok(Async::Ready((Client {
                 transport: wrapped.take().unwrap(),
