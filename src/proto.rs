@@ -32,14 +32,14 @@ impl<'a> Decoder for ImapCodec {
         if self.decode_need_message_bytes > buf.len() {
             return Ok(None);
         }
-        let res = match imap_proto::parse_response(buf) {
+        let (response, rsp_len) = match imap_proto::parse_response(buf) {
             IResult::Done(remaining, response) => {
                 // This SHOULD be acceptable/safe: BytesMut storage memory is
                 // allocated on the heap and should not move. It will not be
                 // freed as long as we keep a reference alive, which we do
                 // by retaining a reference to the split buffer, below.
                 let response = unsafe { mem::transmute(response) };
-                Some((response, buf.len() - remaining.len()))
+                (response, buf.len() - remaining.len())
             },
             IResult::Incomplete(Needed::Size(min)) => {
                 self.decode_need_message_bytes = min;
@@ -50,7 +50,6 @@ impl<'a> Decoder for ImapCodec {
             },
             IResult::Error(err) => panic!("error {} during parsing of {:?}", err, buf),
         };
-        let (response, rsp_len) = res.unwrap();
         let raw = buf.split_to(rsp_len);
         self.decode_need_message_bytes = 0;
         Ok(Some(ResponseData { raw, response }))
