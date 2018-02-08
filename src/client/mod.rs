@@ -89,10 +89,10 @@ impl StateStream for ResponseStream {
             },
             None => {},
         }
-        if !self.transport.is_some() {
-            return Ok(Async::NotReady);
-        }
-        let mut transport = self.transport.take().unwrap();
+        let mut transport = match self.transport.take() {
+            None => return Ok(Async::NotReady),
+            Some(mut transport) => transport,
+        };
         if self.done {
             let mut state = self.state.take().unwrap();
             if self.next_state.is_some() {
