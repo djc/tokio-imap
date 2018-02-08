@@ -74,9 +74,8 @@ impl StateStream for ResponseStream {
     type State = Client;
     type Error = io::Error;
     fn poll(&mut self) -> Poll<StreamEvent<Self::Item, Self::State>, Self::Error> {
-        if self.future.is_some() {
-            let mut future = self.future.take().unwrap();
-            match future.poll() {
+        match self.future.take() {
+            Some(mut future) => match future.poll() {
                 Ok(Async::Ready(transport)) => {
                     self.transport = Some(transport);
                 },
@@ -87,7 +86,8 @@ impl StateStream for ResponseStream {
                 Err(e) => {
                     return Err(e);
                 },
-            }
+            },
+            None => {},
         }
         if !self.transport.is_some() {
             return Ok(Async::NotReady);
