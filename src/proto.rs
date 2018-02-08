@@ -48,7 +48,10 @@ impl<'a> Decoder for ImapCodec {
             IResult::Incomplete(_) => {
                 return Ok(None);
             },
-            IResult::Error(err) => panic!("error {} during parsing of {:?}", err, buf),
+            IResult::Error(err) => {
+                return Err(io::Error::new(io::ErrorKind::Other,
+                                          format!("error {} during parsing of {:?}", err, buf)));
+            }
         };
         let raw = buf.split_to(rsp_len);
         self.decode_need_message_bytes = 0;
