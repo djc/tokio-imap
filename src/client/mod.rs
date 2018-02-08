@@ -94,7 +94,7 @@ impl StateStream for ResponseStream {
             Some(mut transport) => transport,
         };
         if self.done {
-            let mut state = self.state.take().unwrap();
+            let mut state = self.state.take().unwrap(); // safe: initialized from start
             if let Some(next_state) = self.next_state.take() {
                 state.state = next_state;
             }
