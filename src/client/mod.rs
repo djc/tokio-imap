@@ -95,8 +95,8 @@ impl StateStream for ResponseStream {
         };
         if self.done {
             let mut state = self.state.take().unwrap();
-            if self.next_state.is_some() {
-                state.state = self.next_state.take().unwrap();
+            if let Some(next_state) = self.next_state.take() {
+                state.state = next_state;
             }
             let client = Client { transport, state };
             return Ok(Async::Ready(StreamEvent::Done(client)));
