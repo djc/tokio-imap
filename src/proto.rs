@@ -1,5 +1,7 @@
 use bytes::{BufMut, BytesMut};
 
+use futures;
+
 use nom::{IResult, Needed};
 
 use imap_proto;
@@ -8,12 +10,10 @@ use imap_proto::types::{Request, RequestId, Response};
 use std::io;
 use std::mem;
 
-use tokio_core::net::TcpStream;
+use tokio::net::TcpStream;
 use tokio_io::codec::{Decoder, Encoder, Framed};
 use tokio_tls::TlsStream;
 
-
-pub type ImapTransport = Framed<TlsStream<TcpStream>, ImapCodec>;
 
 pub struct ImapCodec {
     decode_need_message_bytes: usize,
@@ -32,14 +32,14 @@ impl<'a> Decoder for ImapCodec {
         if self.decode_need_message_bytes > buf.len() {
             return Ok(None);
         }
-        let res = match imap_proto::parse_response(buf) {
+        let (response, rsp_len) = match imap_proto::parse_response(buf) {
             IResult::Done(remaining, response) => {
                 // This SHOULD be acceptable/safe: BytesMut storage memory is
                 // allocated on the heap and should not move. It will not be
                 // freed as long as we keep a reference alive, which we do
                 // by retaining a reference to the split buffer, below.
                 let response = unsafe { mem::transmute(response) };
-                Some((response, buf.len() - remaining.len()))
+                (response, buf.len() - remaining.len())
             },
             IResult::Incomplete(Needed::Size(min)) => {
                 self.decode_need_message_bytes = min;
@@ -48,9 +48,11 @@ impl<'a> Decoder for ImapCodec {
             IResult::Incomplete(_) => {
                 return Ok(None);
             },
-            IResult::Error(err) => panic!("error {} during parsing of {:?}", err, buf),
+            IResult::Error(err) => {
+                return Err(io::Error::new(io::ErrorKind::Other,
+                                          format!("error {} during parsing of {:?}", err, buf)));
+            }
         };
-        let (response, rsp_len) = res.unwrap();
         let raw = buf.split_to(rsp_len);
         self.decode_need_message_bytes = 0;
         Ok(Some(ResponseData { raw, response }))
@@ -90,4 +92,12 @@ impl ResponseData {
     pub fn parsed(&self) -> &Response {
         unsafe { mem::transmute(&self.response) }
     }
+}
+
+pub type ImapTls = Framed<TlsStream<TcpStream>, ImapCodec>;
+
+impl ImapTransport for ImapTls {}
+
+pub trait ImapTransport: futures::Stream<Item = ResponseData, Error = io::Error> +
+                         futures::Sink<SinkItem = Request, SinkError = io::Error> {
 }
