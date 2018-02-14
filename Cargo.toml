@@ -1,2 +1,2 @@
 [workspace]
-members = ["tokio-imap"]
+members = ["imap-proto", "tokio-imap"]
