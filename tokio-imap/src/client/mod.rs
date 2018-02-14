@@ -108,8 +108,8 @@ where
     type State = E;
     type Error = io::Error;
     fn poll(&mut self) -> Poll<StreamEvent<Self::Item, Self::State>, Self::Error> {
-        match self.future.take() {
-            Some(mut future) => match future.poll() {
+        if let Some(mut future) = self.future.take() {
+            match future.poll() {
                 Ok(Async::Ready(transport)) => {
                     self.transport = Some(transport);
                 },
@@ -120,8 +120,7 @@ where
                 Err(e) => {
                     return Err(e);
                 },
-            },
-            None => {},
+            }
         }
         let mut transport = match self.transport.take() {
             None => return Ok(Async::NotReady),
