@@ -30,9 +30,11 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn connect(server: &str) -> ImapConnectFuture {
-        let addr = (server, 993).to_socket_addrs().unwrap().next().unwrap();
-        ImapConnectFuture::TcpConnecting(TcpStream::connect(&addr), server.to_string())
+    pub fn connect(server: &str) -> io::Result<ImapConnectFuture> {
+        let addr = (server, 993).to_socket_addrs()?.next().ok_or_else(|| {
+            io::Error::new(io::ErrorKind::Other, format!("no IP addresses found for {}", server))
+        })?;
+        Ok(ImapConnectFuture::TcpConnecting(TcpStream::connect(&addr), server.to_string()))
     }
 
     pub fn call(self, cmd: Command) -> ResponseStream {
