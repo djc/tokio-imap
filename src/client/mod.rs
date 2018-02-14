@@ -14,7 +14,7 @@ use tokio_tls::{ConnectAsync, TlsConnectorExt};
 
 use imap_proto::{Request, RequestId, State};
 use imap_proto::builders::command::Command;
-use proto::{ImapCodec, ImapTransport, ResponseData};
+use proto::{ImapCodec, ImapTls, ResponseData};
 
 pub mod builder {
     pub use imap_proto::builders::command::{CommandBuilder, FetchBuilderAttributes,
@@ -25,7 +25,7 @@ pub mod builder {
 
 
 pub struct Client {
-    transport: ImapTransport,
+    transport: ImapTls,
     state: ClientState,
 }
 
@@ -47,8 +47,8 @@ impl Client {
 }
 
 pub struct ResponseStream {
-    future: Option<Send<ImapTransport>>,
-    transport: Option<ImapTransport>,
+    future: Option<Send<ImapTls>>,
+    transport: Option<ImapTls>,
     state: Option<ClientState>,
     request_id: RequestId,
     next_state: Option<State>,
@@ -56,7 +56,7 @@ pub struct ResponseStream {
 }
 
 impl ResponseStream {
-    pub fn new(future: Send<ImapTransport>, state: ClientState,
+    pub fn new(future: Send<ImapTls>, state: ClientState,
                request_id: RequestId, next_state: Option<State>) -> Self {
         Self {
             future: Some(future),
@@ -122,7 +122,7 @@ impl StateStream for ResponseStream {
 pub enum ImapConnectFuture {
     #[doc(hidden)] TcpConnecting(ConnectFuture, String),
     #[doc(hidden)] TlsHandshake(ConnectAsync<TcpStream>),
-    #[doc(hidden)] ServerGreeting(Option<ImapTransport>),
+    #[doc(hidden)] ServerGreeting(Option<ImapTls>),
 }
 
 impl Future for ImapConnectFuture {
