@@ -45,12 +45,12 @@ pub trait ImapClient {
     }
 }
 
-pub struct Client {
+pub struct TlsClient {
     transport: ImapTls,
     state: ClientState,
 }
 
-impl ImapClient for Client {
+impl ImapClient for TlsClient {
     type Transport = ImapTls;
 
     fn into_parts(self) -> (ImapTls, ClientState) {
@@ -58,8 +58,8 @@ impl ImapClient for Client {
         (transport, state)
     }
 
-    fn rebuild(transport: ImapTls, state: ClientState) -> Client {
-        Client { transport, state }
+    fn rebuild(transport: ImapTls, state: ClientState) -> TlsClient {
+        TlsClient { transport, state }
     }
 }
 
@@ -142,7 +142,7 @@ pub enum ImapConnectFuture {
 }
 
 impl Future for ImapConnectFuture {
-    type Item = (Client, ResponseData);
+    type Item = (TlsClient, ResponseData);
     type Error = io::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let mut new = None;
@@ -166,7 +166,7 @@ impl Future for ImapConnectFuture {
         }
         if let ImapConnectFuture::ServerGreeting(ref mut wrapped) = *self {
             let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
-            return Ok(Async::Ready((Client {
+            return Ok(Async::Ready((TlsClient {
                 transport: wrapped.take().unwrap(),
                 state: ClientState::new(),
             }, msg)));
