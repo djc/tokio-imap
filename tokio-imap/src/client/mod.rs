@@ -23,12 +23,17 @@ pub mod builder {
                                             FetchCommandMessages};
 }
 
-
 pub fn connect(server: &str) -> io::Result<ImapConnectFuture> {
     let addr = (server, 993).to_socket_addrs()?.next().ok_or_else(|| {
-        io::Error::new(io::ErrorKind::Other, format!("no IP addresses found for {}", server))
+        io::Error::new(
+            io::ErrorKind::Other,
+            format!("no IP addresses found for {}", server),
+        )
     })?;
-    Ok(ImapConnectFuture::TcpConnecting(TcpStream::connect(&addr), server.to_string()))
+    Ok(ImapConnectFuture::TcpConnecting(
+        TcpStream::connect(&addr),
+        server.to_string(),
+    ))
 }
 
 pub trait ImapClient {
@@ -36,7 +41,9 @@ pub trait ImapClient {
     fn into_parts(self) -> (Self::Transport, ClientState);
     fn rebuild(transport: Self::Transport, state: ClientState) -> Self;
 
-    fn call(self, cmd: Command) -> ResponseStream<Self> where Self: ImapClient + Sized {
+    fn call(self, cmd: Command) -> ResponseStream<Self>
+    where
+        Self: ImapClient + Sized, {
         let (transport, mut state) = self.into_parts();
         let request_id = state.request_ids.next().unwrap(); // safe: never returns Err
         let (cmd_bytes, next_state) = cmd.into_parts();
@@ -63,7 +70,9 @@ impl ImapClient for TlsClient {
     }
 }
 
-pub struct ResponseStream<E> where E: ImapClient {
+pub struct ResponseStream<E>
+where
+    E: ImapClient, {
     future: Option<Send<E::Transport>>,
     transport: Option<E::Transport>,
     state: Option<ClientState>,
@@ -72,9 +81,14 @@ pub struct ResponseStream<E> where E: ImapClient {
     done: bool,
 }
 
-impl<E> ResponseStream<E> where E: ImapClient {
-    pub fn new(future: Send<E::Transport>, state: ClientState,
-               request_id: RequestId, next_state: Option<State>) -> Self {
+impl<E> ResponseStream<E>
+where
+    E: ImapClient,
+{
+    pub fn new(
+        future: Send<E::Transport>, state: ClientState, request_id: RequestId,
+        next_state: Option<State>,
+    ) -> Self {
         Self {
             future: Some(future),
             transport: None,
@@ -86,7 +100,10 @@ impl<E> ResponseStream<E> where E: ImapClient {
     }
 }
 
-impl<E> StateStream for ResponseStream<E> where E: ImapClient {
+impl<E> StateStream for ResponseStream<E>
+where
+    E: ImapClient,
+{
     type Item = ResponseData;
     type State = E;
     type Error = io::Error;
@@ -115,7 +132,10 @@ impl<E> StateStream for ResponseStream<E> where E: ImapClient {
             if let Some(next_state) = self.next_state.take() {
                 state.state = next_state;
             }
-            return Ok(Async::Ready(StreamEvent::Done(E::rebuild(transport, state))));
+            return Ok(Async::Ready(StreamEvent::Done(E::rebuild(
+                transport,
+                state,
+            ))));
         }
         match transport.poll() {
             Ok(Async::Ready(Some(rsp))) => {
@@ -136,9 +156,12 @@ impl<E> StateStream for ResponseStream<E> where E: ImapClient {
 }
 
 pub enum ImapConnectFuture {
-    #[doc(hidden)] TcpConnecting(ConnectFuture, String),
-    #[doc(hidden)] TlsHandshake(ConnectAsync<TcpStream>),
-    #[doc(hidden)] ServerGreeting(Option<ImapTls>),
+    #[doc(hidden)]
+    TcpConnecting(ConnectFuture, String),
+    #[doc(hidden)]
+    TlsHandshake(ConnectAsync<TcpStream>),
+    #[doc(hidden)]
+    ServerGreeting(Option<ImapTls>),
 }
 
 impl Future for ImapConnectFuture {
@@ -156,9 +179,11 @@ impl Future for ImapConnectFuture {
             *self = new.take().unwrap();
         }
         if let ImapConnectFuture::TlsHandshake(ref mut future) = *self {
-            let transport = try_ready!(future.map_err(|e| {
-                io::Error::new(io::ErrorKind::Other, e)
-            }).poll()).framed(ImapCodec::default());
+            let transport = try_ready!(
+                future
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+                    .poll()
+            ).framed(ImapCodec::default());
             new = Some(ImapConnectFuture::ServerGreeting(Some(transport)));
         }
         if new.is_some() {
@@ -166,10 +191,13 @@ impl Future for ImapConnectFuture {
         }
         if let ImapConnectFuture::ServerGreeting(ref mut wrapped) = *self {
             let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
-            return Ok(Async::Ready((TlsClient {
-                transport: wrapped.take().unwrap(),
-                state: ClientState::new(),
-            }, msg)));
+            return Ok(Async::Ready((
+                TlsClient {
+                    transport: wrapped.take().unwrap(),
+                    state: ClientState::new(),
+                },
+                msg,
+            )));
         }
         Ok(Async::NotReady)
     }

@@ -14,14 +14,15 @@ use tokio::net::TcpStream;
 use tokio_io::codec::{Decoder, Encoder, Framed};
 use tokio_tls::TlsStream;
 
-
 pub struct ImapCodec {
     decode_need_message_bytes: usize,
 }
 
 impl Default for ImapCodec {
     fn default() -> Self {
-        Self { decode_need_message_bytes: 0 }
+        Self {
+            decode_need_message_bytes: 0,
+        }
     }
 }
 
@@ -49,9 +50,11 @@ impl<'a> Decoder for ImapCodec {
                 return Ok(None);
             },
             IResult::Error(err) => {
-                return Err(io::Error::new(io::ErrorKind::Other,
-                                          format!("{} during parsing of {:?}", err, buf)));
-            }
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("{} during parsing of {:?}", err, buf),
+                ));
+            },
         };
         let raw = buf.split_to(rsp_len);
         self.decode_need_message_bytes = 0;
@@ -98,6 +101,7 @@ pub type ImapTls = Framed<TlsStream<TcpStream>, ImapCodec>;
 
 impl ImapTransport for ImapTls {}
 
-pub trait ImapTransport: futures::Stream<Item = ResponseData, Error = io::Error> +
-                         futures::Sink<SinkItem = Request, SinkError = io::Error> {
+pub trait ImapTransport
+    : futures::Stream<Item = ResponseData, Error = io::Error>
+    + futures::Sink<SinkItem = Request, SinkError = io::Error> {
 }
