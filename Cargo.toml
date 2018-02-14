@@ -1,6 +1,6 @@
 [package]
 name = "tokio-imap"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>"]
 description = "Tokio-based IMAP protocol (client, for now) implementation"
 documentation = "https://docs.rs/tokio-imap"
