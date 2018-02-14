@@ -17,7 +17,7 @@ extern crate tokio_tls;
 pub mod client;
 pub mod proto;
 
-pub use client::TlsClient;
+pub use client::{ImapClient, TlsClient};
 
 pub mod types {
     pub use imap_proto::types::*;
