@@ -50,7 +50,7 @@ Have a look at the [mailsync][mailsync] crate for example usage.
 
 [mailsync]: https://github.com/djc/mailsync
 
-## imap-proto: 
+## imap-proto: IMAP types and protocol parser
 
 [![crates.io, downloads](https://img.shields.io/crates/d/imap-proto.svg)](https://crates.io/crates/imap-proto)
 [![crates.io, latest release](https://img.shields.io/crates/v/imap-proto.svg)](https://crates.io/crates/imap-proto)
