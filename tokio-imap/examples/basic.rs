@@ -100,8 +100,8 @@ fn imapfetch(
     current_thread::run(|_| {
         eprintln!("Fetching e-mails ... ");
         current_thread::spawn(fut_responses);
-        eprintln!("Finished fetching e-mails. ");
     });
+    eprintln!("Finished fetching e-mails. ");
     Ok(())
 }
 
