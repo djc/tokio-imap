@@ -16,6 +16,75 @@ use tokio_imap::client::connect;
 use tokio_imap::proto::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
 
+fn main() {
+    // Provide server address, login, password and mailbox name on standard input, each on a line
+    // and 4 lines in total.
+    let (mut server, mut login, mut password, mut mailbox) =
+        (String::new(), String::new(), String::new(), String::new());
+    let (server, login, password, mailbox) = {
+        io::stdin()
+            .read_line(&mut server)
+            .expect("Provide an IMAP server FQDN. ");
+        io::stdin()
+            .read_line(&mut login)
+            .expect("Provide a login. ");
+        io::stdin()
+            .read_line(&mut password)
+            .expect("Provide a password. ");
+        io::stdin()
+            .read_line(&mut mailbox)
+            .expect("Provide a mailbox. ");
+        (
+            server.trim(),
+            login.trim().to_owned(),
+            password.trim().to_owned(),
+            mailbox.trim().to_owned(),
+        )
+    };
+    if let Err(cause) = imap_fetch(server, login, password, mailbox) {
+        eprintln!("Fatal error: {}", cause);
+    };
+}
+
+fn imap_fetch(
+    server: &str, login: String, password: String, mailbox: String
+) -> Result<(), ImapError> {
+    eprintln!("Will connect to {}", server);
+    let fut_connect = connect(server).map_err(|cause| ImapError::Connect { cause })?;
+    let fut_responses = fut_connect
+        .and_then(move |(tls_client, _)| {
+            tls_client
+                .call(CommandBuilder::login(login.as_str(), password.as_str()))
+                .collect()
+        })
+        .and_then(move |(_, tls_client)| {
+            tls_client
+                .call(CommandBuilder::select(mailbox.as_str()))
+                .collect()
+        })
+        .and_then(move |(_, tls_client)| {
+            let cmd = CommandBuilder::uid_fetch()
+                .all_after(1_u32)
+                .attr(Attribute::Uid)
+                .attr(Attribute::Rfc822);
+            tls_client.call(cmd.build()).for_each(move |response_data| {
+                process_email(&response_data);
+                Ok(())
+            })
+        })
+        .and_then(move |tls_client: tokio_imap::TlsClient| {
+            tls_client.call(CommandBuilder::close()).collect()
+        })
+        .and_then(|_| Ok(()))
+        .map_err(|_| ());
+    current_thread::run(|_| {
+        eprintln!("Fetching e-mails ... ");
+        current_thread::spawn(fut_responses);
+    });
+    eprintln!("Finished fetching e-mails. ");
+    Ok(())
+}
+
 fn process_email(response_data: &ResponseData) {
     if let Response::Fetch(_, ref attr_vals) = *response_data.parsed() {
         for val in attr_vals.iter() {
@@ -64,73 +133,4 @@ impl Display for ImapError {
             ImapError::UidFetch { ref cause } => write!(f, "Fetching e-mails failed: {}. ", cause),
         }
     }
-}
-
-fn imap_fetch(
-    server: &str, login: String, password: String, mailbox: String
-) -> Result<(), ImapError> {
-    eprintln!("Will connect to {}", server);
-    let fut_connect = connect(server).map_err(|cause| ImapError::Connect { cause })?;
-    let fut_responses = fut_connect
-        .and_then(move |(tls_client, _)| {
-            tls_client
-                .call(CommandBuilder::login(login.as_str(), password.as_str()))
-                .collect()
-        })
-        .and_then(move |(_, tls_client)| {
-            tls_client
-                .call(CommandBuilder::select(mailbox.as_str()))
-                .collect()
-        })
-        .and_then(move |(_, tls_client)| {
-            let cmd = CommandBuilder::uid_fetch()
-                .all_after(1_u32)
-                .attr(Attribute::Uid)
-                .attr(Attribute::Rfc822);
-            tls_client.call(cmd.build()).for_each(move |response_data| {
-                process_email(&response_data);
-                Ok(())
-            })
-        })
-        .and_then(move |tls_client: tokio_imap::TlsClient| {
-            tls_client.call(CommandBuilder::close()).collect()
-        })
-        .and_then(|_| Ok(()))
-        .map_err(|_| ());
-    current_thread::run(|_| {
-        eprintln!("Fetching e-mails ... ");
-        current_thread::spawn(fut_responses);
-    });
-    eprintln!("Finished fetching e-mails. ");
-    Ok(())
-}
-
-fn main() {
-    // Provide server address, login, password and mailbox name on standard input, each on a line
-    // and 4 lines in total.
-    let (mut server, mut login, mut password, mut mailbox) =
-        (String::new(), String::new(), String::new(), String::new());
-    let (server, login, password, mailbox) = {
-        io::stdin()
-            .read_line(&mut server)
-            .expect("Provide an IMAP server FQDN. ");
-        io::stdin()
-            .read_line(&mut login)
-            .expect("Provide a login. ");
-        io::stdin()
-            .read_line(&mut password)
-            .expect("Provide a password. ");
-        io::stdin()
-            .read_line(&mut mailbox)
-            .expect("Provide a mailbox. ");
-        (
-            server.trim(),
-            login.trim().to_owned(),
-            password.trim().to_owned(),
-            mailbox.trim().to_owned(),
-        )
-    };
-    if let Err(cause) = imap_fetch(server, login, password, mailbox) {
-        eprintln!("Fatal error: {}", cause);
-    };
 }
