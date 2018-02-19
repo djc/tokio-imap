@@ -54,7 +54,7 @@ fn imap_fetch(
                 Ok(())
             })
         })
-        .and_then(move |tls_client: tokio_imap::TlsClient| {
+        .and_then(move |tls_client| {
             tls_client.call(CommandBuilder::close()).collect()
         })
         .and_then(|_| Ok(()))
