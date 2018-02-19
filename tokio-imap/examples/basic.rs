@@ -16,8 +16,8 @@ use tokio_imap::client::connect;
 use tokio_imap::proto::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
 
-fn process_email(responsedata: &ResponseData) {
-    if let Response::Fetch(_, ref attr_vals) = *responsedata.parsed() {
+fn process_email(response_data: &ResponseData) {
+    if let Response::Fetch(_, ref attr_vals) = *response_data.parsed() {
         for val in attr_vals.iter() {
             match *val {
                 AttributeValue::Uid(u) => {
@@ -66,34 +66,34 @@ impl Display for ImapError {
     }
 }
 
-fn imapfetch(
+fn imap_fetch(
     server: &str, login: String, password: String, mailbox: String
 ) -> Result<(), ImapError> {
     eprintln!("Will connect to {}", server);
     let fut_connect = connect(server).map_err(|cause| ImapError::Connect { cause })?;
     let fut_responses = fut_connect
-        .and_then(move |(tlsclient, _)| {
-            tlsclient
+        .and_then(move |(tls_client, _)| {
+            tls_client
                 .call(CommandBuilder::login(login.as_str(), password.as_str()))
                 .collect()
         })
-        .and_then(move |(_, tlsclient)| {
-            tlsclient
+        .and_then(move |(_, tls_client)| {
+            tls_client
                 .call(CommandBuilder::select(mailbox.as_str()))
                 .collect()
         })
-        .and_then(move |(_, tlsclient)| {
+        .and_then(move |(_, tls_client)| {
             let cmd = CommandBuilder::uid_fetch()
                 .all_after(1_u32)
                 .attr(Attribute::Uid)
                 .attr(Attribute::Rfc822);
-            tlsclient.call(cmd.build()).for_each(move |responsedata| {
-                process_email(&responsedata);
+            tls_client.call(cmd.build()).for_each(move |response_data| {
+                process_email(&response_data);
                 Ok(())
             })
         })
-        .and_then(move |tlsclient: tokio_imap::TlsClient| {
-            tlsclient.call(CommandBuilder::close()).collect()
+        .and_then(move |tls_client: tokio_imap::TlsClient| {
+            tls_client.call(CommandBuilder::close()).collect()
         })
         .and_then(|_| Ok(()))
         .map_err(|_| ());
@@ -130,7 +130,7 @@ fn main() {
             mailbox.trim().to_owned(),
         )
     };
-    if let Err(cause) = imapfetch(server, login, password, mailbox) {
+    if let Err(cause) = imap_fetch(server, login, password, mailbox) {
         eprintln!("Fatal error: {}", cause);
     };
 }
