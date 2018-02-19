@@ -17,31 +17,13 @@ use tokio_imap::proto::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
 
 fn main() {
-    // Provide server address, login, password and mailbox name on standard input, each on a line
-    // and 4 lines in total.
-    let (mut server, mut login, mut password, mut mailbox) =
-        (String::new(), String::new(), String::new(), String::new());
-    let (server, login, password, mailbox) = {
-        io::stdin()
-            .read_line(&mut server)
-            .expect("Provide an IMAP server FQDN. ");
-        io::stdin()
-            .read_line(&mut login)
-            .expect("Provide a login. ");
-        io::stdin()
-            .read_line(&mut password)
-            .expect("Provide a password. ");
-        io::stdin()
-            .read_line(&mut mailbox)
-            .expect("Provide a mailbox. ");
-        (
-            server.trim(),
-            login.trim().to_owned(),
-            password.trim().to_owned(),
-            mailbox.trim().to_owned(),
-        )
-    };
-    if let Err(cause) = imap_fetch(server, login, password, mailbox) {
+    let mut args = std::env::args();
+    let _ = args.next();
+    let server = args.next().expect("no server provided");
+    let login = args.next().expect("no login provided");
+    let password = args.next().expect("no password provided");
+    let mailbox = args.next().expect("no mailbox provided");
+    if let Err(cause) = imap_fetch(&server, login, password, mailbox) {
         eprintln!("Fatal error: {}", cause);
     };
 }
