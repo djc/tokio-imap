@@ -595,6 +595,16 @@ named!(resp_text<(Option<ResponseCode>, Option<&str>)>, do_parse!(
     })
 ));
 
+named!(continue_req<Response>, do_parse!(
+    tag_s!("+ ") >>
+    text: resp_text >> // TODO: base64
+    tag_s!("\r\n") >>
+    (Response::Continue {
+        code: text.0,
+        information: text.1,
+    })
+));
+
 named!(response_tagged<Response>, do_parse!(
     tag: tag >>
     tag_s!(" ") >>
@@ -635,6 +645,7 @@ named!(response_data<Response>, do_parse!(
 ));
 
 named!(response<Response>, alt!(
+    continue_req |
     response_data |
     response_tagged
 ));

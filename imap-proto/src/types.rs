@@ -13,6 +13,10 @@ impl Copy for AttrMacro {}
 #[derive(Debug, Eq, PartialEq)]
 pub enum Response<'a> {
     Capabilities(Vec<&'a str>),
+    Continue {
+        code: Option<ResponseCode<'a>>,
+        information: Option<&'a str>,
+    },
     Done {
         tag: RequestId,
         status: Status,
