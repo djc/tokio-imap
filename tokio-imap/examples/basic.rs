@@ -40,9 +40,7 @@ fn imap_fetch(
                 .collect()
         })
         .and_then(move |(_, tls_client)| {
-            tls_client
-                .call(CommandBuilder::select(&mailbox))
-                .collect()
+            tls_client.call(CommandBuilder::select(&mailbox)).collect()
         })
         .and_then(move |(_, tls_client)| {
             let cmd = CommandBuilder::uid_fetch()
@@ -54,9 +52,7 @@ fn imap_fetch(
                 Ok(())
             })
         })
-        .and_then(move |tls_client| {
-            tls_client.call(CommandBuilder::close()).collect()
-        })
+        .and_then(move |tls_client| tls_client.call(CommandBuilder::close()).collect())
         .and_then(|_| Ok(()))
         .map_err(|_| ());
     current_thread::run(|_| {
