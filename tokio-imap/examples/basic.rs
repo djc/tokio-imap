@@ -56,10 +56,10 @@ fn imap_fetch(
         .and_then(|_| Ok(()))
         .map_err(|_| ());
     current_thread::run(|_| {
-        eprintln!("Fetching e-mails ... ");
+        eprintln!("Fetching messages...");
         current_thread::spawn(fut_responses);
     });
-    eprintln!("Finished fetching e-mails. ");
+    eprintln!("Finished fetching messages");
     Ok(())
 }
 
@@ -68,10 +68,10 @@ fn process_email(response_data: &ResponseData) {
         for val in attr_vals.iter() {
             match *val {
                 AttributeValue::Uid(u) => {
-                    eprintln!("E-mail UID: {}", u);
+                    eprintln!("Message UID: {}", u);
                 },
                 AttributeValue::Rfc822(Some(src)) => {
-                    eprintln!("E-mail body length: {}", src.to_vec().len());
+                    eprintln!("Message length: {}", src.to_vec().len());
                 },
                 _ => (),
             }
@@ -105,10 +105,10 @@ impl Error for ImapError {
 impl Display for ImapError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match *self {
-            ImapError::Connect { ref cause } => write!(f, "Connect failed: {}. ", cause),
-            ImapError::Login { ref cause } => write!(f, "Login failed: {}. ", cause),
-            ImapError::Select { ref cause } => write!(f, "Mailbox selection failed: {}. ", cause),
-            ImapError::UidFetch { ref cause } => write!(f, "Fetching e-mails failed: {}. ", cause),
+            ImapError::Connect { ref cause } => write!(f, "Connect failed: {}", cause),
+            ImapError::Login { ref cause } => write!(f, "Login failed: {}", cause),
+            ImapError::Select { ref cause } => write!(f, "Mailbox selection failed: {}", cause),
+            ImapError::UidFetch { ref cause } => write!(f, "Fetching messages failed: {}", cause),
         }
     }
 }
