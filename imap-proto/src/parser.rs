@@ -710,4 +710,20 @@ mod tests {
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
     }
+
+    #[test]
+    fn test_notify() {
+        match parse_response(b"* 3501 EXPUNGE\r\n") {
+            IResult::Done(_, Response::Expunge(3501)) => {},
+            rsp @ _ => panic!("unexpected response {:?}", rsp),
+        }
+        match parse_response(b"* 3501 EXISTS\r\n") {
+            IResult::Done(_, Response::MailboxData(MailboxDatum::Exists(3501))) => {},
+            rsp @ _ => panic!("unexpected response {:?}", rsp),
+        }
+        match parse_response(b"+ idling\r\n") {
+            IResult::Done(_, Response::Continue { code: None, information: Some("idling") }) => {},
+            rsp @ _ => panic!("unexpected response {:?}", rsp),
+        }
+    }
 }
