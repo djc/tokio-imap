@@ -36,12 +36,12 @@ fn imap_fetch(
     let fut_responses = fut_connect
         .and_then(move |(tls_client, _)| {
             tls_client
-                .call(CommandBuilder::login(login.as_str(), password.as_str()))
+                .call(CommandBuilder::login(&login, &password))
                 .collect()
         })
         .and_then(move |(_, tls_client)| {
             tls_client
-                .call(CommandBuilder::select(mailbox.as_str()))
+                .call(CommandBuilder::select(&mailbox))
                 .collect()
         })
         .and_then(move |(_, tls_client)| {
