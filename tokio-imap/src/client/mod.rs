@@ -166,7 +166,7 @@ pub enum ImapConnectFuture {
 }
 
 impl Future for ImapConnectFuture {
-    type Item = (TlsClient, ResponseData);
+    type Item = (ResponseData, TlsClient);
     type Error = io::Error;
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
         let mut new = None;
@@ -193,11 +193,11 @@ impl Future for ImapConnectFuture {
         if let ImapConnectFuture::ServerGreeting(ref mut wrapped) = *self {
             let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
             return Ok(Async::Ready((
+                msg,
                 TlsClient {
                     transport: wrapped.take().unwrap(),
                     state: ClientState::new(),
                 },
-                msg,
             )));
         }
         Ok(Async::NotReady)

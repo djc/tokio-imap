@@ -33,7 +33,7 @@ fn imap_fetch(
     eprintln!("Will connect to {}", server);
     let fut_connect = TlsClient::connect(server).map_err(|cause| ImapError::Connect { cause })?;
     let fut_responses = fut_connect
-        .and_then(move |(tls_client, _)| {
+        .and_then(move |(_, tls_client)| {
             tls_client
                 .call(CommandBuilder::login(&login, &password))
                 .collect()
