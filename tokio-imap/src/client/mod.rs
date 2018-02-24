@@ -23,19 +23,6 @@ pub mod builder {
                                             FetchCommandMessages};
 }
 
-pub fn connect(server: &str) -> io::Result<ImapConnectFuture> {
-    let addr = (server, 993).to_socket_addrs()?.next().ok_or_else(|| {
-        io::Error::new(
-            io::ErrorKind::Other,
-            format!("no IP addresses found for {}", server),
-        )
-    })?;
-    Ok(ImapConnectFuture::TcpConnecting(
-        TcpStream::connect(&addr),
-        server.to_string(),
-    ))
-}
-
 pub trait ImapClient {
     type Transport: ImapTransport;
     fn into_parts(self) -> (Self::Transport, ClientState);
@@ -55,6 +42,21 @@ pub trait ImapClient {
 pub struct TlsClient {
     transport: ImapTls,
     state: ClientState,
+}
+
+impl TlsClient {
+    pub fn connect(server: &str) -> io::Result<ImapConnectFuture> {
+        let addr = (server, 993).to_socket_addrs()?.next().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("no IP addresses found for {}", server),
+            )
+        })?;
+        Ok(ImapConnectFuture::TcpConnecting(
+            TcpStream::connect(&addr),
+            server.to_string(),
+        ))
+    }
 }
 
 impl ImapClient for TlsClient {

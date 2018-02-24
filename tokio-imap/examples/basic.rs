@@ -9,10 +9,9 @@ use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 use tokio::executor::current_thread;
-use tokio_imap::ImapClient;
+use tokio_imap::{ImapClient, TlsClient};
 use tokio_imap::client::builder::{CommandBuilder, FetchBuilderAttributes, FetchBuilderMessages,
                                   FetchBuilderModifiers};
-use tokio_imap::client::connect;
 use tokio_imap::proto::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
 
@@ -32,7 +31,7 @@ fn imap_fetch(
     server: &str, login: String, password: String, mailbox: String
 ) -> Result<(), ImapError> {
     eprintln!("Will connect to {}", server);
-    let fut_connect = connect(server).map_err(|cause| ImapError::Connect { cause })?;
+    let fut_connect = TlsClient::connect(server).map_err(|cause| ImapError::Connect { cause })?;
     let fut_responses = fut_connect
         .and_then(move |(tls_client, _)| {
             tls_client
