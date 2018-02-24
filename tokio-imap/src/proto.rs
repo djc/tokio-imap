@@ -1,4 +1,4 @@
-use bytes::{BufMut, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 
 use futures;
 
@@ -56,7 +56,7 @@ impl<'a> Decoder for ImapCodec {
                 ));
             },
         };
-        let raw = buf.split_to(rsp_len);
+        let raw = buf.split_to(rsp_len).freeze();
         self.decode_need_message_bytes = 0;
         Ok(Some(ResponseData { raw, response }))
     }
@@ -76,7 +76,7 @@ impl Encoder for ImapCodec {
 
 #[derive(Debug)]
 pub struct ResponseData {
-    raw: BytesMut,
+    raw: Bytes,
     // This reference is really scoped to the lifetime of the `raw`
     // member, but unfortunately Rust does not allow that yet. It
     // is transmuted to `'static` by the `Decoder`, instead, and
