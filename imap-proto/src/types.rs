@@ -122,6 +122,7 @@ pub enum AttributeValue<'a> {
     InternalDate(&'a str),
     ModSeq(u64), // RFC 4551, section 3.3.2
     Rfc822(Option<&'a [u8]>),
+    Rfc822Header(Option<&'a [u8]>),
     Rfc822Size(u32),
     Uid(u32),
 }

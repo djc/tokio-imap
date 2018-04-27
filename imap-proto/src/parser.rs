@@ -520,6 +520,12 @@ named!(msg_att_rfc822<AttributeValue>, do_parse!(
     (AttributeValue::Rfc822(raw))
 ));
 
+named!(msg_att_rfc822_header<AttributeValue>, do_parse!(
+    tag_s!("RFC822.HEADER ") >>
+    raw: nstring >>
+    (AttributeValue::Rfc822Header(raw))
+));
+
 named!(msg_att_rfc822_size<AttributeValue>, do_parse!(
     tag_s!("RFC822.SIZE ") >>
     num: number >>
@@ -546,6 +552,7 @@ named!(msg_att<AttributeValue>, alt!(
     msg_att_flags |
     msg_att_mod_seq |
     msg_att_rfc822 |
+    msg_att_rfc822_header |
     msg_att_rfc822_size |
     msg_att_uid
 ));
@@ -670,7 +677,7 @@ pub fn parse_response(msg: &[u8]) -> ParseResult {
 #[cfg(test)]
 mod tests {
     use types::*;
-    use super::{parse_response, IResult};
+    use super::{nom, parse_response, IResult};
 
     #[test]
     fn test_number_overflow() {
@@ -751,6 +758,14 @@ mod tests {
                 assert_eq!(ids[1], 67890);
             },
             rsp @ _ => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_uid_fetch() {
+        match parse_response(b"* 4 FETCH (UID 71372 RFC822.HEADER {10275}\r\n") {
+            IResult::Incomplete(nom::Needed::Size(10319)) => {},
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 }
