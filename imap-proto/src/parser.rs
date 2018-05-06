@@ -127,7 +127,6 @@ named!(astring<&[u8]>, alt!(
 ));
 
 named!(mailbox<&str>, alt!(
-    map!(tag_s!("INBOX"), |s| "INBOX") |
     map_res!(astring, str::from_utf8)
 ));
 
@@ -766,6 +765,22 @@ mod tests {
         match parse_response(b"* 4 FETCH (UID 71372 RFC822.HEADER {10275}\r\n") {
             IResult::Incomplete(nom::Needed::Size(10319)) => {},
             rsp => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_list() {
+        match ::parser::mailbox(b"INBOX.Tests") {
+            IResult::Done(_, mb) => {
+                assert_eq!(mb, "INBOX.Tests");
+            },
+            rsp @ _ => panic!("unexpected response {:?}", rsp),
+        }
+
+        match parse_response(b"* LIST (\\HasNoChildren) \".\" INBOX.Tests\r\n") {
+            IResult::Done(_, Response::MailboxData(mb)) => {
+            },
+            rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
     }
 }
