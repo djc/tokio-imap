@@ -126,8 +126,15 @@ named!(astring<&[u8]>, alt!(
     string
 ));
 
-named!(mailbox<&str>, alt!(
-    map_res!(astring, str::from_utf8)
+named!(mailbox<&str>, map!(
+    map_res!(astring, str::from_utf8),
+    |s| {
+        if s.eq_ignore_ascii_case("INBOX") {
+            "INBOX"
+        } else {
+            s
+        }
+    }
 ));
 
 named!(flag_extension<&str>, map_res!(
@@ -770,9 +777,9 @@ mod tests {
 
     #[test]
     fn test_list() {
-        match ::parser::mailbox(b"INBOX.Tests") {
+        match ::parser::mailbox(b"iNboX") {
             IResult::Done(_, mb) => {
-                assert_eq!(mb, "INBOX.Tests");
+                assert_eq!(mb, "INBOX");
             },
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
