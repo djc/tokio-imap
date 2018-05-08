@@ -785,8 +785,7 @@ mod tests {
         }
 
         match parse_response(b"* LIST (\\HasNoChildren) \".\" INBOX.Tests\r\n") {
-            IResult::Done(_, Response::MailboxData(mb)) => {
-            },
+            IResult::Done(_, Response::MailboxData(_)) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
     }
