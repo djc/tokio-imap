@@ -53,13 +53,13 @@ fn imap_fetch(
         })
         .and_then(move |tls_client| tls_client.call(CommandBuilder::close()).collect())
         .and_then(|_| Ok(()))
-        .map_err(|_| ());
-    current_thread::run(|_| {
+        .map_err(|e| ImapError::UidFetch { cause: e });
+    let res = current_thread::block_on_all({
         eprintln!("Fetching messages...");
-        current_thread::spawn(fut_responses);
+        fut_responses
     });
     eprintln!("Finished fetching messages");
-    Ok(())
+    res
 }
 
 fn process_email(response_data: &ResponseData) {
