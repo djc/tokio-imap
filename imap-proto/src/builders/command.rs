@@ -30,7 +30,7 @@ impl CommandBuilder {
 
     pub fn fetch() -> FetchCommandEmpty {
         let args = b"FETCH ".to_vec();
-        FetchCommandEmpty { args: args }
+        FetchCommandEmpty { args }
     }
 
     pub fn list(reference: &str, glob: &str) -> Command {

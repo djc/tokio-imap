@@ -493,7 +493,7 @@ named!(msg_att_envelope<AttributeValue>, do_parse!(
     tag_s!(" ") >>
     message_id: nstring >>
     tag_s!(")") >> ({
-        AttributeValue::Envelope(Envelope {
+        AttributeValue::Envelope(Box::new(Envelope {
             date: date.map(|s| str::from_utf8(s).unwrap()),
             subject: subject.map(|s| str::from_utf8(s).unwrap()),
             from,
@@ -504,7 +504,7 @@ named!(msg_att_envelope<AttributeValue>, do_parse!(
             bcc,
             in_reply_to: in_reply_to.map(|s| str::from_utf8(s).unwrap()),
             message_id: message_id.map(|s| str::from_utf8(s).unwrap()),
-        })
+        }))
     })
 ));
 
@@ -607,7 +607,7 @@ named!(resp_text<(Option<ResponseCode>, Option<&str>)>, do_parse!(
     code: opt!(resp_text_code) >>
     text: text >>
     ({
-        let res = if text.len() < 1 {
+        let res = if text.is_empty() {
             None
         } else if code.is_some() {
             Some(&text[1..])

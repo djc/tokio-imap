@@ -95,8 +95,8 @@ where
             future: Some(future),
             transport: None,
             state: Some(state),
-            request_id: request_id,
-            next_state: next_state,
+            request_id,
+            next_state,
             done: false,
         }
     }
