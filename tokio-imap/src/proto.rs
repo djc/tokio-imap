@@ -11,7 +11,7 @@ use std::io;
 use std::mem;
 
 use tokio::net::TcpStream;
-use tokio_io::codec::{Decoder, Encoder, Framed};
+use tokio_codec::{Decoder, Encoder, Framed};
 use tokio_tls::TlsStream;
 
 pub struct ImapCodec {

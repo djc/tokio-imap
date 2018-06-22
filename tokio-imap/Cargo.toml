@@ -19,5 +19,5 @@ imap-proto = { version = "0.4", path = "../imap-proto" }
 native-tls = "0.1"
 nom = "3.1"
 tokio = "0.1"
-tokio-io = "0.1"
+tokio-codec = "0.1"
 tokio-tls = "0.1"

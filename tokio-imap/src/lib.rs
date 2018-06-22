@@ -11,7 +11,7 @@ extern crate imap_proto;
 extern crate native_tls;
 extern crate nom;
 extern crate tokio;
-extern crate tokio_io;
+extern crate tokio_codec;
 extern crate tokio_tls;
 
 pub mod client;

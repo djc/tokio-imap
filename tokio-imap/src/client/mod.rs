@@ -9,7 +9,7 @@ use std::io;
 use std::net::ToSocketAddrs;
 
 use tokio::net::{ConnectFuture, TcpStream};
-use tokio_io::AsyncRead;
+use tokio_codec::Decoder;
 use tokio_tls::{ConnectAsync, TlsConnectorExt};
 
 use imap_proto::{Request, RequestId, State};
@@ -180,11 +180,11 @@ impl Future for ImapConnectFuture {
             *self = new.take().unwrap();
         }
         if let ImapConnectFuture::TlsHandshake(ref mut future) = *self {
-            let transport = try_ready!(
+            let transport = ImapCodec::default().framed(try_ready!(
                 future
                     .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
                     .poll()
-            ).framed(ImapCodec::default());
+            ));
             new = Some(ImapConnectFuture::ServerGreeting(Some(transport)));
         }
         if new.is_some() {
