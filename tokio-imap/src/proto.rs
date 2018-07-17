@@ -2,7 +2,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 
 use futures;
 
-use nom::{IResult, Needed};
+use nom::{self, Needed};
 
 use imap_proto;
 use imap_proto::types::{Request, RequestId, Response};
@@ -34,7 +34,7 @@ impl<'a> Decoder for ImapCodec {
             return Ok(None);
         }
         let (response, rsp_len) = match imap_proto::parse_response(buf) {
-            IResult::Done(remaining, response) => {
+            Ok((remaining, response)) => {
                 // This SHOULD be acceptable/safe: BytesMut storage memory is
                 // allocated on the heap and should not move. It will not be
                 // freed as long as we keep a reference alive, which we do
@@ -42,14 +42,14 @@ impl<'a> Decoder for ImapCodec {
                 let response = unsafe { mem::transmute(response) };
                 (response, buf.len() - remaining.len())
             },
-            IResult::Incomplete(Needed::Size(min)) => {
+            Err(nom::Err::Incomplete(Needed::Size(min))) => {
                 self.decode_need_message_bytes = min;
                 return Ok(None);
             },
-            IResult::Incomplete(_) => {
+            Err(nom::Err::Incomplete(_)) => {
                 return Ok(None);
             },
-            IResult::Error(err) => {
+            Err(err) => {
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
                     format!("{} during parsing of {:?}", err, buf),

@@ -2,7 +2,7 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
 
-use nom::{self, IResult};
+use nom::{self, IResult, ErrorKind};
 
 use std::str;
 
@@ -58,7 +58,7 @@ fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
             escape = false;
         }
     }
-    IResult::Done(&i[len..], &i[..len])
+    Ok((&i[len..], &i[..len]))
 }
 
 named!(quoted<&[u8]>, do_parse!(
@@ -122,7 +122,7 @@ named!(atom<&str>, map_res!(take_while1_s!(atom_char),
 ));
 
 named!(astring<&[u8]>, alt!(
-    take_while1_s!(astring_char) |
+    take_while1!(astring_char) |
     string
 ));
 
@@ -683,12 +683,12 @@ pub fn parse_response(msg: &[u8]) -> ParseResult {
 #[cfg(test)]
 mod tests {
     use types::*;
-    use super::{nom, parse_response, IResult};
+    use super::{nom, parse_response};
 
     #[test]
     fn test_number_overflow() {
         match parse_response(b"* 2222222222222222222222222222222222222222222C\r\n") {
-            IResult::Error(_) => {},
+            Err(_) => {},
             _ => panic!("error required for integer overflow"),
         }
     }
@@ -708,7 +708,7 @@ mod tests {
     #[test]
     fn test_body_text() {
         match parse_response(b"* 2 FETCH (BODY[TEXT] {3}\r\nfoo)\r\n") {
-            IResult::Done(_, Response::Fetch(_, attrs)) => {
+            Ok((_, Response::Fetch(_, attrs))) => {
                 let body = &attrs[0];
                 assert_eq!(body, &AttributeValue::BodySection {
                     section: Some(SectionPath::Full(MessageSection::Text)),
@@ -723,7 +723,7 @@ mod tests {
     #[test]
     fn test_status() {
         match parse_response(b"* STATUS blurdybloop (MESSAGES 231 UIDNEXT 44292)\r\n") {
-            IResult::Done(_, Response::MailboxData(MailboxDatum::Status { mailbox, status })) => {
+            Ok((_, Response::MailboxData(MailboxDatum::Status { mailbox, status }))) => {
                 assert_eq!(mailbox, "blurdybloop");
                 assert_eq!(status, [
                     StatusAttribute::Messages(231),
@@ -737,15 +737,15 @@ mod tests {
     #[test]
     fn test_notify() {
         match parse_response(b"* 3501 EXPUNGE\r\n") {
-            IResult::Done(_, Response::Expunge(3501)) => {},
+            Ok((_, Response::Expunge(3501))) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
         match parse_response(b"* 3501 EXISTS\r\n") {
-            IResult::Done(_, Response::MailboxData(MailboxDatum::Exists(3501))) => {},
+            Ok((_, Response::MailboxData(MailboxDatum::Exists(3501)))) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
         match parse_response(b"+ idling\r\n") {
-            IResult::Done(_, Response::Continue { code: None, information: Some("idling") }) => {},
+            Ok((_, Response::Continue { code: None, information: Some("idling") })) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
     }
@@ -753,13 +753,13 @@ mod tests {
     #[test]
     fn test_search() {
         match parse_response(b"* SEARCH\r\n") {
-            IResult::Done(_, Response::IDs(ids)) => {
+            Ok((_, Response::IDs(ids))) => {
                 assert!(ids.is_empty());
             },
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
         match parse_response(b"* SEARCH 12345 67890\r\n") {
-            IResult::Done(_, Response::IDs(ids)) => {
+            Ok((_, Response::IDs(ids))) => {
                 assert_eq!(ids[0], 12345);
                 assert_eq!(ids[1], 67890);
             },
@@ -770,22 +770,42 @@ mod tests {
     #[test]
     fn test_uid_fetch() {
         match parse_response(b"* 4 FETCH (UID 71372 RFC822.HEADER {10275}\r\n") {
-            IResult::Incomplete(nom::Needed::Size(10319)) => {},
+            Err(nom::Err::Incomplete(nom::Needed::Size(10275))) => {},
+            rsp => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_string_literal() {
+         match ::parser::string(b"{3}\r\nXYZ") {
+            Ok((_, value)) => {
+                assert_eq!(value, "XYZ".as_bytes());
+            }
+            rsp => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_astring() {
+        match ::parser::astring(b"text ") {
+            Ok((_, value)) => {
+                assert_eq!(value, "text".as_bytes());
+            }
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
     #[test]
     fn test_list() {
-        match ::parser::mailbox(b"iNboX") {
-            IResult::Done(_, mb) => {
+        match ::parser::mailbox(b"iNboX ") {
+            Ok((_, mb)) => {
                 assert_eq!(mb, "INBOX");
             },
-            rsp @ _ => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {:?}", rsp),
         }
 
         match parse_response(b"* LIST (\\HasNoChildren) \".\" INBOX.Tests\r\n") {
-            IResult::Done(_, Response::MailboxData(_)) => {},
+            Ok((_, Response::MailboxData(_))) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
     }
