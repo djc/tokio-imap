@@ -80,19 +80,19 @@ named!(literal<&[u8]>, do_parse!(
 named!(string<&[u8]>, alt!(quoted | literal));
 
 named!(status_ok<Status>, map!(tag_no_case!("OK"),
-    |s| Status::Ok
+    |_s| Status::Ok
 ));
 named!(status_no<Status>, map!(tag_no_case!("NO"),
-    |s| Status::No
+    |_s| Status::No
 ));
 named!(status_bad<Status>, map!(tag_no_case!("BAD"),
-    |s| Status::Bad
+    |_s| Status::Bad
 ));
 named!(status_preauth<Status>, map!(tag_no_case!("PREAUTH"),
-    |s| Status::PreAuth
+    |_s| Status::PreAuth
 ));
 named!(status_bye<Status>, map!(tag_no_case!("BYE"),
-    |s| Status::Bye
+    |_s| Status::Bye
 ));
 
 named!(status<Status>, alt!(
@@ -448,7 +448,7 @@ named!(address<Address>, do_parse!(
 ));
 
 named!(opt_addresses<Option<Vec<Address>>>, alt!(
-    map!(tag_s!("NIL"), |s| None) |
+    map!(tag_s!("NIL"), |_s| None) |
     do_parse!(
         tag_s!("(") >>
         addrs: many1!(address) >>
