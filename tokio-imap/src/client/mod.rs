@@ -10,7 +10,7 @@ use std::net::ToSocketAddrs;
 
 use tokio::net::{ConnectFuture, TcpStream};
 use tokio_codec::Decoder;
-use tokio_tls::{ConnectAsync, TlsConnectorExt};
+use tokio_tls::{self, Connect};
 
 use imap_proto::{Request, RequestId, State};
 use imap_proto::builders::command::Command;
@@ -160,7 +160,7 @@ pub enum ImapConnectFuture {
     #[doc(hidden)]
     TcpConnecting(ConnectFuture, String),
     #[doc(hidden)]
-    TlsHandshake(ConnectAsync<TcpStream>),
+    TlsHandshake(Connect<TcpStream>),
     #[doc(hidden)]
     ServerGreeting(Option<ImapTls>),
 }
@@ -172,9 +172,9 @@ impl Future for ImapConnectFuture {
         let mut new = None;
         if let ImapConnectFuture::TcpConnecting(ref mut future, ref domain) = *self {
             let stream = try_ready!(future.poll());
-            let ctx = TlsConnector::builder().unwrap().build().unwrap();
-            let future = ctx.connect_async(domain, stream);
-            new = Some(ImapConnectFuture::TlsHandshake(future));
+            let ctx = TlsConnector::builder().build().unwrap();
+            let ctx = tokio_tls::TlsConnector::from(ctx);
+            new = Some(ImapConnectFuture::TlsHandshake(ctx.connect(domain, stream)));
         }
         if new.is_some() {
             *self = new.take().unwrap();
