@@ -528,6 +528,7 @@ named!(msg_att_rfc822<AttributeValue>, do_parse!(
 
 named!(msg_att_rfc822_header<AttributeValue>, do_parse!(
     tag_s!("RFC822.HEADER ") >>
+    opt!(tag_s!(" ")) >> // extra space workaround for DavMail
     raw: nstring >>
     (AttributeValue::Rfc822Header(raw))
 ));
@@ -807,6 +808,15 @@ mod tests {
         match parse_response(b"* LIST (\\HasNoChildren) \".\" INBOX.Tests\r\n") {
             Ok((_, Response::MailboxData(_))) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_uid_fetch_extra_space() {
+        // DavMail inserts an extra space after RFC822.HEADER
+        match parse_response(b"* 4 FETCH (UID 71372 RFC822.HEADER  {10275}\r\n") {
+            Err(nom::Err::Incomplete(nom::Needed::Size(10275))) => {},
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 }
