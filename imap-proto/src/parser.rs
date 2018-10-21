@@ -362,26 +362,30 @@ named!(mailbox_data_lsub<Response>, do_parse!(
 
 // Unlike `status_att` in the RFC syntax, this includes the value,
 // so that it can return a valid enum object instead of just a key.
-named!(status_att<StatusAttribute>, do_parse!(
-    key: alt!(
-        tag_s!("HIGHESTMODSEQ") |
-        tag_s!("MESSAGES") |
-        tag_s!("RECENT") |
-        tag_s!("UIDNEXT") |
-        tag_s!("UIDVALIDITY") |
-        tag_s!("UNSEEN")
-    ) >>
-    tag_s!(" ") >>
-    val: number >>
-    (match key {
-        b"HIGHESTMODSEQ" => StatusAttribute::HighestModSeq(val),
-        b"MESSAGES" => StatusAttribute::Messages(val),
-        b"RECENT" => StatusAttribute::Recent(val),
-        b"UIDNEXT" => StatusAttribute::UidNext(val),
-        b"UIDVALIDITY" => StatusAttribute::UidValidity(val),
-        b"UNSEEN" => StatusAttribute::Unseen(val),
-        _ => panic!("invalid status key {}", str::from_utf8(key).unwrap()),
-    })
+named!(status_att<StatusAttribute>, alt!(
+    do_parse!(
+        tag_s!("HIGHESTMODSEQ ") >>
+        // note the _64 here
+        val: number_64 >>
+        (StatusAttribute::HighestModSeq(val))) |
+    do_parse!(
+        key: alt!(
+            tag_s!("MESSAGES") |
+            tag_s!("RECENT") |
+            tag_s!("UIDNEXT") |
+            tag_s!("UIDVALIDITY") |
+            tag_s!("UNSEEN")
+        ) >>
+        tag_s!(" ") >>
+        val: number >>
+        (match key {
+            b"MESSAGES" => StatusAttribute::Messages(val),
+            b"RECENT" => StatusAttribute::Recent(val),
+            b"UIDNEXT" => StatusAttribute::UidNext(val),
+            b"UIDVALIDITY" => StatusAttribute::UidValidity(val),
+            b"UNSEEN" => StatusAttribute::Unseen(val),
+            _ => panic!("invalid status key {}", str::from_utf8(key).unwrap()),
+        }))
 ));
 
 named!(status_att_list<Vec<StatusAttribute>>, do_parse!(
