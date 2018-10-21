@@ -1,6 +1,6 @@
-use futures::{Async, Future, Poll, Sink};
-use futures::stream::Stream;
 use futures::sink::Send;
+use futures::stream::Stream;
+use futures::{Async, Future, Poll, Sink};
 use futures_state_stream::{StateStream, StreamEvent};
 
 use native_tls::TlsConnector;
@@ -12,15 +12,15 @@ use tokio::net::tcp::{ConnectFuture, TcpStream};
 use tokio_codec::Decoder;
 use tokio_tls::{self, Connect};
 
-use imap_proto::{Request, RequestId, State};
 use imap_proto::builders::command::Command;
+use imap_proto::{Request, RequestId, State};
 use proto::{ImapCodec, ImapTls, ImapTransport, ResponseData};
 
 pub mod builder {
-    pub use imap_proto::builders::command::{CommandBuilder, FetchBuilderAttributes,
-                                            FetchBuilderMessages, FetchBuilderModifiers,
-                                            FetchCommand, FetchCommandAttributes,
-                                            FetchCommandMessages};
+    pub use imap_proto::builders::command::{
+        CommandBuilder, FetchBuilderAttributes, FetchBuilderMessages, FetchBuilderModifiers,
+        FetchCommand, FetchCommandAttributes, FetchCommandMessages,
+    };
 }
 
 pub trait ImapClient {
@@ -30,7 +30,8 @@ pub trait ImapClient {
 
     fn call(self, cmd: Command) -> ResponseStream<Self>
     where
-        Self: ImapClient + Sized, {
+        Self: ImapClient + Sized,
+    {
         let (transport, mut state) = self.into_parts();
         let request_id = state.request_ids.next().unwrap(); // safe: never returns Err
         let (cmd_bytes, next_state) = cmd.into_parts();
@@ -74,7 +75,8 @@ impl ImapClient for TlsClient {
 
 pub struct ResponseStream<E>
 where
-    E: ImapClient, {
+    E: ImapClient,
+{
     future: Option<Send<E::Transport>>,
     transport: Option<E::Transport>,
     state: Option<ClientState>,
@@ -88,7 +90,9 @@ where
     E: ImapClient,
 {
     pub fn new(
-        future: Send<E::Transport>, state: ClientState, request_id: RequestId,
+        future: Send<E::Transport>,
+        state: ClientState,
+        request_id: RequestId,
         next_state: Option<State>,
     ) -> Self {
         Self {
@@ -114,14 +118,14 @@ where
             match future.poll() {
                 Ok(Async::Ready(transport)) => {
                     self.transport = Some(transport);
-                },
+                }
                 Ok(Async::NotReady) => {
                     self.future = Some(future);
                     return Ok(Async::NotReady);
-                },
+                }
                 Err(e) => {
                     return Err(e);
-                },
+                }
             }
         }
         let mut transport = match self.transport.take() {
@@ -134,8 +138,7 @@ where
                 state.state = next_state;
             }
             return Ok(Async::Ready(StreamEvent::Done(E::rebuild(
-                transport,
-                state,
+                transport, state,
             ))));
         }
         match transport.poll() {
@@ -145,10 +148,10 @@ where
                 };
                 self.transport = Some(transport);
                 return Ok(Async::Ready(StreamEvent::Next(rsp)));
-            },
+            }
             Err(e) => {
                 return Err(e);
-            },
+            }
             _ => (),
         }
         self.transport = Some(transport);

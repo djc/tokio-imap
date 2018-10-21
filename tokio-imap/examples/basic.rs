@@ -9,11 +9,12 @@ use futures_state_stream::StateStream;
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::io;
-use tokio_imap::{ImapClient, TlsClient};
-use tokio_imap::client::builder::{CommandBuilder, FetchBuilderAttributes, FetchBuilderMessages,
-                                  FetchBuilderModifiers};
+use tokio_imap::client::builder::{
+    CommandBuilder, FetchBuilderAttributes, FetchBuilderMessages, FetchBuilderModifiers,
+};
 use tokio_imap::proto::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
+use tokio_imap::{ImapClient, TlsClient};
 
 fn main() {
     let mut args = std::env::args();
@@ -28,7 +29,10 @@ fn main() {
 }
 
 fn imap_fetch(
-    server: &str, login: String, password: String, mailbox: String
+    server: &str,
+    login: String,
+    password: String,
+    mailbox: String,
 ) -> Result<(), ImapError> {
     eprintln!("Will connect to {}", server);
     let fut_connect = TlsClient::connect(server).map_err(|cause| ImapError::Connect { cause })?;
@@ -37,11 +41,9 @@ fn imap_fetch(
             tls_client
                 .call(CommandBuilder::login(&login, &password))
                 .collect()
-        })
-        .and_then(move |(_, tls_client)| {
+        }).and_then(move |(_, tls_client)| {
             tls_client.call(CommandBuilder::select(&mailbox)).collect()
-        })
-        .and_then(move |(_, tls_client)| {
+        }).and_then(move |(_, tls_client)| {
             let cmd = CommandBuilder::uid_fetch()
                 .all_after(1_u32)
                 .attr(Attribute::Uid)
@@ -50,8 +52,7 @@ fn imap_fetch(
                 process_email(&response_data);
                 Ok(())
             })
-        })
-        .and_then(move |tls_client| tls_client.call(CommandBuilder::close()).collect())
+        }).and_then(move |tls_client| tls_client.call(CommandBuilder::close()).collect())
         .and_then(|_| Ok(()))
         .map_err(|e| ImapError::UidFetch { cause: e });
     let res = tokio_current_thread::block_on_all({
@@ -68,10 +69,10 @@ fn process_email(response_data: &ResponseData) {
             match *val {
                 AttributeValue::Uid(u) => {
                     eprintln!("Message UID: {}", u);
-                },
+                }
                 AttributeValue::Rfc822(Some(src)) => {
                     eprintln!("Message length: {}", src.to_vec().len());
-                },
+                }
                 _ => (),
             }
         }

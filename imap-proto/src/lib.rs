@@ -28,7 +28,7 @@ fn quoted_string(s: &str) -> Result<Cow<str>, &'static str> {
         match *b {
             b'\r' | b'\n' => {
                 return Err("CR and LF not allowed in quoted strings");
-            },
+            }
             b'\\' | b'"' => {
                 if start < i {
                     new.extend(&bytes[start..i]);
@@ -36,8 +36,8 @@ fn quoted_string(s: &str) -> Result<Cow<str>, &'static str> {
                 new.push(b'\\');
                 new.push(*b);
                 start = i + 1;
-            },
-            _ => {},
+            }
+            _ => {}
         };
     }
     if start == 0 {
