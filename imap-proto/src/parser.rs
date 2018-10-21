@@ -364,6 +364,7 @@ named!(mailbox_data_lsub<Response>, do_parse!(
 // so that it can return a valid enum object instead of just a key.
 named!(status_att<StatusAttribute>, do_parse!(
     key: alt!(
+        tag_s!("HIGHESTMODSEQ") |
         tag_s!("MESSAGES") |
         tag_s!("RECENT") |
         tag_s!("UIDNEXT") |
@@ -373,6 +374,7 @@ named!(status_att<StatusAttribute>, do_parse!(
     tag_s!(" ") >>
     val: number >>
     (match key {
+        b"HIGHESTMODSEQ" => StatusAttribute::HighestModSeq(val),
         b"MESSAGES" => StatusAttribute::Messages(val),
         b"RECENT" => StatusAttribute::Recent(val),
         b"UIDNEXT" => StatusAttribute::UidNext(val),
