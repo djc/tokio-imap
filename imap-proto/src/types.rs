@@ -62,6 +62,7 @@ pub enum StatusAttribute {
     UidNext(u32),
     UidValidity(u32),
     Unseen(u32),
+    HighestModSeq(u32),
 }
 
 #[derive(Debug, Eq, PartialEq)]
