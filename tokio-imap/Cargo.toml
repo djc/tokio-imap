@@ -21,3 +21,6 @@ nom = "4.0"
 tokio = "0.1"
 tokio-codec = "0.1"
 tokio-tls = "0.2"
+
+[dev-dependencies]
+tokio-current-thread = "0.1"

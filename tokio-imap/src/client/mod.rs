@@ -8,7 +8,7 @@ use native_tls::TlsConnector;
 use std::io;
 use std::net::ToSocketAddrs;
 
-use tokio::net::{ConnectFuture, TcpStream};
+use tokio::net::tcp::{ConnectFuture, TcpStream};
 use tokio_codec::Decoder;
 use tokio_tls::{self, Connect};
 
