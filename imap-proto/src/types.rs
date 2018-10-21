@@ -57,7 +57,7 @@ pub enum ResponseCode<'a> {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum StatusAttribute {
-    HighestModSeq(u32), // RFC 4551
+    HighestModSeq(u64), // RFC 4551
     Messages(u32),
     Recent(u32),
     UidNext(u32),
