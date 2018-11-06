@@ -82,7 +82,10 @@ pub struct ResponseData {
     // is transmuted to `'static` by the `Decoder`, instead, and
     // references returned to callers of `ResponseData` are limited
     // to the lifetime of the `ResponseData` struct.
-    pub response: Response<'static>,
+    //
+    // `raw` is never mutated during the lifetime of `ResponseData`,
+    // and `Response` does not not implement any specific drop glue.
+    response: Response<'static>,
 }
 
 impl ResponseData {
@@ -92,8 +95,8 @@ impl ResponseData {
             _ => None,
         }
     }
-    pub fn parsed(&self) -> &Response {
-        unsafe { mem::transmute(&self.response) }
+    pub fn parsed<'a>(&'a self) -> &'a Response {
+        &self.response
     }
 }
 
