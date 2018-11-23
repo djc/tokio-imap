@@ -95,6 +95,7 @@ pub enum Attribute {
     ModSeq, // RFC 4551, section 3.3.2
     Rfc822,
     Rfc822Size,
+    Rfc822Text,
     Uid,
 }
 
@@ -125,6 +126,7 @@ pub enum AttributeValue<'a> {
     Rfc822(Option<&'a [u8]>),
     Rfc822Header(Option<&'a [u8]>),
     Rfc822Size(u32),
+    Rfc822Text(Option<&'a [u8]>),
     Uid(u32),
 }
 

@@ -545,6 +545,12 @@ named!(msg_att_rfc822_size<AttributeValue>, do_parse!(
     (AttributeValue::Rfc822Size(num))
 ));
 
+named!(msg_att_rfc822_text<AttributeValue>, do_parse!(
+    tag_s!("RFC822.TEXT ") >>
+    raw: nstring >>
+    (AttributeValue::Rfc822Text(raw))
+));
+
 named!(msg_att_mod_seq<AttributeValue>, do_parse!(
     tag_s!("MODSEQ (") >>
     num: number_64 >>
@@ -567,6 +573,7 @@ named!(msg_att<AttributeValue>, alt!(
     msg_att_rfc822 |
     msg_att_rfc822_header |
     msg_att_rfc822_size |
+    msg_att_rfc822_text |
     msg_att_uid
 ));
 

@@ -184,6 +184,7 @@ where
                 Attribute::ModSeq => "MODSEQ",
                 Attribute::Rfc822 => "RFC822",
                 Attribute::Rfc822Size => "RFC822.SIZE",
+                Attribute::Rfc822Text => "RFC822.TEXT",
                 Attribute::Uid => "UID",
             }.as_bytes(),
         );
