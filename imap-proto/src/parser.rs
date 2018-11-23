@@ -332,31 +332,32 @@ named!(mailbox_data_exists<Response>, do_parse!(
     (Response::MailboxData(MailboxDatum::Exists(num)))
 ));
 
-named!(mailbox_data_list<Response>, do_parse!(
-    tag_s!("LIST ") >>
+named!(mailbox_list<(Vec<&str>, &str, &str)>, do_parse!(
     flags: flag_list >>
     tag_s!(" ") >>
     delimiter: map_res!(quoted, str::from_utf8) >>
     tag_s!(" ") >>
     name: mailbox >>
+    ((flags, delimiter, name))
+));
+
+named!(mailbox_data_list<Response>, do_parse!(
+    tag_s!("LIST ") >>
+    data: mailbox_list >>
     (Response::MailboxData(MailboxDatum::List {
-        flags,
-        delimiter,
-        name
+        flags: data.0,
+        delimiter: data.1,
+        name: data.2,
     }))
 ));
 
 named!(mailbox_data_lsub<Response>, do_parse!(
     tag_s!("LSUB ") >>
-    flags: flag_list >>
-    tag_s!(" ") >>
-    delimiter: map_res!(quoted, str::from_utf8) >>
-    tag_s!(" ") >>
-    name: mailbox >>
+    data: mailbox_list >>
     (Response::MailboxData(MailboxDatum::SubList {
-        flags,
-        delimiter,
-        name
+        flags: data.0,
+        delimiter: data.1,
+        name: data.2,
     }))
 ));
 
