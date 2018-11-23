@@ -314,9 +314,10 @@ named!(capability_data<Response>, do_parse!(
 named!(mailbox_data_search<Response>, do_parse!(
     tag_s!("SEARCH") >>
     ids: many0!(do_parse!(
-            tag_s!(" ") >>
-            id: number >>
-            (id))) >>
+        tag_s!(" ") >>
+        id: number >>
+        (id)
+    )) >>
     (Response::IDs(ids))
 ));
 
