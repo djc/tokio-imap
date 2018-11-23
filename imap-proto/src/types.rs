@@ -71,7 +71,7 @@ pub enum MailboxDatum<'a> {
     Flags(Vec<&'a str>),
     List {
         flags: Vec<&'a str>,
-        delimiter: &'a str,
+        delimiter: Option<&'a str>,
         name: &'a str,
     },
     Status {
@@ -80,7 +80,7 @@ pub enum MailboxDatum<'a> {
     },
     SubList {
         flags: Vec<&'a str>,
-        delimiter: &'a str,
+        delimiter: Option<&'a str>,
         name: &'a str,
     },
     Recent(u32),

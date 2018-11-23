@@ -333,10 +333,13 @@ named!(mailbox_data_exists<Response>, do_parse!(
     (Response::MailboxData(MailboxDatum::Exists(num)))
 ));
 
-named!(mailbox_list<(Vec<&str>, &str, &str)>, do_parse!(
+named!(mailbox_list<(Vec<&str>, Option<&str>, &str)>, do_parse!(
     flags: flag_list >>
     tag_s!(" ") >>
-    delimiter: map_res!(quoted, str::from_utf8) >>
+    delimiter: alt!(
+        map!(map_res!(quoted, str::from_utf8), |v| Some(v)) |
+        map!(tag_s!("NIL"), |_| None)
+    ) >>
     tag_s!(" ") >>
     name: mailbox >>
     ((flags, delimiter, name))
