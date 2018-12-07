@@ -358,7 +358,7 @@ named!(mailbox_data_list<Response>, do_parse!(
 named!(mailbox_data_lsub<Response>, do_parse!(
     tag_s!("LSUB ") >>
     data: mailbox_list >>
-    (Response::MailboxData(MailboxDatum::SubList {
+    (Response::MailboxData(MailboxDatum::List {
         flags: data.0,
         delimiter: data.1,
         name: data.2,
