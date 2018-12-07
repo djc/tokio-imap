@@ -38,7 +38,8 @@ impl CommandBuilder {
             "LIST \"{}\" \"{}\"",
             quoted_string(reference).unwrap(),
             quoted_string(glob).unwrap()
-        ).into_bytes();
+        )
+        .into_bytes();
         Command {
             args,
             next_state: None,
@@ -50,7 +51,8 @@ impl CommandBuilder {
             "LOGIN \"{}\" \"{}\"",
             quoted_string(user_name).unwrap(),
             quoted_string(password).unwrap()
-        ).into_bytes();
+        )
+        .into_bytes();
         Command {
             args,
             next_state: Some(State::Authenticated),
@@ -114,7 +116,8 @@ impl FetchCommandMessages {
                 AttrMacro::All => "ALL",
                 AttrMacro::Fast => "FAST",
                 AttrMacro::Full => "FULL",
-            }.as_bytes(),
+            }
+            .as_bytes(),
         );
         FetchCommand { args }
     }
@@ -186,7 +189,8 @@ where
                 Attribute::Rfc822Size => "RFC822.SIZE",
                 Attribute::Rfc822Text => "RFC822.TEXT",
                 Attribute::Uid => "UID",
-            }.as_bytes(),
+            }
+            .as_bytes(),
         );
         FetchCommandAttributes { args }
     }

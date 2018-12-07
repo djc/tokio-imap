@@ -183,11 +183,9 @@ impl Future for ImapConnectFuture {
             *self = new.take().unwrap();
         }
         if let ImapConnectFuture::TlsHandshake(ref mut future) = *self {
-            let transport = ImapCodec::default().framed(try_ready!(
-                future
-                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-                    .poll()
-            ));
+            let transport = ImapCodec::default().framed(try_ready!(future
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+                .poll()));
             new = Some(ImapConnectFuture::ServerGreeting(Some(transport)));
         }
         if new.is_some() {

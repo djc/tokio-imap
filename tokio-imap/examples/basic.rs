@@ -41,9 +41,11 @@ fn imap_fetch(
             tls_client
                 .call(CommandBuilder::login(&login, &password))
                 .collect()
-        }).and_then(move |(_, tls_client)| {
+        })
+        .and_then(move |(_, tls_client)| {
             tls_client.call(CommandBuilder::select(&mailbox)).collect()
-        }).and_then(move |(_, tls_client)| {
+        })
+        .and_then(move |(_, tls_client)| {
             let cmd = CommandBuilder::uid_fetch()
                 .all_after(1_u32)
                 .attr(Attribute::Uid)
@@ -52,7 +54,8 @@ fn imap_fetch(
                 process_email(&response_data);
                 Ok(())
             })
-        }).and_then(move |tls_client| tls_client.call(CommandBuilder::close()).collect())
+        })
+        .and_then(move |tls_client| tls_client.call(CommandBuilder::close()).collect())
         .and_then(|_| Ok(()))
         .map_err(|e| ImapError::UidFetch { cause: e });
     let res = tokio_current_thread::block_on_all({
