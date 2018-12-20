@@ -1,3 +1,9 @@
+//!
+//! https://tools.ietf.org/html/rfc3501
+//!
+//! INTERNET MESSAGE ACCESS PROTOCOL
+//!
+
 // rustfmt doesn't do a very good job on nom parser invocations.
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
@@ -6,10 +12,10 @@ use nom::IResult;
 
 use std::str;
 
+use crate::parser::rfc4551;
 use types::*;
 use core::*;
 use body::*;
-
 
 
 fn tag_char(c: u8) -> bool {
@@ -109,12 +115,6 @@ named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
     })
 ));
 
-named!(resp_text_code_highest_mod_seq<ResponseCode>, do_parse!(
-    tag_s!("HIGHESTMODSEQ ") >>
-    num: number_64 >>
-    (ResponseCode::HighestModSeq(num))
-));
-
 named!(resp_text_code_read_only<ResponseCode>, do_parse!(
     tag_s!("READ-ONLY") >>
     (ResponseCode::ReadOnly)
@@ -158,7 +158,7 @@ named!(resp_text_code<ResponseCode>, do_parse!(
         resp_text_code_read_only |
         resp_text_code_read_write |
         resp_text_code_try_create |
-        resp_text_code_highest_mod_seq
+        rfc4551::resp_text_code_highest_mod_seq
     ) >>
     // Per the spec, the closing tag should be "] ".
     // See `resp_text` for more on why this is done differently.
@@ -235,11 +235,7 @@ named!(mailbox_data_lsub<Response>, do_parse!(
 // Unlike `status_att` in the RFC syntax, this includes the value,
 // so that it can return a valid enum object instead of just a key.
 named!(status_att<StatusAttribute>, alt!(
-    do_parse!(
-        tag_s!("HIGHESTMODSEQ ") >>
-        // note the _64 here
-        val: number_64 >>
-        (StatusAttribute::HighestModSeq(val))) |
+    rfc4551::status_att_val_highest_mod_seq |
     do_parse!(
         key: alt!(
             tag_s!("MESSAGES") |
@@ -302,6 +298,8 @@ named!(mailbox_data<Response>, alt!(
     mailbox_data_search
 ));
 
+// An address structure is a parenthesized list that describes an
+// electronic mail address.
 named!(address<Address>, do_parse!(
     tag_s!("(") >>
     name: nstring >>
@@ -404,13 +402,6 @@ named!(msg_att_rfc822_text<AttributeValue>, do_parse!(
     (AttributeValue::Rfc822Text(raw))
 ));
 
-named!(msg_att_mod_seq<AttributeValue>, do_parse!(
-    tag_s!("MODSEQ (") >>
-    num: number_64 >>
-    tag_s!(")") >>
-    (AttributeValue::ModSeq(num))
-));
-
 named!(msg_att_uid<AttributeValue>, do_parse!(
     tag_s!("UID ") >>
     num: number >>
@@ -422,7 +413,7 @@ named!(msg_att<AttributeValue>, alt!(
     msg_att_envelope |
     msg_att_internal_date |
     msg_att_flags |
-    msg_att_mod_seq |
+    rfc4551::msg_att_mod_seq |
     msg_att_rfc822 |
     msg_att_rfc822_header |
     msg_att_rfc822_size |
@@ -645,7 +636,7 @@ mod tests {
 
     #[test]
     fn test_list() {
-        match ::parser::mailbox(b"iNboX ") {
+        match ::parser::rfc3501::mailbox(b"iNboX ") {
             Ok((_, mb)) => {
                 assert_eq!(mb, "INBOX");
             },
