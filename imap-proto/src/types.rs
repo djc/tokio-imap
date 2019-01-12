@@ -57,6 +57,7 @@ pub enum ResponseCode<'a> {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum StatusAttribute {
+    HighestModSeq(u64), // RFC 4551
     Messages(u32),
     Recent(u32),
     UidNext(u32),
@@ -70,17 +71,12 @@ pub enum MailboxDatum<'a> {
     Flags(Vec<&'a str>),
     List {
         flags: Vec<&'a str>,
-        delimiter: &'a str,
+        delimiter: Option<&'a str>,
         name: &'a str,
     },
     Status {
         mailbox: &'a str,
         status: Vec<StatusAttribute>,
-    },
-    SubList {
-        flags: Vec<&'a str>,
-        delimiter: &'a str,
-        name: &'a str,
     },
     Recent(u32),
 }
@@ -94,6 +90,7 @@ pub enum Attribute {
     ModSeq, // RFC 4551, section 3.3.2
     Rfc822,
     Rfc822Size,
+    Rfc822Text,
     Uid,
 }
 
@@ -124,6 +121,7 @@ pub enum AttributeValue<'a> {
     Rfc822(Option<&'a [u8]>),
     Rfc822Header(Option<&'a [u8]>),
     Rfc822Size(u32),
+    Rfc822Text(Option<&'a [u8]>),
     Uid(u32),
 }
 

@@ -38,7 +38,8 @@ impl CommandBuilder {
             "LIST \"{}\" \"{}\"",
             quoted_string(reference).unwrap(),
             quoted_string(glob).unwrap()
-        ).into_bytes();
+        )
+        .into_bytes();
         Command {
             args,
             next_state: None,
@@ -50,7 +51,8 @@ impl CommandBuilder {
             "LOGIN \"{}\" \"{}\"",
             quoted_string(user_name).unwrap(),
             quoted_string(password).unwrap()
-        ).into_bytes();
+        )
+        .into_bytes();
         Command {
             args,
             next_state: Some(State::Authenticated),
@@ -114,7 +116,8 @@ impl FetchCommandMessages {
                 AttrMacro::All => "ALL",
                 AttrMacro::Fast => "FAST",
                 AttrMacro::Full => "FULL",
-            }.as_bytes(),
+            }
+            .as_bytes(),
         );
         FetchCommand { args }
     }
@@ -122,7 +125,8 @@ impl FetchCommandMessages {
 
 pub trait FetchBuilderMessages
 where
-    Self: Sized, {
+    Self: Sized,
+{
     fn prepare(self) -> FetchCommandMessages;
 
     fn num(self, num: u32) -> FetchCommandMessages {
@@ -169,7 +173,8 @@ impl FetchBuilderAttributes for FetchCommandAttributes {
 
 pub trait FetchBuilderAttributes
 where
-    Self: Sized, {
+    Self: Sized,
+{
     fn prepare(self) -> FetchCommandAttributes;
     fn attr(self, attr: Attribute) -> FetchCommandAttributes {
         let FetchCommandAttributes { mut args } = self.prepare();
@@ -182,8 +187,10 @@ where
                 Attribute::ModSeq => "MODSEQ",
                 Attribute::Rfc822 => "RFC822",
                 Attribute::Rfc822Size => "RFC822.SIZE",
+                Attribute::Rfc822Text => "RFC822.TEXT",
                 Attribute::Uid => "UID",
-            }.as_bytes(),
+            }
+            .as_bytes(),
         );
         FetchCommandAttributes { args }
     }
@@ -195,7 +202,8 @@ pub struct FetchCommand {
 
 pub trait FetchBuilderModifiers
 where
-    Self: Sized, {
+    Self: Sized,
+{
     fn prepare(self) -> FetchCommand;
     fn build(self) -> Command {
         let FetchCommand { args } = self.prepare();

@@ -1,6 +1,7 @@
 extern crate futures;
 extern crate futures_state_stream;
 extern crate tokio;
+extern crate tokio_current_thread;
 extern crate tokio_imap;
 
 use futures::future::Future;
@@ -8,12 +9,12 @@ use futures_state_stream::StateStream;
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::io;
-use tokio::executor::current_thread;
-use tokio_imap::{ImapClient, TlsClient};
-use tokio_imap::client::builder::{CommandBuilder, FetchBuilderAttributes, FetchBuilderMessages,
-                                  FetchBuilderModifiers};
+use tokio_imap::client::builder::{
+    CommandBuilder, FetchBuilderAttributes, FetchBuilderMessages, FetchBuilderModifiers,
+};
 use tokio_imap::proto::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
+use tokio_imap::{ImapClient, TlsClient};
 
 fn main() {
     let mut args = std::env::args();
@@ -28,7 +29,10 @@ fn main() {
 }
 
 fn imap_fetch(
-    server: &str, login: String, password: String, mailbox: String
+    server: &str,
+    login: String,
+    password: String,
+    mailbox: String,
 ) -> Result<(), ImapError> {
     eprintln!("Will connect to {}", server);
     let fut_connect = TlsClient::connect(server).map_err(|cause| ImapError::Connect { cause })?;
@@ -54,7 +58,7 @@ fn imap_fetch(
         .and_then(move |tls_client| tls_client.call(CommandBuilder::close()).collect())
         .and_then(|_| Ok(()))
         .map_err(|e| ImapError::UidFetch { cause: e });
-    let res = current_thread::block_on_all({
+    let res = tokio_current_thread::block_on_all({
         eprintln!("Fetching messages...");
         fut_responses
     });
@@ -68,10 +72,10 @@ fn process_email(response_data: &ResponseData) {
             match *val {
                 AttributeValue::Uid(u) => {
                     eprintln!("Message UID: {}", u);
-                },
+                }
                 AttributeValue::Rfc822(Some(src)) => {
                     eprintln!("Message length: {}", src.to_vec().len());
-                },
+                }
                 _ => (),
             }
         }

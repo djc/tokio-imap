@@ -41,20 +41,20 @@ impl<'a> Decoder for ImapCodec {
                 // by retaining a reference to the split buffer, below.
                 let response = unsafe { mem::transmute(response) };
                 (response, buf.len() - remaining.len())
-            },
+            }
             Err(nom::Err::Incomplete(Needed::Size(min))) => {
                 self.decode_need_message_bytes = min;
                 return Ok(None);
-            },
+            }
             Err(nom::Err::Incomplete(_)) => {
                 return Ok(None);
-            },
+            }
             Err(err) => {
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
                     format!("{} during parsing of {:?}", err, buf),
                 ));
-            },
+            }
         };
         let raw = buf.split_to(rsp_len).freeze();
         self.decode_need_message_bytes = 0;
@@ -82,7 +82,10 @@ pub struct ResponseData {
     // is transmuted to `'static` by the `Decoder`, instead, and
     // references returned to callers of `ResponseData` are limited
     // to the lifetime of the `ResponseData` struct.
-    pub response: Response<'static>,
+    //
+    // `raw` is never mutated during the lifetime of `ResponseData`,
+    // and `Response` does not not implement any specific drop glue.
+    response: Response<'static>,
 }
 
 impl ResponseData {
@@ -92,8 +95,8 @@ impl ResponseData {
             _ => None,
         }
     }
-    pub fn parsed(&self) -> &Response {
-        unsafe { mem::transmute(&self.response) }
+    pub fn parsed<'a>(&'a self) -> &'a Response {
+        &self.response
     }
 }
 
@@ -101,7 +104,8 @@ pub type ImapTls = Framed<TlsStream<TcpStream>, ImapCodec>;
 
 impl ImapTransport for ImapTls {}
 
-pub trait ImapTransport
-    : futures::Stream<Item = ResponseData, Error = io::Error>
-    + futures::Sink<SinkItem = Request, SinkError = io::Error> {
+pub trait ImapTransport:
+    futures::Stream<Item = ResponseData, Error = io::Error>
+    + futures::Sink<SinkItem = Request, SinkError = io::Error>
+{
 }

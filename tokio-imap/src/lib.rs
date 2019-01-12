@@ -1,8 +1,3 @@
-#![deny(warnings)]
-#![deny(unused)]
-#![deny(future_incompatible)]
-#![deny(bad_style)]
-
 extern crate bytes;
 #[macro_use]
 extern crate futures;
