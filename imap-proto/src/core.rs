@@ -2,9 +2,7 @@ use nom::{self, IResult};
 
 use std::str;
 
-/// RFC 5234
-/// CRLF = CR LF
-///         ; Internet standard newline
+/// Note: ABNF core also defines CRLF. However, this is CR *or* LF and not CR+LF as in the RFC.
 pub fn crlf(c: u8) -> bool {
     c == b'\r' || c == b'\n'
 }
@@ -114,9 +112,14 @@ named!(pub astring<&[u8]>, alt!(
 ));
 
 /// text = 1*TEXT-CHAR
-named!(pub text<&str>, map_res!(take_till_s!(crlf),
+named!(pub text<&str>, map_res!(take_till_s!(text_char),
     str::from_utf8
 ));
+
+/// TEXT-CHAR = <any CHAR except CR and LF>
+pub fn text_char(c: u8) -> bool {
+    c != b'\r' && c != b'\n'
+}
 
 #[cfg(test)]
 mod tests {
