@@ -1,11 +1,11 @@
 #[macro_use]
 extern crate nom;
 
+pub mod body;
 pub mod builders;
+pub mod core;
 mod parser;
 pub mod types;
-pub mod core;
-pub mod body;
 
 pub use parser::{parse_response, ParseResult};
 pub use types::*;

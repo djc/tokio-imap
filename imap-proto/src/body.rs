@@ -1,6 +1,5 @@
-use types::*;
 use core::*;
-
+use types::*;
 
 named!(pub section_part<Vec<u32>>, do_parse!(
     part: number >>

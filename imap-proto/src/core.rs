@@ -24,8 +24,14 @@ pub fn resp_specials(c: u8) -> bool {
 
 /// atom-specials = "(" / ")" / "{" / SP / CTL / list-wildcards / quoted-specials / resp-specials
 pub fn atom_specials(c: u8) -> bool {
-    c == b'(' || c == b')' || c == b'{' || c == b' ' || c < 32 || list_wildcards(c)
-        || quoted_specials(c) || resp_specials(c)
+    c == b'('
+        || c == b')'
+        || c == b'{'
+        || c == b' '
+        || c < 32
+        || list_wildcards(c)
+        || quoted_specials(c)
+        || resp_specials(c)
 }
 
 /// ATOM-CHAR = <any CHAR except atom-specials>
@@ -143,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_string_literal() {
-         match string(b"{3}\r\nXYZ") {
+        match string(b"{3}\r\nXYZ") {
             Ok((_, value)) => {
                 assert_eq!(value, "XYZ".as_bytes());
             }
@@ -160,4 +166,4 @@ mod tests {
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
-} 
+}
