@@ -11,9 +11,6 @@ use core::*;
 use body::*;
 
 
-fn crlf(c: u8) -> bool {
-    c == b'\r' || c == b'\n'
-}
 
 fn tag_char(c: u8) -> bool {
     c != b'+' && astring_char(c)

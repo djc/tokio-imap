@@ -2,6 +2,13 @@ use nom::{self, IResult};
 
 use std::str;
 
+/// RFC 5234
+/// CRLF = CR LF
+///         ; Internet standard newline
+pub fn crlf(c: u8) -> bool {
+    c == b'\r' || c == b'\n'
+}
+
 /// list-wildcards = "%" / "*"
 pub fn list_wildcards(c: u8) -> bool {
     c == b'%' || c == b'*'
@@ -116,6 +123,18 @@ mod tests {
     use nom::{Err, Needed};
 
     use super::*;
+
+    #[test]
+    fn test_quoted() {
+        assert!(quoted(b"\"Hello \\\"World!\\\"!\"").is_ok());
+
+        assert!(quoted(b"\"I am finished!\"").is_ok());
+
+        assert_eq!(
+            quoted(b"\"I am fini..."),
+            Err(Err::Incomplete(Needed::Unknown))
+        );
+    }
 
     #[test]
     fn test_string_literal() {
