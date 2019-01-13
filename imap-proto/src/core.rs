@@ -112,7 +112,7 @@ named!(pub astring<&[u8]>, alt!(
 ));
 
 /// text = 1*TEXT-CHAR
-named!(pub text<&str>, map_res!(take_till_s!(text_char),
+named!(pub text<&str>, map_res!(take_while_s!(text_char),
     str::from_utf8
 ));
 
