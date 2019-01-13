@@ -5,6 +5,7 @@ pub mod builders;
 mod parser;
 pub mod types;
 pub mod core;
+pub mod body;
 
 pub use parser::{parse_response, ParseResult};
 pub use types::*;

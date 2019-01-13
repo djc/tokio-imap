@@ -64,6 +64,11 @@ named!(pub literal<&[u8]>, do_parse!(
 
 named!(pub string<&[u8]>, alt!(quoted | literal));
 
+named!(pub nstring<Option<&[u8]>>, map!(
+    alt!(tag_s!("NIL") | string),
+    |s| if s == b"NIL" { None } else { Some(s) }
+));
+
 named!(pub number<u32>, map_res!(
     map_res!(nom::digit, str::from_utf8),
     str::parse
