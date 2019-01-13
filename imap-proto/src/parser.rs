@@ -43,10 +43,6 @@ named!(status<Status>, alt!(
     status_bye
 ));
 
-named!(text<&str>, map_res!(take_till_s!(crlf),
-    str::from_utf8
-));
-
 named!(mailbox<&str>, map!(
     map_res!(astring, str::from_utf8),
     |s| {
