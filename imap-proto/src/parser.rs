@@ -2,82 +2,21 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
 
-use nom::{self, IResult};
+use nom::{self, IResult, ErrorKind};
 
 use std::str;
 
 use types::*;
+use core::*;
 
 
 fn crlf(c: u8) -> bool {
     c == b'\r' || c == b'\n'
 }
 
-fn list_wildcards(c: u8) -> bool {
-    c == b'%' || c == b'*'
-}
-
-fn quoted_specials(c: u8) -> bool {
-    c == b'"' || c == b'\\'
-}
-
-fn resp_specials(c: u8) -> bool {
-    c == b']'
-}
-
-fn atom_specials(c: u8) -> bool {
-    c == b'(' || c == b')' || c == b'{' || c == b' ' || c < 32 || list_wildcards(c)
-        || quoted_specials(c) || resp_specials(c)
-}
-
-fn atom_char(c: u8) -> bool {
-    !atom_specials(c)
-}
-
-fn astring_char(c: u8) -> bool {
-    atom_char(c) || resp_specials(c)
-}
-
 fn tag_char(c: u8) -> bool {
     c != b'+' && astring_char(c)
 }
-
-// Ideally this should use nom's `escaped` macro, but it suffers from broken
-// type inference unless compiled with the verbose-errors feature enabled.
-fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
-    let mut escape = false;
-    let mut len = 0;
-    for c in i {
-        if *c == b'"' && !escape {
-            break;
-        }
-        len += 1;
-        if *c == b'\\' && !escape {
-            escape = true
-        } else if escape {
-            escape = false;
-        }
-    }
-    Ok((&i[len..], &i[..len]))
-}
-
-named!(quoted<&[u8]>, do_parse!(
-    tag_s!("\"") >>
-    data: quoted_data >>
-    tag_s!("\"") >>
-    (data)
-));
-
-named!(literal<&[u8]>, do_parse!(
-    tag_s!("{") >>
-    len: number >>
-    tag_s!("}") >>
-    tag_s!("\r\n") >>
-    data: take!(len) >>
-    (data)
-));
-
-named!(string<&[u8]>, alt!(quoted | literal));
 
 named!(status_ok<Status>, map!(tag_no_case!("OK"),
     |_s| Status::Ok
@@ -103,27 +42,8 @@ named!(status<Status>, alt!(
     status_bye
 ));
 
-named!(number<u32>, map_res!(
-    map_res!(nom::digit, str::from_utf8),
-    str::parse
-));
-
-named!(number_64<u64>, map_res!(
-    map_res!(nom::digit, str::from_utf8),
-    str::parse
-));
-
 named!(text<&str>, map_res!(take_till_s!(crlf),
     str::from_utf8
-));
-
-named!(atom<&str>, map_res!(take_while1_s!(atom_char),
-    str::from_utf8
-));
-
-named!(astring<&[u8]>, alt!(
-    take_while1!(astring_char) |
-    string
 ));
 
 named!(mailbox<&str>, map!(
@@ -790,26 +710,6 @@ mod tests {
     fn test_uid_fetch() {
         match parse_response(b"* 4 FETCH (UID 71372 RFC822.HEADER {10275}\r\n") {
             Err(nom::Err::Incomplete(nom::Needed::Size(10275))) => {},
-            rsp => panic!("unexpected response {:?}", rsp),
-        }
-    }
-
-    #[test]
-    fn test_string_literal() {
-         match ::parser::string(b"{3}\r\nXYZ") {
-            Ok((_, value)) => {
-                assert_eq!(value, "XYZ".as_bytes());
-            }
-            rsp => panic!("unexpected response {:?}", rsp),
-        }
-    }
-
-    #[test]
-    fn test_astring() {
-        match ::parser::astring(b"text ") {
-            Ok((_, value)) => {
-                assert_eq!(value, "text".as_bytes());
-            }
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
