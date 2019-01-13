@@ -2,82 +2,22 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
 
-use nom::{self, IResult};
+use nom::IResult;
 
 use std::str;
 
 use types::*;
+use core::*;
+use body::*;
 
 
 fn crlf(c: u8) -> bool {
     c == b'\r' || c == b'\n'
 }
 
-fn list_wildcards(c: u8) -> bool {
-    c == b'%' || c == b'*'
-}
-
-fn quoted_specials(c: u8) -> bool {
-    c == b'"' || c == b'\\'
-}
-
-fn resp_specials(c: u8) -> bool {
-    c == b']'
-}
-
-fn atom_specials(c: u8) -> bool {
-    c == b'(' || c == b')' || c == b'{' || c == b' ' || c < 32 || list_wildcards(c)
-        || quoted_specials(c) || resp_specials(c)
-}
-
-fn atom_char(c: u8) -> bool {
-    !atom_specials(c)
-}
-
-fn astring_char(c: u8) -> bool {
-    atom_char(c) || resp_specials(c)
-}
-
 fn tag_char(c: u8) -> bool {
     c != b'+' && astring_char(c)
 }
-
-// Ideally this should use nom's `escaped` macro, but it suffers from broken
-// type inference unless compiled with the verbose-errors feature enabled.
-fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
-    let mut escape = false;
-    let mut len = 0;
-    for c in i {
-        if *c == b'"' && !escape {
-            break;
-        }
-        len += 1;
-        if *c == b'\\' && !escape {
-            escape = true
-        } else if escape {
-            escape = false;
-        }
-    }
-    Ok((&i[len..], &i[..len]))
-}
-
-named!(quoted<&[u8]>, do_parse!(
-    tag_s!("\"") >>
-    data: quoted_data >>
-    tag_s!("\"") >>
-    (data)
-));
-
-named!(literal<&[u8]>, do_parse!(
-    tag_s!("{") >>
-    len: number >>
-    tag_s!("}") >>
-    tag_s!("\r\n") >>
-    data: take!(len) >>
-    (data)
-));
-
-named!(string<&[u8]>, alt!(quoted | literal));
 
 named!(status_ok<Status>, map!(tag_no_case!("OK"),
     |_s| Status::Ok
@@ -103,27 +43,8 @@ named!(status<Status>, alt!(
     status_bye
 ));
 
-named!(number<u32>, map_res!(
-    map_res!(nom::digit, str::from_utf8),
-    str::parse
-));
-
-named!(number_64<u64>, map_res!(
-    map_res!(nom::digit, str::from_utf8),
-    str::parse
-));
-
 named!(text<&str>, map_res!(take_till_s!(crlf),
     str::from_utf8
-));
-
-named!(atom<&str>, map_res!(take_while1_s!(atom_char),
-    str::from_utf8
-));
-
-named!(astring<&[u8]>, alt!(
-    take_while1!(astring_char) |
-    string
 ));
 
 named!(mailbox<&str>, map!(
@@ -170,53 +91,6 @@ named!(flag_list<Vec<&str>>, do_parse!(
 named!(flag_perm<&str>, alt!(
     map_res!(tag_s!("\\*"), str::from_utf8) |
     flag
-));
-
-named!(section_part<Vec<u32>>, do_parse!(
-    part: number >>
-    rest: many0!(do_parse!(
-        tag_s!(".") >>
-        part: number >>
-        (part)
-    ))  >> ({
-        let mut res = vec![part];
-        res.extend(rest);
-        res
-    })
-));
-
-named!(section_msgtext<MessageSection>, map!(
-    alt!(tag_s!("HEADER") | tag_s!("TEXT")),
-    |s| match s {
-        b"HEADER" => MessageSection::Header,
-        b"TEXT" => MessageSection::Text,
-        _ => panic!("cannot happen"),
-    }
-));
-
-named!(section_text<MessageSection>, alt!(
-    section_msgtext |
-    do_parse!(tag_s!("MIME") >> (MessageSection::Mime))
-));
-
-named!(section_spec<SectionPath>, alt!(
-    map!(section_msgtext, |val| SectionPath::Full(val)) |
-    do_parse!(
-        part: section_part >>
-        text: opt!(do_parse!(
-            tag_s!(".") >>
-            text: section_text >>
-            (text)
-        )) >>
-        (SectionPath::Part(part, text))
-    )
-));
-
-named!(section<Option<SectionPath>>, do_parse!(
-    tag_s!("[") >>
-    spec: opt!(section_spec) >>
-    tag_s!("]") >>
-    (spec)
 ));
 
 named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
@@ -435,11 +309,6 @@ named!(mailbox_data<Response>, alt!(
     mailbox_data_search
 ));
 
-named!(nstring<Option<&[u8]>>, map!(
-    alt!(tag_s!("NIL") | string),
-    |s| if s == b"NIL" { None } else { Some(s) }
-));
-
 named!(address<Address>, do_parse!(
     tag_s!("(") >>
     name: nstring >>
@@ -466,20 +335,6 @@ named!(opt_addresses<Option<Vec<Address>>>, alt!(
         tag_s!(")") >>
         (Some(addrs))
     )
-));
-
-named!(msg_att_body_section<AttributeValue>, do_parse!(
-    tag_s!("BODY") >>
-    section: section >>
-    index: opt!(do_parse!(
-        tag_s!("<") >>
-        num: number >>
-        tag_s!(">") >>
-        (num)
-    )) >>
-    tag_s!(" ") >>
-    data: nstring >>
-    (AttributeValue::BodySection { section, index, data })
 ));
 
 named!(msg_att_envelope<AttributeValue>, do_parse!(
@@ -701,8 +556,9 @@ pub fn parse_response(msg: &[u8]) -> ParseResult {
 
 #[cfg(test)]
 mod tests {
+    use nom;
+    use super::parse_response;
     use types::*;
-    use super::{nom, parse_response};
 
     #[test]
     fn test_number_overflow() {
@@ -790,26 +646,6 @@ mod tests {
     fn test_uid_fetch() {
         match parse_response(b"* 4 FETCH (UID 71372 RFC822.HEADER {10275}\r\n") {
             Err(nom::Err::Incomplete(nom::Needed::Size(10275))) => {},
-            rsp => panic!("unexpected response {:?}", rsp),
-        }
-    }
-
-    #[test]
-    fn test_string_literal() {
-         match ::parser::string(b"{3}\r\nXYZ") {
-            Ok((_, value)) => {
-                assert_eq!(value, "XYZ".as_bytes());
-            }
-            rsp => panic!("unexpected response {:?}", rsp),
-        }
-    }
-
-    #[test]
-    fn test_astring() {
-        match ::parser::astring(b"text ") {
-            Ok((_, value)) => {
-                assert_eq!(value, "text".as_bytes());
-            }
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }

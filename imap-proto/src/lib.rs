@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate nom;
 
+pub mod body;
 pub mod builders;
+pub mod core;
 mod parser;
 pub mod types;
 
