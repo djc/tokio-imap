@@ -112,6 +112,11 @@ named!(pub astring<&[u8]>, alt!(
     string
 ));
 
+/// text = 1*TEXT-CHAR
+named!(pub text<&str>, map_res!(take_till_s!(crlf),
+    str::from_utf8
+));
+
 #[cfg(test)]
 mod tests {
     use super::*;
