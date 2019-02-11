@@ -166,16 +166,48 @@ named!(resp_text_code<ResponseCode>, do_parse!(
     (coded)
 ));
 
-named!(capability<&str>, do_parse!(
-    tag_s!(" ") >>
-    atom: map_res!(take_till1_s!(atom_specials), str::from_utf8) >>
-    (atom)
+/// [RFC3501 - 9. Formal Syntax - capability](https://tools.ietf.org/html/rfc3501#section-9)
+named!(capability_auth<Capability>, do_parse!(
+    tag_s!("AUTH=") >>
+    auth: atom >>
+    (Capability::Auth(auth))
 ));
 
+/// [RFC3501 - 9. Formal Syntax - capability](https://tools.ietf.org/html/rfc3501#section-9)
+named!(capability_atom<Capability>, do_parse!(
+    not!(tag!("IMAP4rev1")) >>
+    atom: atom >>
+    (Capability::Atom(atom))
+));
+
+/// [RFC3501 - 9. Formal Syntax - capability](https://tools.ietf.org/html/rfc3501#section-9)
+named!(capability<Capability>, do_parse!(
+    tag!(" ") >>
+    capability: alt!(
+        capability_auth |
+        capability_atom
+    ) >>
+    (capability)
+));
+
+/// The CAPABILITY command requests a listing of capabilities that the
+/// server supports.
+/// [RFC3501 - 6.1.1 CAPABILITY Command](https://tools.ietf.org/html/rfc3501#section-6.1.1)
+/// [RFC3501 - 9. Formal Syntax - capability-data](https://tools.ietf.org/html/rfc3501#section-9)
 named!(capability_data<Response>, do_parse!(
     tag_s!("CAPABILITY") >>
-    capabilities: many1!(capability) >>
-    (Response::Capabilities(capabilities))
+    capabilities_a: many0!(capability) >>
+    tag_s!(" IMAP4rev1") >>
+    capabilities_b: many0!(capability) >>
+    ({
+        let capacity = capabilities_a.len() + 1 +  capabilities_b.len();
+        let mut capabilities = Vec::with_capacity(capacity);
+        capabilities.extend(capabilities_a);
+        capabilities.push(Capability::IMAP4rev1);
+        capabilities.extend(capabilities_b);
+
+        Response::Capabilities(capabilities)
+    })
 ));
 
 named!(mailbox_data_search<Response>, do_parse!(
@@ -676,11 +708,48 @@ mod tests {
         }
     }
 
-      #[test]
+    #[test]
     fn test_addresses() {
         match ::parser::rfc3501::address(b"(\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\") ") {
             Ok((_, _address)) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+    }
+
+    #[test]
+    fn test_mailbox_data_recent() {
+        match ::parser::rfc3501::mailbox_data_recent(b"5 RECENT\r\n") {
+            Ok((_, Response::MailboxData(MailboxDatum::Recent(num)))) => assert_eq!(5, num),
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+    }
+
+    #[test]
+    fn test_capability_data() {
+        // Minimal capabilities
+        match ::parser::rfc3501::capability_data(b"CAPABILITY IMAP4rev1\r\n") {
+            Ok((_, Response::Capabilities(capabilities))) =>
+                assert_eq!(vec!(Capability::IMAP4rev1), capabilities),
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+
+        match ::parser::rfc3501::capability_data(b"CAPABILITY XPIG-LATIN IMAP4rev1 STARTTLS AUTH=GSSAPI\r\n") {
+            Ok((_, Response::Capabilities(capabilities))) =>
+                assert_eq!(vec!(Capability::Atom("XPIG-LATIN"), Capability::IMAP4rev1, Capability::Atom("STARTTLS"), Capability::Auth("GSSAPI")), capabilities),
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+
+        match ::parser::rfc3501::capability_data(b"CAPABILITY IMAP4rev1 AUTH=GSSAPI AUTH=PLAIN\r\n") {
+            Ok((_, Response::Capabilities(capabilities))) =>
+                assert_eq!(vec!(Capability::IMAP4rev1, Capability::Auth("GSSAPI"), Capability::Auth("PLAIN")), capabilities),
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+
+        // Capability command must contain IMAP4rev1
+        match ::parser::rfc3501::capability_data(b"CAPABILITY AUTH=GSSAPI AUTH=PLAIN\r\n") {
+            Ok((_, Response::Capabilities(capabilities))) =>
+                panic!("unexpected response {:?}", capabilities),
+            _ => {},
         }
     }
 }
