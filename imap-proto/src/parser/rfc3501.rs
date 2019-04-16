@@ -97,6 +97,25 @@ named!(resp_text_code_alert<ResponseCode>, do_parse!(
     (ResponseCode::Alert)
 ));
 
+named!(resp_text_code_badcharset<ResponseCode>, do_parse!(
+    tag_s!("BADCHARSET") >>
+    ch: opt!(do_parse!(
+        tag_s!(" (") >>
+        charset0: map_res!(astring, str::from_utf8) >>
+        charsets: many0!(do_parse!(
+            tag_s!(" ") >>
+            charset: map_res!(astring, str::from_utf8) >>
+            (charset)
+        )) >>
+        tag_s!(")") >> ({
+            let mut res = vec![charset0];
+            res.extend(charsets);
+            res
+        })
+    )) >>
+    (ResponseCode::BadCharset(ch))
+));
+
 named!(resp_text_code_capability<ResponseCode>, do_parse!(
     tag_s!("CAPABILITY") >>
     capabilities: many1!(capability) >>
@@ -168,6 +187,7 @@ named!(resp_text_code<ResponseCode>, do_parse!(
     tag_s!("[") >>
     coded: alt!(
         resp_text_code_alert |
+        resp_text_code_badcharset |
         resp_text_code_capability |
         resp_text_code_parse |
         resp_text_code_permanent_flags |
@@ -725,6 +745,28 @@ mod tests {
                 assert_eq!(c[0], "IMAP4rev1");
                 assert_eq!(c[1], "IDLE");
             }
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+
+        match parse_response(b"* NO [BADCHARSET] error\r\n") {
+            Ok((_, Response::Data {
+                status: Status::No,
+                code: Some(ResponseCode::BadCharset(None)),
+                information: Some("error")
+            })) => {},
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+
+        match parse_response(b"* NO [BADCHARSET (utf-8 latin1)] error\r\n") {
+            Ok((_, Response::Data {
+                status: Status::No,
+                code: Some(ResponseCode::BadCharset(Some(v))),
+                information: Some("error")
+            })) => {
+                assert_eq!(v.len(), 2);
+                assert_eq!(v[0], "utf-8");
+                assert_eq!(v[1], "latin1");
+            },
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }
     }
