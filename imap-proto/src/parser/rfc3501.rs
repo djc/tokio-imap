@@ -92,6 +92,16 @@ named!(flag_perm<&str>, alt!(
     flag
 ));
 
+named!(resp_text_code_alert<ResponseCode>, do_parse!(
+    tag_s!("ALERT") >>
+    (ResponseCode::Alert)
+));
+
+named!(resp_text_code_parse<ResponseCode>, do_parse!(
+    tag_s!("PARSE") >>
+    (ResponseCode::Parse)
+));
+
 named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
     tag_s!("PERMANENTFLAGS (") >>
     elements: opt!(do_parse!(
@@ -151,6 +161,8 @@ named!(resp_text_code_unseen<ResponseCode>, do_parse!(
 named!(resp_text_code<ResponseCode>, do_parse!(
     tag_s!("[") >>
     coded: alt!(
+        resp_text_code_alert |
+        resp_text_code_parse |
         resp_text_code_permanent_flags |
         resp_text_code_uid_validity |
         resp_text_code_uid_next |
