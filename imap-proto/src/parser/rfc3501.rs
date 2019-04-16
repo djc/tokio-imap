@@ -116,9 +116,20 @@ named!(resp_text_code_badcharset<ResponseCode>, do_parse!(
     (ResponseCode::BadCharset(ch))
 ));
 
+named!(capability_list<Vec<&str>>, do_parse!(
+    capabilities1: many_till!(capability, tag_s!(" IMAP4rev1")) >>
+    capabilities2: many0!(capability) >> ({
+        let mut v = Vec::with_capacity(10);
+        v.extend(capabilities1.0);
+        v.push("IMAP4rev1");
+        v.extend(capabilities2);
+        v
+    })
+));
+
 named!(resp_text_code_capability<ResponseCode>, do_parse!(
     tag_s!("CAPABILITY") >>
-    capabilities: many1!(capability) >>
+    capabilities: capability_list >>
     (ResponseCode::Capabilities(capabilities))
 ));
 
@@ -213,7 +224,7 @@ named!(capability<&str>, do_parse!(
 
 named!(capability_data<Response>, do_parse!(
     tag_s!("CAPABILITY") >>
-    capabilities: many1!(capability) >>
+    capabilities: capability_list >>
     (Response::Capabilities(capabilities))
 ));
 
@@ -745,6 +756,30 @@ mod tests {
                 assert_eq!(c[0], "IMAP4rev1");
                 assert_eq!(c[1], "IDLE");
             }
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+
+        match parse_response(b"* OK [CAPABILITY UIDPLUS IMAP4rev1 IDLE] Logged in\r\n") {
+            Ok((_, Response::Data {
+                status: Status::Ok,
+                code: Some(ResponseCode::Capabilities(c)),
+                information: Some("Logged in")
+            })) => {
+                assert_eq!(c.len(), 3);
+                assert_eq!(c[0], "UIDPLUS");
+                assert_eq!(c[1], "IMAP4rev1");
+                assert_eq!(c[2], "IDLE");
+            }
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+
+        // Missing IMAP4rev1
+        match parse_response(b"* OK [CAPABILITY UIDPLUS IDLE] Logged in\r\n") {
+            Ok((_, Response::Data {
+                status: Status::Ok,
+                code: None,
+                information: Some("[CAPABILITY UIDPLUS IDLE] Logged in")
+            })) => {}
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }
 
