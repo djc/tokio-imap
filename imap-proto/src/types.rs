@@ -46,6 +46,7 @@ pub enum Status {
 #[derive(Debug, Eq, PartialEq)]
 pub enum ResponseCode<'a> {
     Alert,
+    Capabilities(Vec<&'a str>),
     HighestModSeq(u64), // RFC 4551, section 3.1.1
     Parse,
     PermanentFlags(Vec<&'a str>),

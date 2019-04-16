@@ -97,6 +97,12 @@ named!(resp_text_code_alert<ResponseCode>, do_parse!(
     (ResponseCode::Alert)
 ));
 
+named!(resp_text_code_capability<ResponseCode>, do_parse!(
+    tag_s!("CAPABILITY") >>
+    capabilities: many1!(capability) >>
+    (ResponseCode::Capabilities(capabilities))
+));
+
 named!(resp_text_code_parse<ResponseCode>, do_parse!(
     tag_s!("PARSE") >>
     (ResponseCode::Parse)
@@ -162,6 +168,7 @@ named!(resp_text_code<ResponseCode>, do_parse!(
     tag_s!("[") >>
     coded: alt!(
         resp_text_code_alert |
+        resp_text_code_capability |
         resp_text_code_parse |
         resp_text_code_permanent_flags |
         resp_text_code_uid_validity |
@@ -688,10 +695,36 @@ mod tests {
         }
     }
 
-      #[test]
+    #[test]
     fn test_addresses() {
         match ::parser::rfc3501::address(b"(\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\") ") {
             Ok((_, _address)) => {},
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+    }
+
+    #[test]
+    fn test_response_codes() {
+        match parse_response(b"* OK [ALERT] Alert!\r\n") {
+            Ok((_, Response::Data { status: Status::Ok, code: Some(ResponseCode::Alert), information: Some("Alert!") })) => {}
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+
+        match parse_response(b"* NO [PARSE] Something\r\n") {
+            Ok((_, Response::Data { status: Status::No, code: Some(ResponseCode::Parse), information: Some("Something") })) => {}
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+
+        match parse_response(b"* OK [CAPABILITY IMAP4rev1 IDLE] Logged in\r\n") {
+            Ok((_, Response::Data {
+                status: Status::Ok,
+                code: Some(ResponseCode::Capabilities(c)),
+                information: Some("Logged in")
+            })) => {
+                assert_eq!(c.len(), 2);
+                assert_eq!(c[0], "IMAP4rev1");
+                assert_eq!(c[1], "IDLE");
+            }
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }
     }
