@@ -769,5 +769,14 @@ mod tests {
             },
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }
+
+        match parse_response(b"* NO [BADCHARSET ()] error\r\n") {
+            Ok((_, Response::Data {
+                status: Status::No,
+                code: None,
+                information: Some("[BADCHARSET ()] error")
+            })) => {}
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
     }
 }
