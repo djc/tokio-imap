@@ -82,9 +82,9 @@ named!(pub literal<&[u8]>, do_parse!(
 named!(pub string<&[u8]>, alt!(quoted | literal));
 
 /// nstring = string / nil
-named!(pub nstring<Option<&[u8]>>, map!(
-    alt!(tag_s!("NIL") | string),
-    |s| if s == b"NIL" { None } else { Some(s) }
+named!(pub nstring<Option<&[u8]>>, alt!(
+    map!(tag_s!("NIL"), |_| None) |
+    map!(string, |s| Some(s))
 ));
 
 /// number          = 1*DIGIT
