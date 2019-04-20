@@ -131,39 +131,51 @@ pub enum BodyExtension<'a> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct BodyStructureText<'a> {
+    pub media_subtype: &'a str,
+    pub params: Option<Vec<BodyParam<'a>>>,
+    pub id: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub encoding: &'a str,
+    pub octets: u32,
+    pub md5: Option<&'a str>,
+    pub disposition: Option<BodyDisposition<'a>>,
+    pub lang: Option<Vec<&'a str>>,
+    pub loc: Option<&'a str>,
+    pub lines: u32,
+    pub extensions: Option<BodyExtension<'a>>
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct BodyStructureBasic<'a> {
+    pub media_type: &'a str,
+    pub media_subtype: &'a str,
+    pub params: Option<Vec<BodyParam<'a>>>,
+    pub id: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub encoding: &'a str,
+    pub octets: u32,
+    pub md5: Option<&'a str>,
+    pub disposition: Option<BodyDisposition<'a>>,
+    pub lang: Option<Vec<&'a str>>,
+    pub loc: Option<&'a str>,
+    pub extensions: Option<BodyExtension<'a>>
+}
+
+// TODO
+#[derive(Debug, Eq, PartialEq)]
+pub struct BodyStructureMessage {}
+
+// TODO
+#[derive(Debug, Eq, PartialEq)]
+pub struct BodyStructureMultipart {}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum BodyStructure<'a> {
-    Basic {
-        media_type: &'a str,
-        media_subtype: &'a str,
-        params: Option<Vec<BodyParam<'a>>>,
-        id: Option<&'a str>,
-        description: Option<&'a str>,
-        encoding: &'a str,
-        octets: u32,
-        md5: Option<&'a str>,
-        disposition: Option<BodyDisposition<'a>>,
-        lang: Option<Vec<&'a str>>,
-        loc: Option<&'a str>,
-        extensions: Option<BodyExtension<'a>>
-    },
-    Text {
-        media_subtype: &'a str,
-        params: Option<Vec<BodyParam<'a>>>,
-        id: Option<&'a str>,
-        description: Option<&'a str>,
-        encoding: &'a str,
-        octets: u32,
-        md5: Option<&'a str>,
-        disposition: Option<BodyDisposition<'a>>,
-        lang: Option<Vec<&'a str>>,
-        loc: Option<&'a str>,
-        lines: u32,
-        extensions: Option<BodyExtension<'a>>
-    },
-    // TODO
-    Message,
-    // TODO
-    Multipart
+    Basic(BodyStructureBasic<'a>),
+    Text(BodyStructureText<'a>),
+    Message(BodyStructureMessage),
+    Multipart(BodyStructureMultipart)
 }
 
 #[derive(Debug, Eq, PartialEq)]
