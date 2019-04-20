@@ -59,6 +59,12 @@ pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
     Ok((&i[len..], &i[..len]))
 }
 
+/// space = a single space character
+named!(pub space, tag_s!(" "));
+
+// nil = "NIL"
+named!(pub nil, tag_s!("NIL"));
+
 /// quoted = DQUOTE *QUOTED-CHAR DQUOTE
 named!(pub quoted<&[u8]>, do_parse!(
     tag_s!("\"") >>
@@ -81,29 +87,28 @@ named!(pub literal<&[u8]>, do_parse!(
 /// string = quoted / literal
 named!(pub string<&[u8]>, alt!(quoted | literal));
 
+/// string bytes as as utf8
+named!(pub string_utf8<&str>, map_res!(string, str::from_utf8));
+
 /// nstring = string / nil
 named!(pub nstring<Option<&[u8]>>, alt!(
-    map!(tag_s!("NIL"), |_| None) |
+    map!(nil, |_| None) |
     map!(string, |s| Some(s))
 ));
 
-named!(pub string_utf8<&str>, map!(string, |s| str::from_utf8(s).unwrap()));
-
-named!(pub nstring_utf8<Option<&str>>, map!(nstring, |val| val.map(|s| str::from_utf8(s).unwrap())));
+/// nstring bytes as utf8
+named!(pub nstring_utf8<Option<&str>>, alt!(
+    map!(nil, |_| None) |
+    map!(map_res!(string, str::from_utf8), |s| Some(s))
+));
 
 /// number          = 1*DIGIT
 ///                    ; Unsigned 32-bit integer
 ///                    ; (0 <= n < 4,294,967,296)
-named!(pub number<u32>, map_res!(
-    map_res!(nom::digit, str::from_utf8),
-    str::parse
-));
+named!(pub number<u32>, flat_map!(nom::digit, parse_to!(u32)));
 
 /// same as `number` but 64-bit
-named!(pub number_64<u64>, map_res!(
-    map_res!(nom::digit, str::from_utf8),
-    str::parse
-));
+named!(pub number_64<u64>, flat_map!(nom::digit, parse_to!(u64)));
 
 /// atom = 1*ATOM-CHAR
 named!(pub atom<&str>, map_res!(take_while1_s!(atom_char),
