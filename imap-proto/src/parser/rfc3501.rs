@@ -16,6 +16,7 @@ use crate::parser::rfc4551;
 use types::*;
 use core::*;
 use body::*;
+use body_structure::*;
 
 
 fn tag_char(c: u8) -> bool {
@@ -460,6 +461,7 @@ named!(msg_att_uid<AttributeValue>, do_parse!(
 
 named!(msg_att<AttributeValue>, alt!(
     msg_att_body_section |
+    msg_att_body_structure |
     msg_att_envelope |
     msg_att_internal_date |
     msg_att_flags |
@@ -624,6 +626,18 @@ mod tests {
                     index: None,
                     data: Some(b"foo"),
                 }, "body = {:?}", body);
+            },
+            rsp @ _ => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_body_structure() {
+        const RESPONSE: &[u8] = b"* 15 FETCH (BODYSTRUCTURE (\"TEXT\" \"PLAIN\" (\"CHARSET\" \"iso-8859-1\") NIL NIL \"QUOTED-PRINTABLE\" 1315 42 NIL NIL NIL NIL))\r\n";
+        match parse_response(RESPONSE) {
+            Ok((_, Response::Fetch(_, attrs))) => {
+                let body = &attrs[0];
+                assert!(if let &AttributeValue::BodyStructure(_) = body { true } else { false }, "body = {:?}", body);
             },
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }

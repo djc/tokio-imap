@@ -112,12 +112,68 @@ pub enum SectionPath {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct BodyParam<'a> {
+    pub key: &'a str,
+    pub val: &'a str
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct BodyDisposition<'a> {
+    pub disposition_type: &'a str,
+    pub params: Option<Vec<(BodyParam<'a>)>>
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum BodyExtension<'a> {
+    Num(u32),
+    Str(Option<&'a str>),
+    List(Vec<BodyExtension<'a>>)
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum BodyStructure<'a> {
+    Basic {
+        media_type: &'a str,
+        media_subtype: &'a str,
+        params: Option<Vec<BodyParam<'a>>>,
+        id: Option<&'a str>,
+        description: Option<&'a str>,
+        encoding: &'a str,
+        octets: u32,
+        md5: Option<&'a str>,
+        disposition: Option<BodyDisposition<'a>>,
+        lang: Option<Vec<&'a str>>,
+        loc: Option<&'a str>,
+        extensions: Option<BodyExtension<'a>>
+    },
+    Text {
+        media_subtype: &'a str,
+        params: Option<Vec<BodyParam<'a>>>,
+        id: Option<&'a str>,
+        description: Option<&'a str>,
+        encoding: &'a str,
+        octets: u32,
+        md5: Option<&'a str>,
+        disposition: Option<BodyDisposition<'a>>,
+        lang: Option<Vec<&'a str>>,
+        loc: Option<&'a str>,
+        lines: u32,
+        extensions: Option<BodyExtension<'a>>
+    },
+    // TODO
+    Message,
+    // TODO
+    Multipart
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum AttributeValue<'a> {
     BodySection {
         section: Option<SectionPath>,
         index: Option<u32>,
         data: Option<&'a [u8]>,
     },
+    BodyStructure(Box<BodyStructure<'a>>),
     Envelope(Box<Envelope<'a>>),
     Flags(Vec<&'a str>),
     InternalDate(&'a str),

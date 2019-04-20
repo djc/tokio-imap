@@ -87,6 +87,10 @@ named!(pub nstring<Option<&[u8]>>, alt!(
     map!(string, |s| Some(s))
 ));
 
+named!(pub string_utf8<&str>, map!(string, |s| str::from_utf8(s).unwrap()));
+
+named!(pub nstring_utf8<Option<&str>>, map!(nstring, |val| val.map(|s| str::from_utf8(s).unwrap())));
+
 /// number          = 1*DIGIT
 ///                    ; Unsigned 32-bit integer
 ///                    ; (0 <= n < 4,294,967,296)
