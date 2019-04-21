@@ -120,7 +120,7 @@ pub struct BodyParam<'a> {
 #[derive(Debug, Eq, PartialEq)]
 pub struct BodyDisposition<'a> {
     pub disposition_type: &'a str,
-    pub params: Option<Vec<(BodyParam<'a>)>>,
+    pub param: Option<Vec<BodyParam<'a>>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -133,7 +133,7 @@ pub enum BodyExtension<'a> {
 #[derive(Debug, Eq, PartialEq)]
 pub struct BodyStructureText<'a> {
     pub media_subtype: &'a str,
-    pub params: Option<Vec<BodyParam<'a>>>,
+    pub param: Option<Vec<BodyParam<'a>>>,
     pub id: Option<&'a str>,
     pub description: Option<&'a str>,
     pub encoding: &'a str,
@@ -141,16 +141,16 @@ pub struct BodyStructureText<'a> {
     pub md5: Option<&'a str>,
     pub disposition: Option<BodyDisposition<'a>>,
     pub lang: Option<Vec<&'a str>>,
-    pub loc: Option<&'a str>,
+    pub location: Option<&'a str>,
     pub lines: u32,
-    pub extensions: Option<BodyExtension<'a>>,
+    pub extension: Option<BodyExtension<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct BodyStructureBasic<'a> {
     pub media_type: &'a str,
     pub media_subtype: &'a str,
-    pub params: Option<Vec<BodyParam<'a>>>,
+    pub param: Option<Vec<BodyParam<'a>>>,
     pub id: Option<&'a str>,
     pub description: Option<&'a str>,
     pub encoding: &'a str,
@@ -158,13 +158,13 @@ pub struct BodyStructureBasic<'a> {
     pub md5: Option<&'a str>,
     pub disposition: Option<BodyDisposition<'a>>,
     pub lang: Option<Vec<&'a str>>,
-    pub loc: Option<&'a str>,
-    pub extensions: Option<BodyExtension<'a>>,
+    pub location: Option<&'a str>,
+    pub extension: Option<BodyExtension<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct BodyStructureMessage<'a> {
-    pub params: Option<Vec<BodyParam<'a>>>,
+    pub param: Option<Vec<BodyParam<'a>>>,
     pub id: Option<&'a str>,
     pub description: Option<&'a str>,
     pub encoding: &'a str,
@@ -178,11 +178,11 @@ pub struct BodyStructureMessage<'a> {
 pub struct BodyStructureMultipart<'a> {
     pub bodies: Vec<BodyStructure<'a>>,
     pub media_subtype: &'a str,
-    pub params: Option<Vec<BodyParam<'a>>>,
+    pub param: Option<Vec<BodyParam<'a>>>,
     pub disposition: Option<BodyDisposition<'a>>,
     pub lang: Option<Vec<&'a str>>,
-    pub loc: Option<&'a str>,
-    pub extensions: Option<BodyExtension<'a>>,
+    pub location: Option<&'a str>,
+    pub extension: Option<BodyExtension<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]

@@ -15,3 +15,21 @@ macro_rules! opt_opt(
         opt_opt!($i, call!($f));
     );
 );
+
+macro_rules! paren_delimited(
+    ($i:expr, $submac:ident!( $($args:tt)* )) => ({
+        delimited!($i, char!('('), $submac!($($args)*), char!(')'))
+    });
+    ($i:expr, $f:expr) => (
+        paren_delimited!($i, call!($f));
+    );
+);
+
+macro_rules! paren_list(
+    ($i:expr, $submac:ident!( $($args:tt)* )) => ({
+        paren_delimited!($i, separated_nonempty_list!(opt!(space), $submac!($($args)*)))
+    });
+    ($i:expr, $f:expr) => (
+        paren_list!($i, call!($f));
+    );
+);
