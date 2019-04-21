@@ -162,20 +162,36 @@ pub struct BodyStructureBasic<'a> {
     pub extensions: Option<BodyExtension<'a>>
 }
 
-// TODO
 #[derive(Debug, Eq, PartialEq)]
-pub struct BodyStructureMessage {}
+pub struct BodyStructureMessage<'a> {
+    pub params: Option<Vec<BodyParam<'a>>>,
+    pub id: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub encoding: &'a str,
+    pub octets: u32,
+    pub envelope: Box<Envelope<'a>>,
+    pub body: Box<BodyStructure<'a>>,
+    pub lines: u32
+}
 
 // TODO
 #[derive(Debug, Eq, PartialEq)]
-pub struct BodyStructureMultipart {}
+pub struct BodyStructureMultipart<'a> {
+    pub bodies: Vec<BodyStructure<'a>>,
+    pub media_subtype: &'a str,
+    pub params: Option<Vec<BodyParam<'a>>>,
+    pub disposition: Option<BodyDisposition<'a>>,
+    pub lang: Option<Vec<&'a str>>,
+    pub loc: Option<&'a str>,
+    pub extensions: Option<BodyExtension<'a>>
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum BodyStructure<'a> {
     Basic(BodyStructureBasic<'a>),
     Text(BodyStructureText<'a>),
-    Message(BodyStructureMessage),
-    Multipart(BodyStructureMultipart)
+    Message(BodyStructureMessage<'a>),
+    Multipart(BodyStructureMultipart<'a>)
 }
 
 #[derive(Debug, Eq, PartialEq)]

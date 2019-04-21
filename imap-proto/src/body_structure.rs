@@ -1,6 +1,8 @@
 use core::*;
 use types::*;
 
+use parser::envelope;
+
 use std::str;
 
 named!(body_lang<Option<Vec<&str>>>, alt!(
@@ -117,22 +119,81 @@ named!(body_type_text<BodyStructure>, do_parse!(
         encoding,
         octets,
         lines,
-        md5: None,
-        disposition: None,
-        lang: None,
-        loc: None,
-        extensions: None
+        md5,
+        disposition,
+        lang,
+        loc,
+        extensions
     }))
 ));
 
-named!(body_type<BodyStructure>, alt!(
-    body_type_text | body_type_basic
+named!(body_type_message<BodyStructure>, do_parse!(
+    tag_s!("\"MESSAGE\" \"RFC822\"") >>
+    space >>
+    params: body_param >>
+    space >>
+    id: nstring_utf8 >>
+    space >>
+    description: nstring_utf8 >>
+    space >>
+    encoding: string_utf8 >>
+    space >>
+    octets: number >>
+    space >>
+    envelope: envelope >>
+    space >>
+    body: body >>
+    space >>
+    lines: number >>
+    (BodyStructure::Message(BodyStructureMessage {
+        params,
+        id,
+        description,
+        encoding,
+        octets,
+        envelope: Box::new(envelope),
+        body: Box::new(body),
+        lines
+    }))
+));
+
+
+// body-fld-param [SP body-fld-dsp [SP body-fld-lang
+//   [SP body-fld-loc *(SP body-extension)]]]
+//   ; MUST NOT be returned on non-extensible
+//   ; "BODY" fetch
+named!(body_type_multipart<BodyStructure>, do_parse!(
+    bodies: many1!(body) >>
+    space >>
+    media_subtype: string_utf8 >>
+    params: opt_opt!(preceded!(space, body_param)) >>
+    disposition: opt_opt!(preceded!(space, body_disposition)) >>
+    lang: opt_opt!(preceded!(space, body_lang)) >>
+    loc: opt_opt!(preceded!(space, nstring_utf8)) >>
+    extensions: opt!(preceded!(space, body_extension)) >>
+    (BodyStructure::Multipart(BodyStructureMultipart {
+        bodies,
+        media_subtype,
+        params,
+        disposition,
+        lang,
+        loc,
+        extensions
+    }))
+));
+
+named!(body<BodyStructure>, delimited!(
+    char!('('),
+    alt!(
+        body_type_text | body_type_basic |
+        body_type_message | body_type_multipart
+    ),
+    char!(')')
 ));
 
 named!(pub msg_att_body_structure<AttributeValue>, do_parse!(
-    tag_s!("BODYSTRUCTURE (") >>
-    body: body_type >>
-    tag_s!(")") >>
+    tag_s!("BODYSTRUCTURE ") >>
+    body: body >>
     (AttributeValue::BodyStructure(Box::new(body)))
 ));
 
@@ -141,8 +202,6 @@ mod tests {
     use super::*;
 
     const EMPTY: &[u8] = &[];
-
-    named!(body_structure_inner<BodyStructure>, delimited!(char!('('), body_type, char!(')')));
 
     #[test]
     fn test_body_param_nil() {
@@ -185,14 +244,6 @@ mod tests {
     }
 
     #[test]
-    fn test_body_extension_list_num() {
-        assert_eq!(
-            body_extension(br#"(1337)"#).unwrap(),
-            (EMPTY, BodyExtension::List(vec![BodyExtension::Num(1337)]))
-        )
-    }
-
-    #[test]
     fn test_body_extension_str() {
         assert_eq!(
             body_extension(br#""blah""#).unwrap(),
@@ -217,6 +268,14 @@ mod tests {
     }
 
     #[test]
+    fn test_body_extension_list_num() {
+        assert_eq!(
+            body_extension(br#"(1337)"#).unwrap(),
+            (EMPTY, BodyExtension::List(vec![BodyExtension::Num(1337)]))
+        )
+    }
+
+    #[test]
     fn test_body_disposition_nil() {
         assert_eq!(
             body_disposition(br#"NIL"#).unwrap(),
@@ -237,7 +296,8 @@ mod tests {
 
     #[test]
     fn test_body_structure_text() {
-        match body_structure_inner(br#"("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 2279 48)"#) {
+        const BODY: &[u8] = br#"("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 2279 48)"#;
+        match body(BODY) {
             Ok((_, BodyStructure::Text(text))) => {
                 // assert_eq!(text, BodyStructureText {})
             },
@@ -247,8 +307,8 @@ mod tests {
 
     #[test]
     fn test_body_structure_text_with_ext() {
-        const RESPONSE: &[u8] = br#"("TEXT" "PLAIN" ("CHARSET" "iso-8859-1") NIL NIL "QUOTED-PRINTABLE" 1315 42 NIL NIL NIL NIL)"#;
-        match body_structure_inner(RESPONSE) {
+        const BODY: &[u8] = br#"("TEXT" "PLAIN" ("CHARSET" "iso-8859-1") NIL NIL "QUOTED-PRINTABLE" 1315 42 NIL NIL NIL NIL)"#;
+        match body(BODY) {
             Ok((_, BodyStructure::Text(text))) => {
                 // assert_eq!(text, BodyStructureText {})
             },
@@ -258,8 +318,8 @@ mod tests {
 
     #[test]
     fn test_body_structure_basic() {
-        const RESPONSE: &[u8] = br#"("APPLICATION" "PDF" ("NAME" "pages.pdf") NIL NIL "BASE64" 38838 NIL ("attachment" ("FILENAME" "pages.pdf")) NIL NIL)"#;
-        match body_structure_inner(RESPONSE) {
+        const BODY: &[u8] = br#"("APPLICATION" "PDF" ("NAME" "pages.pdf") NIL NIL "BASE64" 38838 NIL ("attachment" ("FILENAME" "pages.pdf")) NIL NIL)"#;
+        match body(BODY) {
             Ok((_, BodyStructure::Basic(basic))) => {
                 // assert_eq!(text, BodyStructureText {})
             },
