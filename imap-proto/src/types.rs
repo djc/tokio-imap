@@ -114,20 +114,20 @@ pub enum SectionPath {
 #[derive(Debug, Eq, PartialEq)]
 pub struct BodyParam<'a> {
     pub key: &'a str,
-    pub val: &'a str
+    pub val: &'a str,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct BodyDisposition<'a> {
     pub disposition_type: &'a str,
-    pub params: Option<Vec<(BodyParam<'a>)>>
+    pub params: Option<Vec<(BodyParam<'a>)>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum BodyExtension<'a> {
     Num(u32),
     Str(Option<&'a str>),
-    List(Vec<BodyExtension<'a>>)
+    List(Vec<BodyExtension<'a>>),
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -143,7 +143,7 @@ pub struct BodyStructureText<'a> {
     pub lang: Option<Vec<&'a str>>,
     pub loc: Option<&'a str>,
     pub lines: u32,
-    pub extensions: Option<BodyExtension<'a>>
+    pub extensions: Option<BodyExtension<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -159,7 +159,7 @@ pub struct BodyStructureBasic<'a> {
     pub disposition: Option<BodyDisposition<'a>>,
     pub lang: Option<Vec<&'a str>>,
     pub loc: Option<&'a str>,
-    pub extensions: Option<BodyExtension<'a>>
+    pub extensions: Option<BodyExtension<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -171,10 +171,9 @@ pub struct BodyStructureMessage<'a> {
     pub octets: u32,
     pub envelope: Box<Envelope<'a>>,
     pub body: Box<BodyStructure<'a>>,
-    pub lines: u32
+    pub lines: u32,
 }
 
-// TODO
 #[derive(Debug, Eq, PartialEq)]
 pub struct BodyStructureMultipart<'a> {
     pub bodies: Vec<BodyStructure<'a>>,
@@ -183,7 +182,7 @@ pub struct BodyStructureMultipart<'a> {
     pub disposition: Option<BodyDisposition<'a>>,
     pub lang: Option<Vec<&'a str>>,
     pub loc: Option<&'a str>,
-    pub extensions: Option<BodyExtension<'a>>
+    pub extensions: Option<BodyExtension<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -191,7 +190,7 @@ pub enum BodyStructure<'a> {
     Basic(BodyStructureBasic<'a>),
     Text(BodyStructureText<'a>),
     Message(BodyStructureMessage<'a>),
-    Multipart(BodyStructureMultipart<'a>)
+    Multipart(BodyStructureMultipart<'a>),
 }
 
 #[derive(Debug, Eq, PartialEq)]
