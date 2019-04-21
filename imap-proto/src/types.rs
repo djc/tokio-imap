@@ -172,6 +172,11 @@ pub struct BodyStructureMessage<'a> {
     pub envelope: Box<Envelope<'a>>,
     pub body: Box<BodyStructure<'a>>,
     pub lines: u32,
+    pub md5: Option<&'a str>,
+    pub disposition: Option<BodyDisposition<'a>>,
+    pub lang: Option<Vec<&'a str>>,
+    pub location: Option<&'a str>,
+    pub extension: Option<BodyExtension<'a>>,
 }
 
 #[derive(Debug, Eq, PartialEq)]

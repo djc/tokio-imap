@@ -130,6 +130,11 @@ named!(body_type_message<BodyStructure>, do_parse!(
     body: body >>
     space >>
     lines: number >>
+    md5: opt_opt!(preceded!(space, nstring_utf8)) >>
+    disposition: opt_opt!(preceded!(space, body_disposition)) >>
+    lang: opt_opt!(preceded!(space, body_lang)) >>
+    location: opt_opt!(preceded!(space, nstring_utf8)) >>
+    extension: opt!(preceded!(space, body_extension)) >>
     (BodyStructure::Message(BodyStructureMessage {
         param,
         id,
@@ -138,7 +143,12 @@ named!(body_type_message<BodyStructure>, do_parse!(
         octets,
         envelope: Box::new(envelope),
         body: Box::new(body),
-        lines
+        lines,
+        md5,
+        disposition,
+        lang,
+        location,
+        extension,
     }))
 ));
 
@@ -163,7 +173,7 @@ named!(body_type_multipart<BodyStructure>, do_parse!(
 ));
 
 named!(body<BodyStructure>, paren_delimited!(
-    alt!(body_type_text | body_type_basic | body_type_message | body_type_multipart)
+    alt!(body_type_text | body_type_message | body_type_basic | body_type_multipart)
 ));
 
 named!(pub msg_att_body_structure<AttributeValue>, do_parse!(
@@ -178,28 +188,56 @@ mod tests {
 
     const EMPTY: &[u8] = &[];
 
+    // body-fld-param SP body-fld-id SP body-fld-desc SP body-fld-enc SP body-fld-octets
+    const BODY_FIELDS: &str = r#"("foo" "bar") "id" "desc" "7BIT" 1337"#;
+    const BODY_FIELD_PARAM_PAIR: BodyParam = BodyParam { key: "foo", val: "bar" };
+    const BODY_FIELD_ID: Option<&str> = Some("id");
+    const BODY_FIELD_DESC: Option<&str> = Some("desc");
+    const BODY_FIELD_ENC: &str = "7BIT";
+    const BODY_FIELD_OCTETS: u32 = 1337;
+
+    fn mock_body_text() -> (String, BodyStructureText<'static>) {
+        (
+            format!(r#"("TEXT" "PLAIN" {} 42)"#, BODY_FIELDS),
+            BodyStructureText {
+                media_subtype: "PLAIN",
+                param: Some(vec![BODY_FIELD_PARAM_PAIR]),
+                encoding: BODY_FIELD_ENC,
+                octets: BODY_FIELD_OCTETS,
+                id: BODY_FIELD_ID,
+                description: BODY_FIELD_DESC,
+                lines: 42,
+                md5: None,
+                lang: None,
+                location: None,
+                extension: None,
+                disposition: None,
+            }
+        )
+    }
+
     #[test]
     fn test_body_param_nil() {
-        assert_eq!(body_param(br#"NIL"#).unwrap(), (EMPTY, None));
+        assert_eq!(
+            body_param(br#"NIL"#).unwrap(),
+            (EMPTY, None)
+        )
     }
 
     #[test]
     fn test_body_param() {
         assert_eq!(
             body_param(br#"("foo" "bar")"#).unwrap(),
-            (
-                EMPTY,
-                Some(vec![BodyParam {
-                    key: "foo",
-                    val: "bar"
-                }])
-            )
-        );
+            (EMPTY, Some(vec![BodyParam { key: "foo", val: "bar" }]))
+        )
     }
 
     #[test]
     fn test_body_lang_one() {
-        assert_eq!(body_lang(br#""bob""#).unwrap(), (EMPTY, Some(vec!["bob"])))
+        assert_eq!(
+            body_lang(br#""bob""#).unwrap(),
+            (EMPTY, Some(vec!["bob"]))
+        )
     }
 
     #[test]
@@ -212,7 +250,10 @@ mod tests {
 
     #[test]
     fn test_body_lang_nil() {
-        assert_eq!(body_lang(br#"NIL"#).unwrap(), (EMPTY, None))
+        assert_eq!(
+            body_lang(br#"NIL"#).unwrap(),
+            (EMPTY, None)
+        )
     }
 
     #[test]
@@ -235,10 +276,7 @@ mod tests {
     fn test_body_extension_list() {
         assert_eq!(
             body_extension(br#"("hello")"#).unwrap(),
-            (
-                EMPTY,
-                BodyExtension::List(vec![BodyExtension::Str(Some("hello"))])
-            )
+            (EMPTY, BodyExtension::List(vec![BodyExtension::Str(Some("hello"))]))
         )
     }
 
@@ -252,7 +290,10 @@ mod tests {
 
     #[test]
     fn test_body_disposition_nil() {
-        assert_eq!(body_disposition(br#"NIL"#).unwrap(), (EMPTY, None))
+        assert_eq!(
+            body_disposition(br#"NIL"#).unwrap(),
+            (EMPTY, None)
+        )
     }
 
     #[test]
@@ -274,23 +315,10 @@ mod tests {
 
     #[test]
     fn test_body_structure_text() {
-        const BODY: &[u8] = br#"("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 2279 48)"#;
-        match body(BODY) {
+        let (body_str, body_struct) = mock_body_text();
+        match body(body_str.as_bytes()) {
             Ok((_, BodyStructure::Text(text))) => {
-                assert_eq!(text, BodyStructureText {
-                    media_subtype: "PLAIN",
-                    param: Some(vec![BodyParam { key: "CHARSET", val: "US-ASCII" }]),
-                    encoding: "7BIT",
-                    octets: 2279,
-                    lines: 48,
-                    id: None,
-                    md5: None,
-                    lang: None,
-                    location: None,
-                    extension: None,
-                    description: None,
-                    disposition: None,
-                })
+                assert_eq!(text, body_struct)
             }
             rsp @ _ => panic!("unexpected response {:?}", rsp),
         }
@@ -298,21 +326,21 @@ mod tests {
 
     #[test]
     fn test_body_structure_text_with_ext() {
-        const BODY: &[u8] = br#"("TEXT" "PLAIN" ("CHARSET" "iso-8859-1") NIL NIL "QUOTED-PRINTABLE" 1315 42 NIL NIL NIL NIL)"#;
-        match body(BODY) {
+        let body_str = format!(r#"("TEXT" "PLAIN" {} 42 NIL NIL NIL NIL)"#, BODY_FIELDS);
+        match body(body_str.as_bytes()) {
             Ok((_, BodyStructure::Text(text))) => {
                 assert_eq!(text, BodyStructureText {
                     media_subtype: "PLAIN",
-                    param: Some(vec![BodyParam { key: "CHARSET", val: "iso-8859-1" }]),
-                    encoding: "QUOTED-PRINTABLE",
-                    octets: 1315,
                     lines: 42,
-                    id: None,
+                    param: Some(vec![BODY_FIELD_PARAM_PAIR]),
+                    encoding: BODY_FIELD_ENC,
+                    octets: BODY_FIELD_OCTETS,
+                    id: BODY_FIELD_ID,
+                    description: BODY_FIELD_DESC,
                     md5: None,
                     lang: None,
                     location: None,
                     extension: None,
-                    description: None,
                     disposition: None,
                 })
             }
@@ -347,6 +375,41 @@ mod tests {
         }
     }
 
-    // TODO: test_body_structure_message
-    // TODO: test_body_structure_multipart
+    #[test]
+    fn test_body_structure_message() {
+        let (text_body_str, _) = mock_body_text();
+        let envelope_str = r#"("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" "IMAP4rev1 WG mtg summary and minutes" (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) ((NIL NIL "imap" "cac.washington.edu")) ((NIL NIL "minutes" "CNRI.Reston.VA.US") ("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL "<B27397-0100000@cac.washington.edu>")"#;
+        let body_str = format!(r#"("MESSAGE" "RFC822" {} {} {} 42)"#, BODY_FIELDS, envelope_str, text_body_str);
+        match body(body_str.as_bytes()) {
+            Ok((_, BodyStructure::Message(_))) => {},
+            rsp @ _ => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_body_structure_multipart() {
+        let (text_body_str1, text_body_struct1) = mock_body_text();
+        let (text_body_str2, text_body_struct2) = mock_body_text();
+        let body_str = format!(
+            r#"({}{} "ALTERNATIVE" NIL NIL NIL NIL)"#,
+            text_body_str1, text_body_str2
+        );
+        match body(body_str.as_bytes()) {
+            Ok((_, BodyStructure::Multipart(multipart))) => {
+                assert_eq!(multipart, BodyStructureMultipart {
+                    bodies: vec![
+                        BodyStructure::Text(text_body_struct1),
+                        BodyStructure::Text(text_body_struct2),
+                    ],
+                    media_subtype: "ALTERNATIVE",
+                    param: None,
+                    lang: None,
+                    disposition: None,
+                    location: None,
+                    extension: None
+                })
+            }
+            rsp @ _ => panic!("unexpected response {:?}", rsp),
+        }
+    }
 }
