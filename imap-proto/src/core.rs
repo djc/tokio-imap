@@ -62,7 +62,7 @@ pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
 /// space = a single space character
 named!(pub space, tag_s!(" "));
 
-// nil = "NIL"
+/// nil = "NIL"
 named!(pub nil, tag_s!("NIL"));
 
 /// quoted = DQUOTE *QUOTED-CHAR DQUOTE

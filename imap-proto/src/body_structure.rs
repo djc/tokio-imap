@@ -172,7 +172,7 @@ named!(body_type_multipart<BodyStructure>, do_parse!(
     }))
 ));
 
-named!(body<BodyStructure>, paren_delimited!(
+named!(pub body<BodyStructure>, paren_delimited!(
     alt!(body_type_text | body_type_message | body_type_basic | body_type_multipart)
 ));
 
