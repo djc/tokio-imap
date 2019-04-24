@@ -76,7 +76,7 @@ named!(body_type_basic<BodyStructure>, do_parse!(
 ));
 
 named!(body_type_text<BodyStructure>, do_parse!(
-    tag_s!("\"TEXT\"") >>
+    tag_no_case_s!("\"TEXT\"") >>
     space >>
     media_subtype: string_utf8 >>
     space >>
@@ -113,7 +113,7 @@ named!(body_type_text<BodyStructure>, do_parse!(
 ));
 
 named!(body_type_message<BodyStructure>, do_parse!(
-    tag_s!("\"MESSAGE\" \"RFC822\"") >>
+    tag_no_case_s!("\"MESSAGE\" \"RFC822\"") >>
     space >>
     param: body_param >>
     space >>
