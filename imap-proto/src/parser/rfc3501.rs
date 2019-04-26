@@ -319,29 +319,28 @@ named!(opt_addresses<Option<Vec<Address>>>, alt!(
     ), |v| Some(v))
 ));
 
-named!(msg_att_envelope<AttributeValue>, do_parse!(
-    tag_s!("ENVELOPE (") >>
-    date: nstring_utf8 >>
-    tag_s!(" ") >>
-    subject: nstring_utf8 >>
-    tag_s!(" ") >>
-    from: opt_addresses >>
-    tag_s!(" ") >>
-    sender: opt_addresses >>
-    tag_s!(" ") >>
-    reply_to: opt_addresses >>
-    tag_s!(" ") >>
-    to: opt_addresses >>
-    tag_s!(" ") >>
-    cc: opt_addresses >>
-    tag_s!(" ") >>
-    bcc: opt_addresses >>
-    tag_s!(" ") >>
-    in_reply_to: nstring_utf8 >>
-    tag_s!(" ") >>
-    message_id: nstring_utf8 >>
-    tag_s!(")") >> ({
-        AttributeValue::Envelope(Box::new(Envelope {
+named!(envelope<Envelope>, paren_delimited!(
+    do_parse!(
+        date: nstring_utf8 >>
+        tag_s!(" ") >>
+        subject: nstring_utf8 >>
+        tag_s!(" ") >>
+        from: opt_addresses >>
+        tag_s!(" ") >>
+        sender: opt_addresses >>
+        tag_s!(" ") >>
+        reply_to: opt_addresses >>
+        tag_s!(" ") >>
+        to: opt_addresses >>
+        tag_s!(" ") >>
+        cc: opt_addresses >>
+        tag_s!(" ") >>
+        bcc: opt_addresses >>
+        tag_s!(" ") >>
+        in_reply_to: nstring_utf8 >>
+        tag_s!(" ") >>
+        message_id: nstring_utf8 >>
+        (Envelope {
             date,
             subject,
             from,
@@ -352,8 +351,14 @@ named!(msg_att_envelope<AttributeValue>, do_parse!(
             bcc,
             in_reply_to,
             message_id,
-        }))
-    })
+        })
+    )
+));
+
+named!(msg_att_envelope<AttributeValue>, do_parse!(
+    tag_s!("ENVELOPE ") >>
+    envelope: envelope >>
+    (AttributeValue::Envelope(Box::new(envelope)))
 ));
 
 named!(msg_att_internal_date<AttributeValue>, do_parse!(
