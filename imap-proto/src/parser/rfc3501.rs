@@ -47,7 +47,7 @@ named!(status<Status>, alt!(
 ));
 
 named!(mailbox<&str>, map!(
-    map_res!(astring, str::from_utf8),
+    astring_utf8,
     |s| {
         if s.eq_ignore_ascii_case("INBOX") {
             "INBOX"
@@ -101,10 +101,10 @@ named!(resp_text_code_badcharset<ResponseCode>, do_parse!(
     tag_s!("BADCHARSET") >>
     ch: opt!(do_parse!(
         tag_s!(" (") >>
-        charset0: map_res!(astring, str::from_utf8) >>
+        charset0: astring_utf8 >>
         charsets: many0!(do_parse!(
             tag_s!(" ") >>
-            charset: map_res!(astring, str::from_utf8) >>
+            charset: astring_utf8 >>
             (charset)
         )) >>
         tag_s!(")") >> ({
@@ -254,7 +254,7 @@ named!(mailbox_list<(Vec<&str>, Option<&str>, &str)>, do_parse!(
     flags: flag_list >>
     tag_s!(" ") >>
     delimiter: alt!(
-        map!(map_res!(quoted, str::from_utf8), |v| Some(v)) |
+        map!(quoted_utf8, |v| Some(v)) |
         map!(nil, |_| None)
     ) >>
     tag_s!(" ") >>
@@ -352,19 +352,19 @@ named!(mailbox_data<Response>, alt!(
 // electronic mail address.
 named!(address<Address>, do_parse!(
     tag_s!("(") >>
-    name: nstring >>
+    name: nstring_utf8 >>
     tag_s!(" ") >>
-    adl: nstring >>
+    adl: nstring_utf8 >>
     tag_s!(" ") >>
-    mailbox: nstring >>
+    mailbox: nstring_utf8 >>
     tag_s!(" ") >>
-    host: nstring >>
+    host: nstring_utf8 >>
     tag_s!(")") >>
     (Address {
-        name: name.map(|s| str::from_utf8(s).unwrap()),
-        adl: adl.map(|s| str::from_utf8(s).unwrap()),
-        mailbox: mailbox.map(|s| str::from_utf8(s).unwrap()),
-        host: host.map(|s| str::from_utf8(s).unwrap()),
+        name,
+        adl,
+        mailbox,
+        host,
     })
 ));
 
@@ -380,9 +380,9 @@ named!(opt_addresses<Option<Vec<Address>>>, alt!(
 
 named!(msg_att_envelope<AttributeValue>, do_parse!(
     tag_s!("ENVELOPE (") >>
-    date: nstring >>
+    date: nstring_utf8 >>
     tag_s!(" ") >>
-    subject: nstring >>
+    subject: nstring_utf8 >>
     tag_s!(" ") >>
     from: opt_addresses >>
     tag_s!(" ") >>
@@ -396,29 +396,29 @@ named!(msg_att_envelope<AttributeValue>, do_parse!(
     tag_s!(" ") >>
     bcc: opt_addresses >>
     tag_s!(" ") >>
-    in_reply_to: nstring >>
+    in_reply_to: nstring_utf8 >>
     tag_s!(" ") >>
-    message_id: nstring >>
+    message_id: nstring_utf8 >>
     tag_s!(")") >> ({
         AttributeValue::Envelope(Box::new(Envelope {
-            date: date.map(|s| str::from_utf8(s).unwrap()),
-            subject: subject.map(|s| str::from_utf8(s).unwrap()),
+            date,
+            subject,
             from,
             sender,
             reply_to,
             to,
             cc,
             bcc,
-            in_reply_to: in_reply_to.map(|s| str::from_utf8(s).unwrap()),
-            message_id: message_id.map(|s| str::from_utf8(s).unwrap()),
+            in_reply_to,
+            message_id,
         }))
     })
 ));
 
 named!(msg_att_internal_date<AttributeValue>, do_parse!(
     tag_s!("INTERNALDATE ") >>
-    date: nstring >>
-    (AttributeValue::InternalDate(str::from_utf8(date.unwrap()).unwrap()))
+    date: nstring_utf8 >>
+    (AttributeValue::InternalDate(date.unwrap()))
 ));
 
 named!(msg_att_flags<AttributeValue>, do_parse!(
