@@ -16,3 +16,6 @@ travis-ci = { repository = "djc/tokio-imap" }
 
 [dependencies]
 nom = "4.0"
+
+[dev-dependencies]
+assert_matches = "1.3"

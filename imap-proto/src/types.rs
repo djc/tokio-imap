@@ -12,7 +12,7 @@ impl Copy for AttrMacro {}
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum Response<'a> {
-    Capabilities(Vec<&'a str>),
+    Capabilities(Vec<Capability<'a>>),
     Continue {
         code: Option<ResponseCode<'a>>,
         information: Option<&'a str>,
@@ -47,7 +47,7 @@ pub enum Status {
 pub enum ResponseCode<'a> {
     Alert,
     BadCharset(Option<Vec<&'a str>>),
-    Capabilities(Vec<&'a str>),
+    Capabilities(Vec<Capability<'a>>),
     HighestModSeq(u64), // RFC 4551, section 3.1.1
     Parse,
     PermanentFlags(Vec<&'a str>),
@@ -83,6 +83,13 @@ pub enum MailboxDatum<'a> {
         status: Vec<StatusAttribute>,
     },
     Recent(u32),
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum Capability<'a> {
+    Imap4rev1,
+    Auth(&'a str),
+    Atom(&'a str),
 }
 
 #[derive(Debug, Eq, PartialEq)]

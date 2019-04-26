@@ -86,21 +86,9 @@ named!(resp_text_code_badcharset<ResponseCode>, do_parse!(
     (ResponseCode::BadCharset(ch))
 ));
 
-named!(capability_list<Vec<&str>>, do_parse!(
-    capabilities1: many_till!(capability, tag_s!(" IMAP4rev1")) >>
-    capabilities2: many0!(capability) >> ({
-        let mut v = Vec::with_capacity(10);
-        v.extend(capabilities1.0);
-        v.push("IMAP4rev1");
-        v.extend(capabilities2);
-        v
-    })
-));
-
-named!(resp_text_code_capability<ResponseCode>, do_parse!(
-    tag_s!("CAPABILITY") >>
-    capabilities: capability_list >>
-    (ResponseCode::Capabilities(capabilities))
+named!(resp_text_code_capability<ResponseCode>, map!(
+    capability_data,
+    |c| ResponseCode::Capabilities(c)
 ));
 
 named!(resp_text_code_parse<ResponseCode>, do_parse!(
@@ -169,16 +157,32 @@ named!(resp_text_code<ResponseCode>, do_parse!(
     (coded)
 ));
 
-named!(capability<&str>, do_parse!(
-    tag_s!(" ") >>
-    atom: map_res!(take_till1_s!(atom_specials), str::from_utf8) >>
-    (atom)
+named!(capability<Capability>, alt!(
+    map!(tag_s!("IMAP4rev1"), |_| Capability::Imap4rev1) |
+    map!(preceded!(tag_s!("AUTH="), atom), |a| Capability::Auth(a)) |
+    map!(atom, |a| Capability::Atom(a))
 ));
 
-named!(capability_data<Response>, do_parse!(
-    tag_s!("CAPABILITY") >>
-    capabilities: capability_list >>
-    (Response::Capabilities(capabilities))
+fn ensure_capabilities_contains_imap4rev<'a>(capabilities: Vec<Capability<'a>>) -> Result<Vec<Capability<'a>>, ()> {
+    if capabilities.contains(&Capability::Imap4rev1) {
+        Ok(capabilities)
+    } else {
+        Err(())
+    }
+}
+
+named!(capability_data<Vec<Capability>>, map_res!(
+    do_parse!(
+        tag_s!("CAPABILITY") >>
+        capabilities: many0!(preceded!(char!(' '), capability)) >>
+        (capabilities)
+    ),
+    ensure_capabilities_contains_imap4rev
+));
+
+named!(resp_capability<Response>, map!(
+    capability_data,
+    |c| Response::Capabilities(c)
 ));
 
 named!(mailbox_data_search<Response>, do_parse!(
@@ -490,7 +494,7 @@ named!(response_data<Response>, do_parse!(
         mailbox_data |
         message_data_expunge |
         message_data_fetch |
-        capability_data
+        resp_capability
     ) >>
     tag_s!("\r\n") >>
     (contents)
@@ -674,8 +678,8 @@ mod tests {
                 information: Some("Logged in")
             })) => {
                 assert_eq!(c.len(), 2);
-                assert_eq!(c[0], "IMAP4rev1");
-                assert_eq!(c[1], "IDLE");
+                assert_eq!(c[0], Capability::Imap4rev1);
+                assert_eq!(c[1], Capability::Atom("IDLE"));
             }
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }
@@ -687,9 +691,9 @@ mod tests {
                 information: Some("Logged in")
             })) => {
                 assert_eq!(c.len(), 3);
-                assert_eq!(c[0], "UIDPLUS");
-                assert_eq!(c[1], "IMAP4rev1");
-                assert_eq!(c[2], "IDLE");
+                assert_eq!(c[0], Capability::Atom("UIDPLUS"));
+                assert_eq!(c[1], Capability::Imap4rev1);
+                assert_eq!(c[2], Capability::Atom("IDLE"));
             }
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }
@@ -734,5 +738,41 @@ mod tests {
             })) => {}
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }
+    }
+
+    #[test]
+    fn test_capability_data() {
+        // Minimal capabilities
+        assert_matches!(
+            super::capability_data(b"CAPABILITY IMAP4rev1\r\n"),
+            Ok((_, capabilities)) => {
+                assert_eq!(capabilities, vec![Capability::Imap4rev1])
+            }
+        );
+
+        assert_matches!(
+            super::capability_data(b"CAPABILITY XPIG-LATIN IMAP4rev1 STARTTLS AUTH=GSSAPI\r\n"),
+            Ok((_, capabilities)) => {
+                assert_eq!(capabilities, vec![
+                    Capability::Atom("XPIG-LATIN"), Capability::Imap4rev1,
+                    Capability::Atom("STARTTLS"), Capability::Auth("GSSAPI")
+                ])
+            }
+        );
+
+        assert_matches!(
+            super::capability_data(b"CAPABILITY IMAP4rev1 AUTH=GSSAPI AUTH=PLAIN\r\n"),
+            Ok((_, capabilities)) => {
+                assert_eq!(capabilities, vec![
+                    Capability::Imap4rev1, Capability::Auth("GSSAPI"),  Capability::Auth("PLAIN")
+                ])
+            }
+        );
+
+        // Capability command must contain IMAP4rev1
+        assert_matches!(
+            super::capability_data(b"CAPABILITY AUTH=GSSAPI AUTH=PLAIN\r\n"),
+            Err(_)
+        );
     }
 }
