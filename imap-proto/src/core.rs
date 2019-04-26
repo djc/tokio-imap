@@ -86,7 +86,7 @@ named!(pub string<&[u8]>, alt!(quoted | literal));
 
 /// nstring = string / nil
 named!(pub nstring<Option<&[u8]>>, alt!(
-    map!(tag_s!("NIL"), |_| None) |
+    map!(nil, |_| None) |
     map!(string, |s| Some(s))
 ));
 

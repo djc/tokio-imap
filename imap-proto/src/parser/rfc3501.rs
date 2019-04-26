@@ -255,7 +255,7 @@ named!(mailbox_list<(Vec<&str>, Option<&str>, &str)>, do_parse!(
     tag_s!(" ") >>
     delimiter: alt!(
         map!(map_res!(quoted, str::from_utf8), |v| Some(v)) |
-        map!(tag_s!("NIL"), |_| None)
+        map!(nil, |_| None)
     ) >>
     tag_s!(" ") >>
     name: mailbox >>
@@ -369,7 +369,7 @@ named!(address<Address>, do_parse!(
 ));
 
 named!(opt_addresses<Option<Vec<Address>>>, alt!(
-    map!(tag_s!("NIL"), |_s| None) |
+    map!(nil, |_s| None) |
     do_parse!(
         tag_s!("(") >>
         addrs: separated_nonempty_list!(opt!(tag!(" ")), address) >>
