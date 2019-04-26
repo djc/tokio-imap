@@ -34,6 +34,9 @@ pub fn atom_char(c: u8) -> bool {
     !atom_specials(c)
 }
 
+/// nil = "NIL"
+named!(pub nil, tag_s!("NIL"));
+
 /// ASTRING-CHAR = ATOM-CHAR / resp-specials
 pub fn astring_char(c: u8) -> bool {
     atom_char(c) || resp_specials(c)
