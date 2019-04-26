@@ -319,7 +319,7 @@ named!(opt_addresses<Option<Vec<Address>>>, alt!(
     ), |v| Some(v))
 ));
 
-named!(envelope<Envelope>, paren_delimited!(
+named!(pub(crate) envelope<Envelope>, paren_delimited!(
     do_parse!(
         date: nstring_utf8 >>
         tag_s!(" ") >>
