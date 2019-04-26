@@ -64,28 +64,7 @@ named!(flag_extension<&str>, map_res!(
 
 named!(flag<&str>, alt!(flag_extension | atom));
 
-named!(flag_list<Vec<&str>>, do_parse!(
-    tag_s!("(") >>
-    elements: opt!(do_parse!(
-        flag0: flag >>
-        flags: many0!(do_parse!(
-            tag_s!(" ") >>
-            flag: flag >>
-            (flag)
-        )) >> ({
-            let mut res = vec![flag0];
-            res.extend(flags);
-            res
-        })
-    )) >>
-    tag_s!(")") >> ({
-       if elements.is_some() {
-           elements.unwrap()
-       } else {
-           Vec::new()
-       }
-    })
-));
+named!(flag_list<Vec<&str>>, parenthesized_list!(flag));
 
 named!(flag_perm<&str>, alt!(
     map_res!(tag_s!("\\*"), str::from_utf8) |
@@ -100,18 +79,9 @@ named!(resp_text_code_alert<ResponseCode>, do_parse!(
 named!(resp_text_code_badcharset<ResponseCode>, do_parse!(
     tag_s!("BADCHARSET") >>
     ch: opt!(do_parse!(
-        tag_s!(" (") >>
-        charset0: astring_utf8 >>
-        charsets: many0!(do_parse!(
-            tag_s!(" ") >>
-            charset: astring_utf8 >>
-            (charset)
-        )) >>
-        tag_s!(")") >> ({
-            let mut res = vec![charset0];
-            res.extend(charsets);
-            res
-        })
+        tag_s!(" ") >>
+        charsets: parenthesized_nonempty_list!(astring_utf8) >>
+        (charsets)
     )) >>
     (ResponseCode::BadCharset(ch))
 ));
@@ -139,26 +109,9 @@ named!(resp_text_code_parse<ResponseCode>, do_parse!(
 ));
 
 named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
-    tag_s!("PERMANENTFLAGS (") >>
-    elements: opt!(do_parse!(
-        flag0: flag_perm >>
-        flags: many0!(do_parse!(
-            tag_s!(" ") >>
-            flag: flag_perm >>
-            (flag)
-        )) >> ({
-            let mut res = vec![flag0];
-            res.extend(flags);
-            res
-        })
-    )) >>
-    tag_s!(")") >> ({
-        ResponseCode::PermanentFlags(if elements.is_some() {
-            elements.unwrap()
-        } else {
-            Vec::new()
-        })
-    })
+    tag_s!("PERMANENTFLAGS ") >>
+    flags: parenthesized_list!(flag_perm) >>
+    (ResponseCode::PermanentFlags(flags))
 ));
 
 named!(resp_text_code_read_only<ResponseCode>, do_parse!(
@@ -306,26 +259,13 @@ named!(status_att<StatusAttribute>, alt!(
         }))
 ));
 
-named!(status_att_list<Vec<StatusAttribute>>, do_parse!(
-    first: status_att >>
-    rest: many0!(do_parse!(
-        tag_s!(" ") >>
-        status: status_att >>
-        (status)
-    )) >>
-    ({
-        let mut res = rest;
-        res.insert(0, first);
-        res
-    })
-));
+named!(status_att_list<Vec<StatusAttribute>>, parenthesized_nonempty_list!(status_att));
 
 named!(mailbox_data_status<Response>, do_parse!(
     tag_s!("STATUS ") >>
     mailbox: mailbox >>
-    tag_s!(" (") >>
+    tag_s!(" ") >>
     status: status_att_list >>
-    tag_s!(")") >>
     (Response::MailboxData(MailboxDatum::Status {
         mailbox,
         status,
@@ -350,32 +290,29 @@ named!(mailbox_data<Response>, alt!(
 
 // An address structure is a parenthesized list that describes an
 // electronic mail address.
-named!(address<Address>, do_parse!(
-    tag_s!("(") >>
-    name: nstring_utf8 >>
-    tag_s!(" ") >>
-    adl: nstring_utf8 >>
-    tag_s!(" ") >>
-    mailbox: nstring_utf8 >>
-    tag_s!(" ") >>
-    host: nstring_utf8 >>
-    tag_s!(")") >>
-    (Address {
-        name,
-        adl,
-        mailbox,
-        host,
-    })
+named!(address<Address>, paren_delimited!(
+    do_parse!(
+        name: nstring_utf8 >>
+        tag_s!(" ") >>
+        adl: nstring_utf8 >>
+        tag_s!(" ") >>
+        mailbox: nstring_utf8 >>
+        tag_s!(" ") >>
+        host: nstring_utf8 >>
+        (Address {
+            name,
+            adl,
+            mailbox,
+            host,
+        })
+    )
 ));
 
 named!(opt_addresses<Option<Vec<Address>>>, alt!(
     map!(nil, |_s| None) |
-    do_parse!(
-        tag_s!("(") >>
-        addrs: separated_nonempty_list!(opt!(tag!(" ")), address) >>
-        tag_s!(")") >>
-        (Some(addrs))
-    )
+    map!(paren_delimited!(
+        separated_nonempty_list!(opt!(char!(' ')), address)
+    ), |v| Some(v))
 ));
 
 named!(msg_att_envelope<AttributeValue>, do_parse!(
@@ -471,23 +408,7 @@ named!(msg_att<AttributeValue>, alt!(
     msg_att_uid
 ));
 
-named!(msg_att_list<Vec<AttributeValue>>, do_parse!(
-    tag_s!("(") >>
-    elements: do_parse!(
-        attr0: msg_att >>
-        attrs: many0!(do_parse!(
-            tag_s!(" ") >>
-            attr: msg_att >>
-            (attr)
-        )) >> ({
-            let mut res = vec![attr0];
-            res.extend(attrs);
-            res
-        })
-    ) >>
-    tag_s!(")") >>
-    (elements)
-));
+named!(msg_att_list<Vec<AttributeValue>>, parenthesized_nonempty_list!(msg_att));
 
 named!(message_data_fetch<Response>, do_parse!(
     num: number >>
