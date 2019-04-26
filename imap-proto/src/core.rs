@@ -70,6 +70,9 @@ named!(pub quoted<&[u8]>, do_parse!(
     (data)
 ));
 
+/// quoted bytes as as utf8
+named!(pub quoted_utf8<&str>, map_res!(quoted, str::from_utf8));
+
 /// literal = "{" number "}" CRLF *CHAR8
 ///            ; Number represents the number of CHAR8s
 named!(pub literal<&[u8]>, do_parse!(
@@ -84,10 +87,19 @@ named!(pub literal<&[u8]>, do_parse!(
 /// string = quoted / literal
 named!(pub string<&[u8]>, alt!(quoted | literal));
 
+/// string bytes as as utf8
+named!(pub string_utf8<&str>, map_res!(string, str::from_utf8));
+
 /// nstring = string / nil
 named!(pub nstring<Option<&[u8]>>, alt!(
     map!(nil, |_| None) |
     map!(string, |s| Some(s))
+));
+
+/// nstring bytes as utf8
+named!(pub nstring_utf8<Option<&str>>, alt!(
+    map!(nil, |_| None) |
+    map!(string_utf8, |s| Some(s))
 ));
 
 /// number          = 1*DIGIT
@@ -114,6 +126,9 @@ named!(pub astring<&[u8]>, alt!(
     take_while1!(astring_char) |
     string
 ));
+
+/// astring bytes as as utf8
+named!(pub astring_utf8<&str>, map_res!(astring, str::from_utf8));
 
 /// text = 1*TEXT-CHAR
 named!(pub text<&str>, map_res!(take_while_s!(text_char),
