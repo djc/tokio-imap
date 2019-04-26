@@ -33,8 +33,7 @@ named!(pub (crate) status_att_val_highest_mod_seq<StatusAttribute>, do_parse!(
 
 // [RFC4551 - 4. Formal Syntax - fetch-mod-resp](https://tools.ietf.org/html/rfc4551#section-4)
 named!(pub (crate) msg_att_mod_seq<AttributeValue>, do_parse!(
-    tag_s!("MODSEQ (") >>
-    num: number_64 >>
-    tag_s!(")") >>
+    tag_s!("MODSEQ ") >>
+    num: paren_delimited!(number_64) >>
     (AttributeValue::ModSeq(num))
 ));
