@@ -63,11 +63,10 @@ pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 /// quoted = DQUOTE *QUOTED-CHAR DQUOTE
-named!(pub quoted<&[u8]>, do_parse!(
-    tag_s!("\"") >>
-    data: quoted_data >>
-    tag_s!("\"") >>
-    (data)
+named!(pub quoted<&[u8]>, delimited!(
+    char!('"'),
+    quoted_data,
+    char!('"')
 ));
 
 /// quoted bytes as as utf8
