@@ -125,6 +125,7 @@ pub enum AttributeValue<'a> {
         index: Option<u32>,
         data: Option<&'a [u8]>,
     },
+    BodyStructure(BodyStructure<'a>),
     Envelope(Box<Envelope<'a>>),
     Flags(Vec<&'a str>),
     InternalDate(&'a str),
@@ -135,6 +136,83 @@ pub enum AttributeValue<'a> {
     Rfc822Text(Option<&'a [u8]>),
     Uid(u32),
 }
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum BodyStructure<'a> {
+    Basic {
+        common: BodyContentCommon<'a>,
+        other: BodyContentSinglePart<'a>,
+        extension: Option<BodyExtension<'a>>,
+    },
+    Text {
+        common: BodyContentCommon<'a>,
+        other: BodyContentSinglePart<'a>,
+        lines: u32,
+        extension: Option<BodyExtension<'a>>,
+    },
+    Message {
+        common: BodyContentCommon<'a>,
+        other: BodyContentSinglePart<'a>,
+        envelope: Envelope<'a>,
+        body: Box<BodyStructure<'a>>,
+        lines: u32,
+        extension: Option<BodyExtension<'a>>,
+    },
+    Multipart {
+        common: BodyContentCommon<'a>,
+        bodies: Vec<BodyStructure<'a>>,
+        extension: Option<BodyExtension<'a>>,
+    },
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct BodyContentCommon<'a> {
+    pub ty: ContentType<'a>,
+    pub disposition: Option<ContentDisposition<'a>>,
+    pub language: Option<Vec<&'a str>>,
+    pub location: Option<&'a str>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct BodyContentSinglePart<'a> {
+    pub id: Option<&'a str>,
+    pub md5: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub transfer_encoding: ContentEncoding<'a>,
+    pub octets: u32,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ContentType<'a> {
+    pub ty: &'a str,
+    pub subtype: &'a str,
+    pub params: BodyParams<'a>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct ContentDisposition<'a> {
+    pub ty: &'a str,
+    pub params: BodyParams<'a>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum ContentEncoding<'a> {
+    SevenBit,
+    EightBit,
+    Binary,
+    Base64,
+    QuotedPrintable,
+    Other(&'a str),
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum BodyExtension<'a> {
+    Num(u32),
+    Str(Option<&'a str>),
+    List(Vec<BodyExtension<'a>>),
+}
+
+pub type BodyParams<'a> = Option<Vec<(&'a str, &'a str)>>;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Envelope<'a> {

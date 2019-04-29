@@ -9,6 +9,7 @@ extern crate assert_matches;
 mod macros;
 
 pub mod body;
+pub mod body_structure;
 pub mod builders;
 pub mod core;
 mod parser;
