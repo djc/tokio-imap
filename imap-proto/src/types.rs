@@ -85,7 +85,7 @@ pub enum MailboxDatum<'a> {
     Recent(u32),
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub enum Capability<'a> {
     Imap4rev1,
     Auth(&'a str),
