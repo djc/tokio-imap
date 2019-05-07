@@ -316,7 +316,11 @@ named!(address<Address>, paren_delimited!(
 named!(opt_addresses<Option<Vec<Address>>>, alt!(
     map!(nil, |_s| None) |
     map!(paren_delimited!(
-        separated_nonempty_list!(opt!(char!(' ')), address)
+        many1!(do_parse!(
+            addr: address >>
+            opt!(char!(' ')) >>
+            (addr)
+        ))
     ), |v| Some(v))
 ));
 
@@ -665,6 +669,15 @@ mod tests {
     fn test_opt_addresses() {
         let addr = b"((NIL NIL \"minutes\" \"CNRI.Reston.VA.US\") (\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\")) ";
             match ::parser::rfc3501::opt_addresses(addr) {
+            Ok((_, _addresses)) => {},
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+    }
+
+    #[test]
+    fn test_opt_addresses_no_space() {
+        let addr = br#"((NIL NIL "test" "example@example.com")(NIL NIL "test" "example@example.com"))"#;
+            match super::opt_addresses(addr) {
             Ok((_, _addresses)) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }
