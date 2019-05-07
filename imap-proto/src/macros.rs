@@ -12,7 +12,7 @@ macro_rules! parenthesized_list (
         paren_delimited!($i, separated_list!(char!(' '), $submac!($($args)*)))
     });
     ($i:expr, $f:expr) => (
-        parenthesized_nonempty_list!($i, call!($f));
+        parenthesized_list!($i, call!($f));
     );
 );
 
