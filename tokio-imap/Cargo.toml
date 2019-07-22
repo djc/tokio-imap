@@ -12,7 +12,8 @@ license = "MIT/Apache-2.0"
 readme = "../README.md"
 
 [badges]
-travis-ci = { repository = "djc/tokio-imap" }
+azure-devops = { project = "dochtman/Projects", pipeline = "tokio-imap", build = "4" }
+maintenance = { status = "passively-maintained" }
 
 [dependencies]
 bytes = "0.4"

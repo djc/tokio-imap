@@ -11,8 +11,8 @@ repository = "https://github.com/djc/tokio-imap"
 license = "MIT/Apache-2.0"
 
 [badges]
-maintenance = { status = "actively-developed" }
-travis-ci = { repository = "djc/tokio-imap" }
+azure-devops = { project = "dochtman/Projects", pipeline = "tokio-imap", build = "4" }
+maintenance = { status = "passively-developed" }
 
 [dependencies]
 nom = "4.0"

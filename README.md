@@ -1,9 +1,9 @@
 # imap-proto and tokio-imap
 
-[![Build status](https://api.travis-ci.org/djc/tokio-imap.svg?branch=master)](https://travis-ci.org/djc/tokio-imap)
+[![Build Status](https://dev.azure.com/dochtman/Projects/_apis/build/status/tokio-imap?branchName=master)](https://dev.azure.com/dochtman/Projects/_build/latest?definitionId=4&branchName=master)
+[![Join the chat at https://gitter.im/djc/tokio-imap](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/djc/tokio-imap?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE-MIT)
 [![Apache License 2.0](https://img.shields.io/badge/license-ALv2-blue.svg)](./LICENSE-APACHE)
-[![Join the chat at https://gitter.im/djc/tokio-imap](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/djc/tokio-imap?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 All feedback welcome. Feel free to file bugs, requests for documentation and
 any other feedback to the [issue tracker][issues] or [tweet me][twitter].
