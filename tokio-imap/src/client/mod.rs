@@ -130,7 +130,7 @@ where
         }
         let mut transport = match self.transport.take() {
             None => return Ok(Async::NotReady),
-            Some(mut transport) => transport,
+            Some(transport) => transport,
         };
         if self.done {
             let mut state = self.state.take().unwrap(); // safe: initialized from start
