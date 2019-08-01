@@ -12,7 +12,7 @@ license = "MIT/Apache-2.0"
 
 [badges]
 azure-devops = { project = "dochtman/Projects", pipeline = "tokio-imap", build = "4" }
-maintenance = { status = "passively-developed" }
+maintenance = { status = "passively-maintained" }
 
 [dependencies]
 nom = "4.0"
