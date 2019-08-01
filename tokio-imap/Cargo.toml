@@ -21,7 +21,7 @@ futures = "0.1"
 futures-state-stream = "0.1"
 imap-proto = { version = "0.8", path = "../imap-proto" }
 native-tls = "0.2"
-nom = "4.0"
+nom = "5.0"
 tokio = "0.1"
 tokio-codec = "0.1"
 tokio-tls = "0.2"
