@@ -70,6 +70,13 @@ pub enum StatusAttribute {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+pub struct Metadata
+{
+    pub entry: String,
+    pub value: Option<String>,
+}
+
+#[derive(Debug, Eq, PartialEq)]
 pub enum MailboxDatum<'a> {
     Exists(u32),
     Flags(Vec<&'a str>),
@@ -83,6 +90,14 @@ pub enum MailboxDatum<'a> {
         status: Vec<StatusAttribute>,
     },
     Recent(u32),
+    MetadataSolicited {
+        mailbox: &'a str,
+        values: Vec<Metadata>,
+    },
+    MetadataUnsolicited {
+        mailbox: &'a str,
+        values: Vec<&'a str>,
+    },
 }
 
 #[derive(Debug, Eq, PartialEq, Hash)]

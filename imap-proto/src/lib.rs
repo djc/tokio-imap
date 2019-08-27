@@ -15,7 +15,7 @@ pub mod core;
 mod parser;
 pub mod types;
 
-pub use crate::parser::{parse_response, ParseResult};
+pub use crate::parser::{resp_metadata, parse_response, ParseResult};
 pub use crate::types::*;
 
 use std::borrow::Cow;
