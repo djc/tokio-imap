@@ -13,6 +13,7 @@ use nom::IResult;
 use std::str;
 
 use crate::parser::rfc4551;
+use crate::parser::rfc5464::resp_metadata;
 use crate::types::*;
 use crate::core::*;
 use crate::body::*;
@@ -512,7 +513,8 @@ named!(response_data<Response>, do_parse!(
         mailbox_data |
         message_data_expunge |
         message_data_fetch |
-        resp_capability
+        resp_capability |
+        resp_metadata
     ) >>
     tag!("\r\n") >>
     (contents)
