@@ -49,10 +49,11 @@ impl<'a> Decoder for ImapCodec {
             Err(nom::Err::Incomplete(_)) => {
                 return Ok(None);
             }
-            Err(err) => {
+            Err(nom::Err::Error((_input, err_kind)))
+            | Err(nom::Err::Failure((_input, err_kind))) => {
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
-                    format!("{} during parsing of {:?}", err, buf),
+                    format!("{:?} during parsing of {:?}", err_kind, buf),
                 ));
             }
         };

@@ -35,7 +35,7 @@ pub fn atom_char(c: u8) -> bool {
 }
 
 // nil = "NIL"
-named!(pub nil, tag_s!("NIL"));
+named!(pub nil, tag!("NIL"));
 
 // ASTRING-CHAR = ATOM-CHAR / resp-specials
 pub fn astring_char(c: u8) -> bool {
@@ -75,10 +75,10 @@ named!(pub quoted_utf8<&str>, map_res!(quoted, str::from_utf8));
 // literal = "{" number "}" CRLF *CHAR8
 //            ; Number represents the number of CHAR8s
 named!(pub literal<&[u8]>, do_parse!(
-    tag_s!("{") >>
+    tag!("{") >>
     len: number >>
-    tag_s!("}") >>
-    tag_s!("\r\n") >>
+    tag!("}") >>
+    tag!("\r\n") >>
     data: take!(len) >>
     (data)
 ));
@@ -104,13 +104,13 @@ named!(pub nstring_utf8<Option<&str>>, alt!(
 // number          = 1*DIGIT
 //                    ; Unsigned 32-bit integer
 //                    ; (0 <= n < 4,294,967,296)
-named!(pub number<u32>, flat_map!(nom::digit, parse_to!(u32)));
+named!(pub number<u32>, flat_map!(nom::character::complete::digit0, parse_to!(u32)));
 
 // same as `number` but 64-bit
-named!(pub number_64<u64>, flat_map!(nom::digit, parse_to!(u64)));
+named!(pub number_64<u64>, flat_map!(nom::character::complete::digit0, parse_to!(u64)));
 
 // atom = 1*ATOM-CHAR
-named!(pub atom<&str>, map_res!(take_while1_s!(atom_char),
+named!(pub atom<&str>, map_res!(take_while1!(atom_char),
     str::from_utf8
 ));
 
@@ -124,7 +124,7 @@ named!(pub astring<&[u8]>, alt!(
 named!(pub astring_utf8<&str>, map_res!(astring, str::from_utf8));
 
 // text = 1*TEXT-CHAR
-named!(pub text<&str>, map_res!(take_while_s!(text_char),
+named!(pub text<&str>, map_res!(take_while!(text_char),
     str::from_utf8
 ));
 

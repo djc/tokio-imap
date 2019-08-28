@@ -68,19 +68,19 @@ named!(flag<&str>, alt!(flag_extension | atom));
 named!(flag_list<Vec<&str>>, parenthesized_list!(flag));
 
 named!(flag_perm<&str>, alt!(
-    map_res!(tag_s!("\\*"), str::from_utf8) |
+    map_res!(tag!("\\*"), str::from_utf8) |
     flag
 ));
 
 named!(resp_text_code_alert<ResponseCode>, do_parse!(
-    tag_s!("ALERT") >>
+    tag!("ALERT") >>
     (ResponseCode::Alert)
 ));
 
 named!(resp_text_code_badcharset<ResponseCode>, do_parse!(
-    tag_s!("BADCHARSET") >>
+    tag!("BADCHARSET") >>
     ch: opt!(do_parse!(
-        tag_s!(" ") >>
+        tag!(" ") >>
         charsets: parenthesized_nonempty_list!(astring_utf8) >>
         (charsets)
     )) >>
@@ -93,51 +93,51 @@ named!(resp_text_code_capability<ResponseCode>, map!(
 ));
 
 named!(resp_text_code_parse<ResponseCode>, do_parse!(
-    tag_s!("PARSE") >>
+    tag!("PARSE") >>
     (ResponseCode::Parse)
 ));
 
 named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
-    tag_s!("PERMANENTFLAGS ") >>
+    tag!("PERMANENTFLAGS ") >>
     flags: parenthesized_list!(flag_perm) >>
     (ResponseCode::PermanentFlags(flags))
 ));
 
 named!(resp_text_code_read_only<ResponseCode>, do_parse!(
-    tag_s!("READ-ONLY") >>
+    tag!("READ-ONLY") >>
     (ResponseCode::ReadOnly)
 ));
 
 named!(resp_text_code_read_write<ResponseCode>, do_parse!(
-    tag_s!("READ-WRITE") >>
+    tag!("READ-WRITE") >>
     (ResponseCode::ReadWrite)
 ));
 
 named!(resp_text_code_try_create<ResponseCode>, do_parse!(
-    tag_s!("TRYCREATE") >>
+    tag!("TRYCREATE") >>
     (ResponseCode::TryCreate)
 ));
 
 named!(resp_text_code_uid_validity<ResponseCode>, do_parse!(
-    tag_s!("UIDVALIDITY ") >>
+    tag!("UIDVALIDITY ") >>
     num: number >>
     (ResponseCode::UidValidity(num))
 ));
 
 named!(resp_text_code_uid_next<ResponseCode>, do_parse!(
-    tag_s!("UIDNEXT ") >>
+    tag!("UIDNEXT ") >>
     num: number >>
     (ResponseCode::UidNext(num))
 ));
 
 named!(resp_text_code_unseen<ResponseCode>, do_parse!(
-    tag_s!("UNSEEN ") >>
+    tag!("UNSEEN ") >>
     num: number >>
     (ResponseCode::Unseen(num))
 ));
 
 named!(resp_text_code<ResponseCode>, do_parse!(
-    tag_s!("[") >>
+    tag!("[") >>
     coded: alt!(
         resp_text_code_alert |
         resp_text_code_badcharset |
@@ -154,13 +154,13 @@ named!(resp_text_code<ResponseCode>, do_parse!(
     ) >>
     // Per the spec, the closing tag should be "] ".
     // See `resp_text` for more on why this is done differently.
-    tag_s!("]") >>
+    tag!("]") >>
     (coded)
 ));
 
 named!(capability<Capability>, alt!(
-    map!(tag_s!("IMAP4rev1"), |_| Capability::Imap4rev1) |
-    map!(preceded!(tag_s!("AUTH="), atom), |a| Capability::Auth(a)) |
+    map!(tag!("IMAP4rev1"), |_| Capability::Imap4rev1) |
+    map!(preceded!(tag!("AUTH="), atom), |a| Capability::Auth(a)) |
     map!(atom, |a| Capability::Atom(a))
 ));
 
@@ -174,7 +174,7 @@ fn ensure_capabilities_contains_imap4rev<'a>(capabilities: Vec<Capability<'a>>) 
 
 named!(capability_data<Vec<Capability>>, map_res!(
     do_parse!(
-        tag_s!("CAPABILITY") >>
+        tag!("CAPABILITY") >>
         capabilities: many0!(preceded!(char!(' '), capability)) >>
         (capabilities)
     ),
@@ -187,9 +187,9 @@ named!(resp_capability<Response>, map!(
 ));
 
 named!(mailbox_data_search<Response>, do_parse!(
-    tag_s!("SEARCH") >>
+    tag!("SEARCH") >>
     ids: many0!(do_parse!(
-        tag_s!(" ") >>
+        tag!(" ") >>
         id: number >>
         (id)
     )) >>
@@ -197,31 +197,31 @@ named!(mailbox_data_search<Response>, do_parse!(
 ));
 
 named!(mailbox_data_flags<Response>, do_parse!(
-    tag_s!("FLAGS ") >>
+    tag!("FLAGS ") >>
     flags: flag_list >>
     (Response::MailboxData(MailboxDatum::Flags(flags)))
 ));
 
 named!(mailbox_data_exists<Response>, do_parse!(
     num: number >>
-    tag_s!(" EXISTS") >>
+    tag!(" EXISTS") >>
     (Response::MailboxData(MailboxDatum::Exists(num)))
 ));
 
 named!(mailbox_list<(Vec<&str>, Option<&str>, &str)>, do_parse!(
     flags: flag_list >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     delimiter: alt!(
         map!(quoted_utf8, |v| Some(v)) |
         map!(nil, |_| None)
     ) >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     name: mailbox >>
     ((flags, delimiter, name))
 ));
 
 named!(mailbox_data_list<Response>, do_parse!(
-    tag_s!("LIST ") >>
+    tag!("LIST ") >>
     data: mailbox_list >>
     (Response::MailboxData(MailboxDatum::List {
         flags: data.0,
@@ -231,7 +231,7 @@ named!(mailbox_data_list<Response>, do_parse!(
 ));
 
 named!(mailbox_data_lsub<Response>, do_parse!(
-    tag_s!("LSUB ") >>
+    tag!("LSUB ") >>
     data: mailbox_list >>
     (Response::MailboxData(MailboxDatum::List {
         flags: data.0,
@@ -246,13 +246,13 @@ named!(status_att<StatusAttribute>, alt!(
     rfc4551::status_att_val_highest_mod_seq |
     do_parse!(
         key: alt!(
-            tag_s!("MESSAGES") |
-            tag_s!("RECENT") |
-            tag_s!("UIDNEXT") |
-            tag_s!("UIDVALIDITY") |
-            tag_s!("UNSEEN")
+            tag!("MESSAGES") |
+            tag!("RECENT") |
+            tag!("UIDNEXT") |
+            tag!("UIDVALIDITY") |
+            tag!("UNSEEN")
         ) >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         val: number >>
         (match key {
             b"MESSAGES" => StatusAttribute::Messages(val),
@@ -267,9 +267,9 @@ named!(status_att<StatusAttribute>, alt!(
 named!(status_att_list<Vec<StatusAttribute>>, parenthesized_nonempty_list!(status_att));
 
 named!(mailbox_data_status<Response>, do_parse!(
-    tag_s!("STATUS ") >>
+    tag!("STATUS ") >>
     mailbox: mailbox >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     status: status_att_list >>
     (Response::MailboxData(MailboxDatum::Status {
         mailbox,
@@ -279,7 +279,7 @@ named!(mailbox_data_status<Response>, do_parse!(
 
 named!(mailbox_data_recent<Response>, do_parse!(
     num: number >>
-    tag_s!(" RECENT") >>
+    tag!(" RECENT") >>
     (Response::MailboxData(MailboxDatum::Recent(num)))
 ));
 
@@ -298,11 +298,11 @@ named!(mailbox_data<Response>, alt!(
 named!(address<Address>, paren_delimited!(
     do_parse!(
         name: nstring_utf8 >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         adl: nstring_utf8 >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         mailbox: nstring_utf8 >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         host: nstring_utf8 >>
         (Address {
             name,
@@ -327,23 +327,23 @@ named!(opt_addresses<Option<Vec<Address>>>, alt!(
 named!(pub(crate) envelope<Envelope>, paren_delimited!(
     do_parse!(
         date: nstring_utf8 >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         subject: nstring_utf8 >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         from: opt_addresses >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         sender: opt_addresses >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         reply_to: opt_addresses >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         to: opt_addresses >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         cc: opt_addresses >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         bcc: opt_addresses >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         in_reply_to: nstring_utf8 >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         message_id: nstring_utf8 >>
         (Envelope {
             date,
@@ -361,50 +361,50 @@ named!(pub(crate) envelope<Envelope>, paren_delimited!(
 ));
 
 named!(msg_att_envelope<AttributeValue>, do_parse!(
-    tag_s!("ENVELOPE ") >>
+    tag!("ENVELOPE ") >>
     envelope: envelope >>
     (AttributeValue::Envelope(Box::new(envelope)))
 ));
 
 named!(msg_att_internal_date<AttributeValue>, do_parse!(
-    tag_s!("INTERNALDATE ") >>
+    tag!("INTERNALDATE ") >>
     date: nstring_utf8 >>
     (AttributeValue::InternalDate(date.unwrap()))
 ));
 
 named!(msg_att_flags<AttributeValue>, do_parse!(
-    tag_s!("FLAGS ") >>
+    tag!("FLAGS ") >>
     flags: flag_list >>
     (AttributeValue::Flags(flags))
 ));
 
 named!(msg_att_rfc822<AttributeValue>, do_parse!(
-    tag_s!("RFC822 ") >>
+    tag!("RFC822 ") >>
     raw: nstring >>
     (AttributeValue::Rfc822(raw))
 ));
 
 named!(msg_att_rfc822_header<AttributeValue>, do_parse!(
-    tag_s!("RFC822.HEADER ") >>
-    opt!(tag_s!(" ")) >> // extra space workaround for DavMail
+    tag!("RFC822.HEADER ") >>
+    opt!(tag!(" ")) >> // extra space workaround for DavMail
     raw: nstring >>
     (AttributeValue::Rfc822Header(raw))
 ));
 
 named!(msg_att_rfc822_size<AttributeValue>, do_parse!(
-    tag_s!("RFC822.SIZE ") >>
+    tag!("RFC822.SIZE ") >>
     num: number >>
     (AttributeValue::Rfc822Size(num))
 ));
 
 named!(msg_att_rfc822_text<AttributeValue>, do_parse!(
-    tag_s!("RFC822.TEXT ") >>
+    tag!("RFC822.TEXT ") >>
     raw: nstring >>
     (AttributeValue::Rfc822Text(raw))
 ));
 
 named!(msg_att_uid<AttributeValue>, do_parse!(
-    tag_s!("UID ") >>
+    tag!("UID ") >>
     num: number >>
     (AttributeValue::Uid(num))
 ));
@@ -427,19 +427,19 @@ named!(msg_att_list<Vec<AttributeValue>>, parenthesized_nonempty_list!(msg_att))
 
 named!(message_data_fetch<Response>, do_parse!(
     num: number >>
-    tag_s!(" FETCH ") >>
+    tag!(" FETCH ") >>
     attrs: msg_att_list >>
     (Response::Fetch(num, attrs))
 ));
 
 named!(message_data_expunge<Response>, do_parse!(
     num: number >>
-    tag_s!(" EXPUNGE") >>
+    tag!(" EXPUNGE") >>
     (Response::Expunge(num))
 ));
 
 named!(tag<RequestId>, map!(
-    map_res!(take_while1_s!(tag_char), str::from_utf8),
+    map_res!(take_while1!(tag_char), str::from_utf8),
     |s| RequestId(s.to_string())
 ));
 
@@ -463,9 +463,9 @@ named!(resp_text<(Option<ResponseCode>, Option<&str>)>, do_parse!(
 ));
 
 named!(continue_req<Response>, do_parse!(
-    tag_s!("+ ") >>
+    tag!("+ ") >>
     text: resp_text >> // TODO: base64
-    tag_s!("\r\n") >>
+    tag!("\r\n") >>
     (Response::Continue {
         code: text.0,
         information: text.1,
@@ -474,11 +474,11 @@ named!(continue_req<Response>, do_parse!(
 
 named!(response_tagged<Response>, do_parse!(
     tag: tag >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     status: status >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     text: resp_text >>
-    tag_s!("\r\n") >>
+    tag!("\r\n") >>
     (Response::Done {
         tag,
         status,
@@ -489,7 +489,7 @@ named!(response_tagged<Response>, do_parse!(
 
 named!(resp_cond<Response>, do_parse!(
     status: status >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     text: resp_text >>
     (Response::Data {
         status,
@@ -499,7 +499,7 @@ named!(resp_cond<Response>, do_parse!(
 ));
 
 named!(response_data<Response>, do_parse!(
-    tag_s!("* ") >>
+    tag!("* ") >>
     contents: alt!(
         resp_cond |
         mailbox_data |
@@ -507,7 +507,7 @@ named!(response_data<Response>, do_parse!(
         message_data_fetch |
         resp_capability
     ) >>
-    tag_s!("\r\n") >>
+    tag!("\r\n") >>
     (contents)
 ));
 

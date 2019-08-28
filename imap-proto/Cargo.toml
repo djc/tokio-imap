@@ -15,7 +15,7 @@ azure-devops = { project = "dochtman/Projects", pipeline = "tokio-imap", build =
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-nom = "4.0"
+nom = "5"
 
 [dev-dependencies]
 assert_matches = "1.3"

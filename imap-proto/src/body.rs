@@ -4,7 +4,7 @@ use types::*;
 named!(pub section_part<Vec<u32>>, do_parse!(
     part: number >>
     rest: many0!(do_parse!(
-        tag_s!(".") >>
+        tag!(".") >>
         part: number >>
         (part)
     ))  >> ({
@@ -15,7 +15,7 @@ named!(pub section_part<Vec<u32>>, do_parse!(
 ));
 
 named!(pub section_msgtext<MessageSection>, map!(
-    alt!(tag_s!("HEADER") | tag_s!("TEXT")),
+    alt!(tag!("HEADER") | tag!("TEXT")),
     |s| match s {
         b"HEADER" => MessageSection::Header,
         b"TEXT" => MessageSection::Text,
@@ -25,7 +25,7 @@ named!(pub section_msgtext<MessageSection>, map!(
 
 named!(pub section_text<MessageSection>, alt!(
     section_msgtext |
-    do_parse!(tag_s!("MIME") >> (MessageSection::Mime))
+    do_parse!(tag!("MIME") >> (MessageSection::Mime))
 ));
 
 named!(pub section_spec<SectionPath>, alt!(
@@ -33,7 +33,7 @@ named!(pub section_spec<SectionPath>, alt!(
     do_parse!(
         part: section_part >>
         text: opt!(do_parse!(
-            tag_s!(".") >>
+            tag!(".") >>
             text: section_text >>
             (text)
         )) >>
@@ -42,22 +42,22 @@ named!(pub section_spec<SectionPath>, alt!(
 ));
 
 named!(pub section<Option<SectionPath>>, do_parse!(
-    tag_s!("[") >>
+    tag!("[") >>
     spec: opt!(section_spec) >>
-    tag_s!("]") >>
+    tag!("]") >>
     (spec)
 ));
 
 named!(pub msg_att_body_section<AttributeValue>, do_parse!(
-    tag_s!("BODY") >>
+    tag!("BODY") >>
     section: section >>
     index: opt!(do_parse!(
-        tag_s!("<") >>
+        tag!("<") >>
         num: number >>
-        tag_s!(">") >>
+        tag!(">") >>
         (num)
     )) >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     data: nstring >>
     (AttributeValue::BodySection { section, index, data })
 ));

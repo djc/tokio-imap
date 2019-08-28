@@ -95,7 +95,7 @@ impl Error for ImapError {
         ""
     }
 
-    fn cause(&self) -> Option<&Error> {
+    fn cause(&self) -> Option<&dyn Error> {
         match *self {
             ImapError::Connect { ref cause }
             | ImapError::Login { ref cause }
