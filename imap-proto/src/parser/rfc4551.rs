@@ -17,7 +17,7 @@ use types::*;
 // [RFC4551 - 3.6 HIGHESTMODSEQ Status Data Items](https://tools.ietf.org/html/rfc4551#section-3.6)
 // [RFC4551 - 4. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc4551#section-4)
 named!(pub (crate) resp_text_code_highest_mod_seq<ResponseCode>, do_parse!(
-    tag_s!("HIGHESTMODSEQ ") >>
+    tag!("HIGHESTMODSEQ ") >>
     num: number_64 >>
     (ResponseCode::HighestModSeq(num))
 ));
@@ -26,14 +26,14 @@ named!(pub (crate) resp_text_code_highest_mod_seq<ResponseCode>, do_parse!(
 // [RFC4551 - 3.6 - HIGHESTMODSEQ Status Data Items](https://tools.ietf.org/html/rfc4551#section-3.6)
 // [RFC4551 - 4. Formal Syntax - status-att-val](https://tools.ietf.org/html/rfc4551#section-4)
 named!(pub (crate) status_att_val_highest_mod_seq<StatusAttribute>, do_parse!(
-    tag_s!("HIGHESTMODSEQ ") >>
+    tag!("HIGHESTMODSEQ ") >>
     mod_sequence_valzer: number_64 >>
     (StatusAttribute::HighestModSeq(mod_sequence_valzer))
 ));
 
 // [RFC4551 - 4. Formal Syntax - fetch-mod-resp](https://tools.ietf.org/html/rfc4551#section-4)
 named!(pub (crate) msg_att_mod_seq<AttributeValue>, do_parse!(
-    tag_s!("MODSEQ ") >>
+    tag!("MODSEQ ") >>
     num: paren_delimited!(number_64) >>
     (AttributeValue::ModSeq(num))
 ));

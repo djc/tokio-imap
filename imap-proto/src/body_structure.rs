@@ -16,13 +16,13 @@ struct BodyFields<'a> {
 
 named!(body_fields<BodyFields>, do_parse!(
     param: body_param >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     id: nstring_utf8 >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     description: nstring_utf8 >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     transfer_encoding: body_encoding >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     octets: number >>
     (BodyFields { param, id, description, transfer_encoding, octets })
 ));
@@ -36,11 +36,11 @@ struct BodyExt1Part<'a> {
 }
 
 named!(body_ext_1part<BodyExt1Part>, do_parse!(
-    md5: opt_opt!(preceded!(tag_s!(" "), nstring_utf8)) >>
-    disposition: opt_opt!(preceded!(tag_s!(" "), body_disposition)) >>
-    language: opt_opt!(preceded!(tag_s!(" "), body_lang)) >>
-    location: opt_opt!(preceded!(tag_s!(" "), nstring_utf8)) >>
-    extension: opt!(preceded!(tag_s!(" "), body_extension)) >>
+    md5: opt_opt!(preceded!(tag!(" "), nstring_utf8)) >>
+    disposition: opt_opt!(preceded!(tag!(" "), body_disposition)) >>
+    language: opt_opt!(preceded!(tag!(" "), body_lang)) >>
+    location: opt_opt!(preceded!(tag!(" "), nstring_utf8)) >>
+    extension: opt!(preceded!(tag!(" "), body_extension)) >>
     (BodyExt1Part { md5, disposition, language, location, extension })
 ));
 
@@ -53,21 +53,21 @@ struct BodyExtMPart<'a> {
 }
 
 named!(body_ext_mpart<BodyExtMPart>, do_parse!(
-    param: opt_opt!(preceded!(tag_s!(" "), body_param)) >>
-    disposition: opt_opt!(preceded!(tag_s!(" "), body_disposition)) >>
-    language: opt_opt!(preceded!(tag_s!(" "), body_lang)) >>
-    location: opt_opt!(preceded!(tag_s!(" "), nstring_utf8)) >>
-    extension: opt!(preceded!(tag_s!(" "), body_extension)) >>
+    param: opt_opt!(preceded!(tag!(" "), body_param)) >>
+    disposition: opt_opt!(preceded!(tag!(" "), body_disposition)) >>
+    language: opt_opt!(preceded!(tag!(" "), body_lang)) >>
+    location: opt_opt!(preceded!(tag!(" "), nstring_utf8)) >>
+    extension: opt!(preceded!(tag!(" "), body_extension)) >>
     (BodyExtMPart { param, disposition, language, location, extension })
 ));
 
 named!(body_encoding<ContentEncoding>, alt!(
     delimited!(char!('"'), alt!(
-        map!(tag_no_case_s!("7BIT"), |_| ContentEncoding::SevenBit) |
-        map!(tag_no_case_s!("8BIT"), |_| ContentEncoding::EightBit) |
-        map!(tag_no_case_s!("BINARY"), |_| ContentEncoding::Binary) |
-        map!(tag_no_case_s!("BASE64"), |_| ContentEncoding::Base64) |
-        map!(tag_no_case_s!("QUOTED-PRINTABLE"), |_| ContentEncoding::QuotedPrintable)
+        map!(tag_no_case!("7BIT"), |_| ContentEncoding::SevenBit) |
+        map!(tag_no_case!("8BIT"), |_| ContentEncoding::EightBit) |
+        map!(tag_no_case!("BINARY"), |_| ContentEncoding::Binary) |
+        map!(tag_no_case!("BASE64"), |_| ContentEncoding::Base64) |
+        map!(tag_no_case!("QUOTED-PRINTABLE"), |_| ContentEncoding::QuotedPrintable)
     ), char!('"')) |
     map!(string_utf8, |enc| ContentEncoding::Other(enc))
 ));
@@ -81,7 +81,7 @@ named!(body_param<BodyParams>, alt!(
     map!(nil, |_| None) |
     map!(parenthesized_nonempty_list!(do_parse!(
         key: string_utf8 >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         val: string_utf8 >>
         ((key, val))
     )), Option::from)
@@ -97,7 +97,7 @@ named!(body_disposition<Option<ContentDisposition>>, alt!(
     map!(nil, |_| None) |
     paren_delimited!(do_parse!(
         ty: string_utf8 >>
-        tag_s!(" ") >>
+        tag!(" ") >>
         params: body_param >>
         (Some(ContentDisposition {
             ty,
@@ -108,9 +108,9 @@ named!(body_disposition<Option<ContentDisposition>>, alt!(
 
 named!(body_type_basic<BodyStructure>, do_parse!(
     media_type: string_utf8 >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     media_subtype: string_utf8 >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     fields: body_fields >>
     ext: body_ext_1part >>
     (BodyStructure::Basic {
@@ -136,12 +136,12 @@ named!(body_type_basic<BodyStructure>, do_parse!(
 ));
 
 named!(body_type_text<BodyStructure>, do_parse!(
-    tag_no_case_s!("\"TEXT\"") >>
-    tag_s!(" ") >>
+    tag_no_case!("\"TEXT\"") >>
+    tag!(" ") >>
     media_subtype: string_utf8 >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     fields: body_fields >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     lines: number >>
     ext: body_ext_1part >>
     (BodyStructure::Text {
@@ -168,14 +168,14 @@ named!(body_type_text<BodyStructure>, do_parse!(
 ));
 
 named!(body_type_message<BodyStructure>, do_parse!(
-    tag_no_case_s!("\"MESSAGE\" \"RFC822\"") >>
-    tag_s!(" ") >>
+    tag_no_case!("\"MESSAGE\" \"RFC822\"") >>
+    tag!(" ") >>
     fields: body_fields >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     envelope: envelope >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     body: body >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     lines: number >>
     ext: body_ext_1part >>
     (BodyStructure::Message {
@@ -205,7 +205,7 @@ named!(body_type_message<BodyStructure>, do_parse!(
 
 named!(body_type_multipart<BodyStructure>, do_parse!(
     bodies: many1!(body) >>
-    tag_s!(" ") >>
+    tag!(" ") >>
     media_subtype: string_utf8 >>
     ext: body_ext_mpart >>
     (BodyStructure::Multipart {
@@ -229,7 +229,7 @@ named!(pub(crate) body<BodyStructure>, paren_delimited!(
 ));
 
 named!(pub(crate) msg_att_body_structure<AttributeValue>, do_parse!(
-    tag_s!("BODYSTRUCTURE ") >>
+    tag!("BODYSTRUCTURE ") >>
     body: body >>
     (AttributeValue::BodyStructure(body))
 ));
