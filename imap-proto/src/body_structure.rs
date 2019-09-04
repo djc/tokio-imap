@@ -229,7 +229,7 @@ named!(pub(crate) body<BodyStructure>, paren_delimited!(
 ));
 
 named!(pub(crate) msg_att_body_structure<AttributeValue>, do_parse!(
-    tag!("BODYSTRUCTURE ") >>
+    tag_no_case!("BODYSTRUCTURE ") >>
     body: body >>
     (AttributeValue::BodyStructure(body))
 ));

@@ -14,18 +14,14 @@ named!(pub section_part<Vec<u32>>, do_parse!(
     })
 ));
 
-named!(pub section_msgtext<MessageSection>, map!(
-    alt!(tag!("HEADER") | tag!("TEXT")),
-    |s| match s {
-        b"HEADER" => MessageSection::Header,
-        b"TEXT" => MessageSection::Text,
-        _ => panic!("cannot happen"),
-    }
+named!(pub section_msgtext<MessageSection>, alt!(
+    do_parse!(tag_no_case!("HEADER") >> (MessageSection::Header)) |
+    do_parse!(tag_no_case!("TEXT") >> (MessageSection::Text))
 ));
 
 named!(pub section_text<MessageSection>, alt!(
     section_msgtext |
-    do_parse!(tag!("MIME") >> (MessageSection::Mime))
+    do_parse!(tag_no_case!("MIME") >> (MessageSection::Mime))
 ));
 
 named!(pub section_spec<SectionPath>, alt!(
@@ -49,7 +45,7 @@ named!(pub section<Option<SectionPath>>, do_parse!(
 ));
 
 named!(pub msg_att_body_section<AttributeValue>, do_parse!(
-    tag!("BODY") >>
+    tag_no_case!("BODY") >>
     section: section >>
     index: opt!(do_parse!(
         tag!("<") >>
