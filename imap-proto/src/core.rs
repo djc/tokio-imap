@@ -35,7 +35,7 @@ pub fn atom_char(c: u8) -> bool {
 }
 
 // nil = "NIL"
-named!(pub nil, tag!("NIL"));
+named!(pub nil, tag_no_case!("NIL"));
 
 // ASTRING-CHAR = ATOM-CHAR / resp-specials
 pub fn astring_char(c: u8) -> bool {

@@ -73,12 +73,12 @@ named!(flag_perm<&str>, alt!(
 ));
 
 named!(resp_text_code_alert<ResponseCode>, do_parse!(
-    tag!("ALERT") >>
+    tag_no_case!("ALERT") >>
     (ResponseCode::Alert)
 ));
 
 named!(resp_text_code_badcharset<ResponseCode>, do_parse!(
-    tag!("BADCHARSET") >>
+    tag_no_case!("BADCHARSET") >>
     ch: opt!(do_parse!(
         tag!(" ") >>
         charsets: parenthesized_nonempty_list!(astring_utf8) >>
@@ -93,45 +93,45 @@ named!(resp_text_code_capability<ResponseCode>, map!(
 ));
 
 named!(resp_text_code_parse<ResponseCode>, do_parse!(
-    tag!("PARSE") >>
+    tag_no_case!("PARSE") >>
     (ResponseCode::Parse)
 ));
 
 named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
-    tag!("PERMANENTFLAGS ") >>
+    tag_no_case!("PERMANENTFLAGS ") >>
     flags: parenthesized_list!(flag_perm) >>
     (ResponseCode::PermanentFlags(flags))
 ));
 
 named!(resp_text_code_read_only<ResponseCode>, do_parse!(
-    tag!("READ-ONLY") >>
+    tag_no_case!("READ-ONLY") >>
     (ResponseCode::ReadOnly)
 ));
 
 named!(resp_text_code_read_write<ResponseCode>, do_parse!(
-    tag!("READ-WRITE") >>
+    tag_no_case!("READ-WRITE") >>
     (ResponseCode::ReadWrite)
 ));
 
 named!(resp_text_code_try_create<ResponseCode>, do_parse!(
-    tag!("TRYCREATE") >>
+    tag_no_case!("TRYCREATE") >>
     (ResponseCode::TryCreate)
 ));
 
 named!(resp_text_code_uid_validity<ResponseCode>, do_parse!(
-    tag!("UIDVALIDITY ") >>
+    tag_no_case!("UIDVALIDITY ") >>
     num: number >>
     (ResponseCode::UidValidity(num))
 ));
 
 named!(resp_text_code_uid_next<ResponseCode>, do_parse!(
-    tag!("UIDNEXT ") >>
+    tag_no_case!("UIDNEXT ") >>
     num: number >>
     (ResponseCode::UidNext(num))
 ));
 
 named!(resp_text_code_unseen<ResponseCode>, do_parse!(
-    tag!("UNSEEN ") >>
+    tag_no_case!("UNSEEN ") >>
     num: number >>
     (ResponseCode::Unseen(num))
 ));
@@ -159,8 +159,8 @@ named!(resp_text_code<ResponseCode>, do_parse!(
 ));
 
 named!(capability<Capability>, alt!(
-    map!(tag!("IMAP4rev1"), |_| Capability::Imap4rev1) |
-    map!(preceded!(tag!("AUTH="), atom), |a| Capability::Auth(a)) |
+    map!(tag_no_case!("IMAP4rev1"), |_| Capability::Imap4rev1) |
+    map!(preceded!(tag_no_case!("AUTH="), atom), |a| Capability::Auth(a)) |
     map!(atom, |a| Capability::Atom(a))
 ));
 
@@ -174,7 +174,7 @@ fn ensure_capabilities_contains_imap4rev<'a>(capabilities: Vec<Capability<'a>>) 
 
 named!(capability_data<Vec<Capability>>, map_res!(
     do_parse!(
-        tag!("CAPABILITY") >>
+        tag_no_case!("CAPABILITY") >>
         capabilities: many0!(preceded!(char!(' '), capability)) >>
         (capabilities)
     ),
@@ -187,7 +187,7 @@ named!(resp_capability<Response>, map!(
 ));
 
 named!(mailbox_data_search<Response>, do_parse!(
-    tag!("SEARCH") >>
+    tag_no_case!("SEARCH") >>
     ids: many0!(do_parse!(
         tag!(" ") >>
         id: number >>
@@ -197,14 +197,14 @@ named!(mailbox_data_search<Response>, do_parse!(
 ));
 
 named!(mailbox_data_flags<Response>, do_parse!(
-    tag!("FLAGS ") >>
+    tag_no_case!("FLAGS ") >>
     flags: flag_list >>
     (Response::MailboxData(MailboxDatum::Flags(flags)))
 ));
 
 named!(mailbox_data_exists<Response>, do_parse!(
     num: number >>
-    tag!(" EXISTS") >>
+    tag_no_case!(" EXISTS") >>
     (Response::MailboxData(MailboxDatum::Exists(num)))
 ));
 
@@ -221,7 +221,7 @@ named!(mailbox_list<(Vec<&str>, Option<&str>, &str)>, do_parse!(
 ));
 
 named!(mailbox_data_list<Response>, do_parse!(
-    tag!("LIST ") >>
+    tag_no_case!("LIST ") >>
     data: mailbox_list >>
     (Response::MailboxData(MailboxDatum::List {
         flags: data.0,
@@ -231,7 +231,7 @@ named!(mailbox_data_list<Response>, do_parse!(
 ));
 
 named!(mailbox_data_lsub<Response>, do_parse!(
-    tag!("LSUB ") >>
+    tag_no_case!("LSUB ") >>
     data: mailbox_list >>
     (Response::MailboxData(MailboxDatum::List {
         flags: data.0,
@@ -245,29 +245,36 @@ named!(mailbox_data_lsub<Response>, do_parse!(
 named!(status_att<StatusAttribute>, alt!(
     rfc4551::status_att_val_highest_mod_seq |
     do_parse!(
-        key: alt!(
-            tag!("MESSAGES") |
-            tag!("RECENT") |
-            tag!("UIDNEXT") |
-            tag!("UIDVALIDITY") |
-            tag!("UNSEEN")
-        ) >>
-        tag!(" ") >>
+        tag_no_case!("MESSAGES ") >>
         val: number >>
-        (match key {
-            b"MESSAGES" => StatusAttribute::Messages(val),
-            b"RECENT" => StatusAttribute::Recent(val),
-            b"UIDNEXT" => StatusAttribute::UidNext(val),
-            b"UIDVALIDITY" => StatusAttribute::UidValidity(val),
-            b"UNSEEN" => StatusAttribute::Unseen(val),
-            _ => panic!("invalid status key {}", str::from_utf8(key).unwrap()),
-        }))
+        (StatusAttribute::Messages(val))
+    ) |
+    do_parse!(
+        tag_no_case!("RECENT ") >>
+        val: number >>
+        (StatusAttribute::Recent(val))
+    ) |
+    do_parse!(
+        tag_no_case!("UIDNEXT ") >>
+        val: number >>
+        (StatusAttribute::UidNext(val))
+    ) |
+    do_parse!(
+        tag_no_case!("UIDVALIDITY ") >>
+        val: number >>
+        (StatusAttribute::UidValidity(val))
+    ) |
+    do_parse!(
+        tag_no_case!("UNSEEN ") >>
+        val: number >>
+        (StatusAttribute::Unseen(val))
+    )
 ));
 
 named!(status_att_list<Vec<StatusAttribute>>, parenthesized_nonempty_list!(status_att));
 
 named!(mailbox_data_status<Response>, do_parse!(
-    tag!("STATUS ") >>
+    tag_no_case!("STATUS ") >>
     mailbox: mailbox >>
     tag!(" ") >>
     status: status_att_list >>
@@ -279,7 +286,7 @@ named!(mailbox_data_status<Response>, do_parse!(
 
 named!(mailbox_data_recent<Response>, do_parse!(
     num: number >>
-    tag!(" RECENT") >>
+    tag_no_case!(" RECENT") >>
     (Response::MailboxData(MailboxDatum::Recent(num)))
 ));
 
@@ -361,50 +368,50 @@ named!(pub(crate) envelope<Envelope>, paren_delimited!(
 ));
 
 named!(msg_att_envelope<AttributeValue>, do_parse!(
-    tag!("ENVELOPE ") >>
+    tag_no_case!("ENVELOPE ") >>
     envelope: envelope >>
     (AttributeValue::Envelope(Box::new(envelope)))
 ));
 
 named!(msg_att_internal_date<AttributeValue>, do_parse!(
-    tag!("INTERNALDATE ") >>
+    tag_no_case!("INTERNALDATE ") >>
     date: nstring_utf8 >>
     (AttributeValue::InternalDate(date.unwrap()))
 ));
 
 named!(msg_att_flags<AttributeValue>, do_parse!(
-    tag!("FLAGS ") >>
+    tag_no_case!("FLAGS ") >>
     flags: flag_list >>
     (AttributeValue::Flags(flags))
 ));
 
 named!(msg_att_rfc822<AttributeValue>, do_parse!(
-    tag!("RFC822 ") >>
+    tag_no_case!("RFC822 ") >>
     raw: nstring >>
     (AttributeValue::Rfc822(raw))
 ));
 
 named!(msg_att_rfc822_header<AttributeValue>, do_parse!(
-    tag!("RFC822.HEADER ") >>
+    tag_no_case!("RFC822.HEADER ") >>
     opt!(tag!(" ")) >> // extra space workaround for DavMail
     raw: nstring >>
     (AttributeValue::Rfc822Header(raw))
 ));
 
 named!(msg_att_rfc822_size<AttributeValue>, do_parse!(
-    tag!("RFC822.SIZE ") >>
+    tag_no_case!("RFC822.SIZE ") >>
     num: number >>
     (AttributeValue::Rfc822Size(num))
 ));
 
 named!(msg_att_rfc822_text<AttributeValue>, do_parse!(
-    tag!("RFC822.TEXT ") >>
+    tag_no_case!("RFC822.TEXT ") >>
     raw: nstring >>
     (AttributeValue::Rfc822Text(raw))
 ));
 
 named!(msg_att_uid<AttributeValue>, do_parse!(
-    tag!("UID ") >>
+    tag_no_case!("UID ") >>
     num: number >>
     (AttributeValue::Uid(num))
 ));
@@ -427,14 +434,14 @@ named!(msg_att_list<Vec<AttributeValue>>, parenthesized_nonempty_list!(msg_att))
 
 named!(message_data_fetch<Response>, do_parse!(
     num: number >>
-    tag!(" FETCH ") >>
+    tag_no_case!(" FETCH ") >>
     attrs: msg_att_list >>
     (Response::Fetch(num, attrs))
 ));
 
 named!(message_data_expunge<Response>, do_parse!(
     num: number >>
-    tag!(" EXPUNGE") >>
+    tag_no_case!(" EXPUNGE") >>
     (Response::Expunge(num))
 ));
 
