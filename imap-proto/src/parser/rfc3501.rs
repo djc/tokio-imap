@@ -790,6 +790,13 @@ mod tests {
         );
 
         assert_matches!(
+            super::capability_data(b"CAPABILITY IMAP4REV1\r\n"),
+            Ok((_, capabilities)) => {
+                assert_eq!(capabilities, vec![Capability::Imap4rev1])
+            }
+        );
+
+        assert_matches!(
             super::capability_data(b"CAPABILITY XPIG-LATIN IMAP4rev1 STARTTLS AUTH=GSSAPI\r\n"),
             Ok((_, capabilities)) => {
                 assert_eq!(capabilities, vec![
