@@ -18,7 +18,7 @@ maintenance = { status = "passively-maintained" }
 [dependencies]
 bytes = "0.4"
 futures = "0.1"
-futures-state-stream = "0.1"
+futures-state-stream = "0.2"
 imap-proto = { version = "0.9", path = "../imap-proto" }
 native-tls = "0.2"
 nom = "5"
