@@ -1,10 +1,10 @@
 // rustfmt doesn't do a very good job on nom parser invocations.
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-use core::*;
-use types::*;
+use crate::core::*;
+use crate::types::*;
 
-use parser::envelope;
+use crate::parser::envelope;
 
 struct BodyFields<'a> {
     pub param: BodyParams<'a>,

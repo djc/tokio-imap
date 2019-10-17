@@ -13,10 +13,10 @@ use nom::IResult;
 use std::str;
 
 use crate::parser::rfc4551;
-use types::*;
-use core::*;
-use body::*;
-use body_structure::*;
+use crate::types::*;
+use crate::core::*;
+use crate::body::*;
+use crate::body_structure::*;
 
 
 fn tag_char(c: u8) -> bool {
@@ -535,7 +535,7 @@ pub fn parse_response(msg: &[u8]) -> ParseResult {
 mod tests {
     use nom;
     use super::parse_response;
-    use types::*;
+    use crate::types::*;
 
     #[test]
     fn test_number_overflow() {
@@ -641,7 +641,7 @@ mod tests {
 
     #[test]
     fn test_list() {
-        match ::parser::rfc3501::mailbox(b"iNboX ") {
+        match crate::parser::rfc3501::mailbox(b"iNboX ") {
             Ok((_, mb)) => {
                 assert_eq!(mb, "INBOX");
             },
@@ -666,7 +666,7 @@ mod tests {
     #[test]
     fn test_envelope() {
         let env = r#"ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" "IMAP4rev1 WG mtg summary and minutes" (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) ((NIL NIL "imap" "cac.washington.edu")) ((NIL NIL "minutes" "CNRI.Reston.VA.US") ("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL "<B27397-0100000@cac.washington.edu>") "#;
-        match ::parser::rfc3501::msg_att_envelope(env.as_bytes()) {
+        match crate::parser::rfc3501::msg_att_envelope(env.as_bytes()) {
             Ok((_, AttributeValue::Envelope(_))) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }
@@ -675,7 +675,7 @@ mod tests {
     #[test]
     fn test_opt_addresses() {
         let addr = b"((NIL NIL \"minutes\" \"CNRI.Reston.VA.US\") (\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\")) ";
-            match ::parser::rfc3501::opt_addresses(addr) {
+            match crate::parser::rfc3501::opt_addresses(addr) {
             Ok((_, _addresses)) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }
@@ -692,7 +692,7 @@ mod tests {
 
     #[test]
     fn test_addresses() {
-        match ::parser::rfc3501::address(b"(\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\") ") {
+        match crate::parser::rfc3501::address(b"(\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\") ") {
             Ok((_, _address)) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }

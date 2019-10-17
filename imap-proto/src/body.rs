@@ -1,5 +1,5 @@
-use core::*;
-use types::*;
+use crate::core::*;
+use crate::types::*;
 
 named!(pub section_part<Vec<u32>>, do_parse!(
     part: number >>

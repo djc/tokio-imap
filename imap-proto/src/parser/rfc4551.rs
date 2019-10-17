@@ -9,8 +9,8 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 #![cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
 
-use core::number_64;
-use types::*;
+use crate::core::number_64;
+use crate::types::*;
 
 // The highest mod-sequence value of all messages in the mailbox.
 // Extends resp-test-code defined in rfc3501.
