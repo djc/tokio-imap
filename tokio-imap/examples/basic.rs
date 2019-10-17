@@ -1,8 +1,4 @@
-extern crate futures;
-extern crate futures_state_stream;
-extern crate tokio;
-extern crate tokio_current_thread;
-extern crate tokio_imap;
+use tokio_current_thread;
 
 use futures::future::Future;
 use futures_state_stream::StateStream;
@@ -106,7 +102,7 @@ impl Error for ImapError {
 }
 
 impl Display for ImapError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match *self {
             ImapError::Connect { ref cause } => write!(f, "Connect failed: {}", cause),
             ImapError::Login { ref cause } => write!(f, "Login failed: {}", cause),

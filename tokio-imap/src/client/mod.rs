@@ -14,7 +14,7 @@ use tokio_tls::{self, Connect};
 
 use imap_proto::builders::command::Command;
 use imap_proto::{Request, RequestId, State};
-use proto::{ImapCodec, ImapTls, ImapTransport, ResponseData};
+use crate::proto::{ImapCodec, ImapTls, ImapTransport, ResponseData};
 
 pub mod builder {
     pub use imap_proto::builders::command::{
