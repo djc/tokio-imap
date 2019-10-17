@@ -12,9 +12,9 @@ use tokio::net::tcp::{ConnectFuture, TcpStream};
 use tokio_codec::Decoder;
 use tokio_tls::{self, Connect};
 
+use crate::proto::{ImapCodec, ImapTls, ImapTransport, ResponseData};
 use imap_proto::builders::command::Command;
 use imap_proto::{Request, RequestId, State};
-use crate::proto::{ImapCodec, ImapTls, ImapTransport, ResponseData};
 
 pub mod builder {
     pub use imap_proto::builders::command::{
