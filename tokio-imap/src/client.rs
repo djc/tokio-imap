@@ -1,16 +1,14 @@
+use std::io;
+use std::net::ToSocketAddrs;
+
 use futures::sink::Send;
 use futures::stream::Stream;
 use futures::{Async, Future, Poll, Sink};
 use futures_state_stream::{StateStream, StreamEvent};
-
 use native_tls::TlsConnector;
-
-use std::io;
-use std::net::ToSocketAddrs;
-
+use tokio::codec::Decoder;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::tcp::{ConnectFuture, TcpStream};
-use tokio_codec::Decoder;
 use tokio_tls::{self, Connect, TlsStream};
 
 use crate::proto::{ImapCodec, ImapTransport, ResponseData};
