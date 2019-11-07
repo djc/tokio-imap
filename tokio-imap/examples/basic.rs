@@ -1,10 +1,11 @@
-use tokio_current_thread;
-
-use futures::future::Future;
-use futures_state_stream::StateStream;
 use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::io;
+
+use futures::future::Future;
+use futures_state_stream::StateStream;
+use tokio::runtime::current_thread;
+
 use tokio_imap::client::builder::{
     CommandBuilder, FetchBuilderAttributes, FetchBuilderMessages, FetchBuilderModifiers,
 };
@@ -54,7 +55,7 @@ fn imap_fetch(
         .and_then(move |tls_client| tls_client.call(CommandBuilder::close()).collect())
         .and_then(|_| Ok(()))
         .map_err(|e| ImapError::UidFetch { cause: e });
-    let res = tokio_current_thread::block_on_all({
+    let res = current_thread::block_on_all({
         eprintln!("Fetching messages...");
         fut_responses
     });

@@ -1,14 +1,12 @@
-use bytes::{BufMut, Bytes, BytesMut};
-
-use nom::{self, Needed};
-
-use imap_proto;
-use imap_proto::types::{Request, RequestId, Response};
-
 use std::io;
 use std::mem;
 
+use bytes::{BufMut, Bytes, BytesMut};
+use nom::{self, Needed};
 use tokio::codec::{Decoder, Encoder, Framed};
+
+use imap_proto;
+use imap_proto::types::{Request, RequestId, Response};
 
 pub struct ImapCodec {
     decode_need_message_bytes: usize,
