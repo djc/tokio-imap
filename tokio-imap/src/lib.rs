@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate futures;
-
 pub mod client;
 pub mod proto;
 
