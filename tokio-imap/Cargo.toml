@@ -19,7 +19,7 @@ maintenance = { status = "passively-maintained" }
 [dependencies]
 bytes = "0.4"
 futures = { version = "0.3.0-alpha.19", package = "futures-preview" }
-imap-proto = { version = "0.9", path = "../imap-proto" }
+imap-proto = { version = "0.9.1", path = "../imap-proto" }
 native-tls = "0.2"
 nom = "5"
 rustls = "0.16.0"
