@@ -1,15 +1,15 @@
+use std::future::Future;
 use std::io;
 use std::net::ToSocketAddrs;
+use std::sync::Arc;
 
-use futures::sink::Send;
-use futures::stream::Stream;
-use futures::{Async, Future, Poll, Sink};
-use futures_state_stream::{StateStream, StreamEvent};
-use native_tls::TlsConnector;
+use futures::{SinkExt, StreamExt};
 use tokio::codec::Decoder;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::net::tcp::{ConnectFuture, TcpStream};
-use tokio_tls::{self, Connect, TlsStream};
+use tokio::net::tcp::TcpStream;
+use tokio_rustls::rustls::ClientConfig;
+use tokio_rustls::webpki::DNSNameRef;
+use tokio_rustls::{client::TlsStream, TlsConnector};
 
 use crate::proto::{ImapCodec, ImapTransport, ResponseData};
 use imap_proto::builders::command::Command;
@@ -29,164 +29,150 @@ pub struct Client<T> {
     state: ClientState,
 }
 
-impl<T> Client<T>
-where
-    T: AsyncRead + AsyncWrite,
-{
-    pub fn call(self, cmd: Command) -> ResponseStream<T> {
-        let Client {
-            transport,
-            mut state,
-        } = self;
-        let request_id = state.request_ids.next().unwrap(); // safe: never returns Err
-        let (cmd_bytes, next_state) = cmd.into_parts();
-        let future = transport.send(Request(request_id.clone(), cmd_bytes));
-        ResponseStream::new(future, state, request_id, next_state)
-    }
-}
-
 impl TlsClient {
-    pub fn connect(server: &str) -> io::Result<ImapConnectFuture> {
+    pub async fn connect(server: &str) -> io::Result<(ResponseData, Self)> {
         let addr = (server, 993).to_socket_addrs()?.next().ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::Other,
                 format!("no IP addresses found for {}", server),
             )
         })?;
-        Ok(ImapConnectFuture::TcpConnecting(
-            TcpStream::connect(&addr),
-            server.to_string(),
-        ))
+
+        let mut tls_config = ClientConfig::new();
+        tls_config
+            .root_store
+            .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
+        let connector: TlsConnector = Arc::new(tls_config).into();
+
+        let stream = TcpStream::connect(&addr).await?;
+        let stream = connector
+            .connect(DNSNameRef::try_from_ascii_str(server).unwrap(), stream)
+            .await?;
+        let mut transport = ImapCodec::default().framed(stream);
+
+        let greeting = match transport.next().await {
+            Some(greeting) => Ok(greeting),
+            None => Err(io::Error::new(io::ErrorKind::Other, "no greeting found")),
+        }?;
+        let client = Client {
+            transport,
+            state: ClientState::new(),
+        };
+
+        greeting.map(|greeting| (greeting, client))
+    }
+
+    pub fn call(&mut self, cmd: Command) -> ResponseStream<TlsStream<TcpStream>> {
+        ResponseStream::new(self, cmd)
     }
 }
 
-pub struct ResponseStream<T>
-where
-    T: AsyncRead + AsyncWrite,
-{
-    future: Option<Send<ImapTransport<T>>>,
-    transport: Option<ImapTransport<T>>,
-    state: Option<ClientState>,
-    request_id: RequestId,
+pub struct ResponseStream<'a, T> {
+    client: &'a mut Client<T>,
+    request: Request,
     next_state: Option<State>,
+    sending: bool,
     done: bool,
 }
 
-impl<T> ResponseStream<T>
+impl<'a, T> ResponseStream<'a, T>
 where
-    T: AsyncRead + AsyncWrite,
+    T: AsyncRead + AsyncWrite + Unpin,
 {
-    pub fn new(
-        future: Send<ImapTransport<T>>,
-        state: ClientState,
-        request_id: RequestId,
-        next_state: Option<State>,
-    ) -> Self {
-        Self {
-            future: Some(future),
-            transport: None,
-            state: Some(state),
-            request_id,
+    pub fn new(client: &mut Client<T>, cmd: Command) -> ResponseStream<'_, T> {
+        let request_id = client.state.request_ids.next().unwrap(); // safe: never returns Err
+        let (cmd_bytes, next_state) = cmd.into_parts();
+        let request = Request(request_id.clone(), cmd_bytes);
+
+        ResponseStream {
+            client,
+            request,
             next_state,
+            sending: true,
             done: false,
         }
     }
-}
 
-impl<T> StateStream for ResponseStream<T>
-where
-    T: AsyncRead + AsyncWrite,
-{
-    type Item = ResponseData;
-    type State = Client<T>;
-    type Error = io::Error;
-    fn poll(&mut self) -> Poll<StreamEvent<Self::Item, Self::State>, Self::Error> {
-        if let Some(mut future) = self.future.take() {
-            match future.poll() {
-                Ok(Async::Ready(transport)) => {
-                    self.transport = Some(transport);
-                }
-                Ok(Async::NotReady) => {
-                    self.future = Some(future);
-                    return Ok(Async::NotReady);
-                }
-                Err(e) => {
-                    return Err(e);
-                }
-            }
-        }
-        let mut transport = match self.transport.take() {
-            None => return Ok(Async::NotReady),
-            Some(transport) => transport,
-        };
+    pub async fn next(&mut self) -> Option<Result<ResponseData, io::Error>> {
         if self.done {
-            let mut state = self.state.take().unwrap(); // safe: initialized from start
-            if let Some(next_state) = self.next_state.take() {
-                state.state = next_state;
-            }
-            return Ok(Async::Ready(StreamEvent::Done(Client { transport, state })));
+            return None;
         }
-        match transport.poll() {
-            Ok(Async::Ready(Some(rsp))) => {
+
+        if self.sending {
+            match self.client.transport.send(self.request.clone()).await {
+                Ok(()) => {
+                    self.sending = false;
+                }
+                Err(e) => return Some(Err(e)),
+            }
+        }
+
+        match self.client.transport.next().await {
+            Some(Ok(rsp)) => {
                 if let Some(req_id) = rsp.request_id() {
-                    self.done = *req_id == self.request_id;
-                };
-                self.transport = Some(transport);
-                return Ok(Async::Ready(StreamEvent::Next(rsp)));
+                    self.done = *req_id == self.request.0;
+                }
+
+                if self.done {
+                    if let Some(next_state) = self.next_state.take() {
+                        self.client.state.state = next_state;
+                    }
+                }
+
+                Some(Ok(rsp))
             }
-            Err(e) => {
-                return Err(e);
-            }
-            _ => (),
+            Some(Err(e)) => Some(Err(e)),
+            None => Some(Err(io::Error::new(
+                io::ErrorKind::Other,
+                "stream ended before command completion",
+            ))),
         }
-        self.transport = Some(transport);
-        Ok(Async::NotReady)
     }
-}
 
-pub enum ImapConnectFuture {
-    #[doc(hidden)]
-    TcpConnecting(ConnectFuture, String),
-    #[doc(hidden)]
-    TlsHandshake(Connect<TcpStream>),
-    #[doc(hidden)]
-    ServerGreeting(Option<ImapTransport<TlsStream<TcpStream>>>),
-}
+    pub async fn try_collect(&mut self) -> Result<Vec<ResponseData>, io::Error> {
+        let mut data = vec![];
+        loop {
+            match self.next().await {
+                Some(Ok(rsp)) => {
+                    data.push(rsp);
+                }
+                Some(Err(e)) => return Err(e),
+                None => return Ok(data),
+            }
+        }
+    }
 
-impl Future for ImapConnectFuture {
-    type Item = (ResponseData, TlsClient);
-    type Error = io::Error;
-    fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        let mut new = None;
-        if let ImapConnectFuture::TcpConnecting(ref mut future, ref domain) = *self {
-            let stream = try_ready!(future.poll());
-            let ctx = TlsConnector::builder().build().unwrap();
-            let ctx = tokio_tls::TlsConnector::from(ctx);
-            new = Some(ImapConnectFuture::TlsHandshake(ctx.connect(domain, stream)));
+    pub async fn try_for_each<F, Fut>(&mut self, mut f: F) -> Result<(), io::Error>
+    where
+        F: FnMut(ResponseData) -> Fut,
+        Fut: Future<Output = Result<(), io::Error>>,
+    {
+        loop {
+            match self.next().await {
+                Some(Ok(rsp)) => f(rsp).await?,
+                Some(Err(e)) => return Err(e),
+                None => return Ok(()),
+            }
         }
-        if new.is_some() {
-            *self = new.take().unwrap();
-        }
-        if let ImapConnectFuture::TlsHandshake(ref mut future) = *self {
-            let transport = ImapCodec::default().framed(try_ready!(future
-                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-                .poll()));
-            new = Some(ImapConnectFuture::ServerGreeting(Some(transport)));
-        }
-        if new.is_some() {
-            *self = new.take().unwrap();
-        }
-        if let ImapConnectFuture::ServerGreeting(ref mut wrapped) = *self {
-            let msg = try_ready!(wrapped.as_mut().unwrap().poll()).unwrap();
-            return Ok(Async::Ready((
-                msg,
-                TlsClient {
-                    transport: wrapped.take().unwrap(),
-                    state: ClientState::new(),
+    }
+
+    pub async fn try_fold<S, Fut, F>(&mut self, mut state: S, mut f: F) -> Result<S, io::Error>
+    where
+        F: FnMut(S, ResponseData) -> Fut,
+        Fut: Future<Output = Result<S, io::Error>>,
+    {
+        loop {
+            match self.next().await {
+                Some(Ok(rsp)) => match f(state, rsp).await {
+                    Ok(new) => {
+                        state = new;
+                    }
+                    Err(e) => return Err(e),
                 },
-            )));
+                Some(Err(e)) => return Err(e),
+                None => return Ok(state),
+            }
         }
-        Ok(Async::NotReady)
     }
 }
 

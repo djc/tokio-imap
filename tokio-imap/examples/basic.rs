@@ -2,8 +2,6 @@ use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
-use futures::future::Future;
-use futures_state_stream::StateStream;
 use tokio::runtime::current_thread;
 
 use tokio_imap::client::builder::{
@@ -20,50 +18,72 @@ fn main() {
     let login = args.next().expect("no login provided");
     let password = args.next().expect("no password provided");
     let mailbox = args.next().expect("no mailbox provided");
-    if let Err(cause) = imap_fetch(&server, login, password, mailbox) {
-        eprintln!("Fatal error: {}", cause);
-    };
+
+    let mut rt = current_thread::Runtime::new().unwrap();
+    rt.block_on(async move {
+        if let Err(cause) = imap_fetch(&server, login, password, mailbox).await {
+            eprintln!("Fatal error: {}", cause);
+        }
+    });
 }
 
-fn imap_fetch(
+async fn imap_fetch(
     server: &str,
     login: String,
     password: String,
     mailbox: String,
 ) -> Result<(), ImapError> {
     eprintln!("Will connect to {}", server);
-    let fut_connect = TlsClient::connect(server).map_err(|cause| ImapError::Connect { cause })?;
-    let fut_responses = fut_connect
-        .and_then(move |(_, tls_client)| {
-            tls_client
-                .call(CommandBuilder::login(&login, &password))
-                .collect()
-        })
-        .and_then(move |(_, tls_client)| {
-            tls_client.call(CommandBuilder::select(&mailbox)).collect()
-        })
-        .and_then(move |(_, tls_client)| {
-            let cmd = CommandBuilder::uid_fetch()
-                .all_after(1_u32)
-                .attr(Attribute::Uid)
-                .attr(Attribute::Rfc822);
-            tls_client.call(cmd.build()).for_each(move |response_data| {
-                process_email(&response_data);
-                Ok(())
-            })
-        })
-        .and_then(move |tls_client| tls_client.call(CommandBuilder::close()).collect())
-        .and_then(|_| Ok(()))
-        .map_err(|e| ImapError::UidFetch { cause: e });
-    let res = current_thread::block_on_all({
-        eprintln!("Fetching messages...");
-        fut_responses
-    });
+    let (_, mut tls_client) = TlsClient::connect(server)
+        .await
+        .map_err(|e| ImapError::Connect { cause: e })?;
+
+    let responses = tls_client
+        .call(CommandBuilder::login(&login, &password))
+        .try_collect()
+        .await
+        .map_err(|e| ImapError::Login { cause: e })?;
+
+    match responses[0].parsed() {
+        Response::Capabilities(_) => {}
+        Response::Done { information, .. } => {
+            if let Some(info) = information {
+                eprintln!("Login failed: {:?}", info);
+            }
+            return Err(ImapError::Login {
+                cause: io::Error::new(io::ErrorKind::Other, "login failed"),
+            });
+        }
+        _ => unimplemented!(),
+    }
+
+    let _ = tls_client
+        .call(CommandBuilder::select(&mailbox))
+        .try_collect()
+        .await
+        .map_err(|e| ImapError::Select { cause: e })?;
+
+    let cmd = CommandBuilder::uid_fetch()
+        .all_after(1_u32)
+        .attr(Attribute::Uid)
+        .attr(Attribute::Rfc822);
+    let _ = tls_client
+        .call(cmd.build())
+        .try_for_each(move |response_data| process_email(response_data))
+        .await
+        .map_err(|e| ImapError::UidFetch { cause: e })?;
+
+    let _ = tls_client
+        .call(CommandBuilder::close())
+        .try_collect()
+        .await
+        .map_err(|e| ImapError::Close { cause: e })?;
+
     eprintln!("Finished fetching messages");
-    res
+    Ok(())
 }
 
-fn process_email(response_data: &ResponseData) {
+async fn process_email(response_data: ResponseData) -> Result<(), io::Error> {
     if let Response::Fetch(_, ref attr_vals) = *response_data.parsed() {
         for val in attr_vals.iter() {
             match *val {
@@ -77,6 +97,7 @@ fn process_email(response_data: &ResponseData) {
             }
         }
     }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -85,6 +106,7 @@ pub enum ImapError {
     Login { cause: io::Error },
     Select { cause: io::Error },
     UidFetch { cause: io::Error },
+    Close { cause: io::Error },
 }
 
 impl Error for ImapError {
@@ -97,7 +119,8 @@ impl Error for ImapError {
             ImapError::Connect { ref cause }
             | ImapError::Login { ref cause }
             | ImapError::Select { ref cause }
-            | ImapError::UidFetch { ref cause } => Some(cause),
+            | ImapError::UidFetch { ref cause }
+            | ImapError::Close { ref cause } => Some(cause),
         }
     }
 }
@@ -109,6 +132,7 @@ impl Display for ImapError {
             ImapError::Login { ref cause } => write!(f, "Login failed: {}", cause),
             ImapError::Select { ref cause } => write!(f, "Mailbox selection failed: {}", cause),
             ImapError::UidFetch { ref cause } => write!(f, "Fetching messages failed: {}", cause),
+            ImapError::Close { ref cause } => write!(f, "Closing failed: {}", cause),
         }
     }
 }
