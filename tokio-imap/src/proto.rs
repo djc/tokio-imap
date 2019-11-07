@@ -1,7 +1,5 @@
 use bytes::{BufMut, Bytes, BytesMut};
 
-use futures;
-
 use nom::{self, Needed};
 
 use imap_proto;
@@ -10,9 +8,7 @@ use imap_proto::types::{Request, RequestId, Response};
 use std::io;
 use std::mem;
 
-use tokio::net::TcpStream;
-use tokio_codec::{Decoder, Encoder, Framed};
-use tokio_tls::TlsStream;
+use tokio::codec::{Decoder, Encoder, Framed};
 
 pub struct ImapCodec {
     decode_need_message_bytes: usize,
@@ -101,12 +97,4 @@ impl ResponseData {
     }
 }
 
-pub type ImapTls = Framed<TlsStream<TcpStream>, ImapCodec>;
-
-impl ImapTransport for ImapTls {}
-
-pub trait ImapTransport:
-    futures::Stream<Item = ResponseData, Error = io::Error>
-    + futures::Sink<SinkItem = Request, SinkError = io::Error>
-{
-}
+pub type ImapTransport<T> = Framed<T, ImapCodec>;

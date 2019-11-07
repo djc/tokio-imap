@@ -8,11 +8,12 @@ use native_tls::TlsConnector;
 use std::io;
 use std::net::ToSocketAddrs;
 
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::tcp::{ConnectFuture, TcpStream};
 use tokio_codec::Decoder;
-use tokio_tls::{self, Connect};
+use tokio_tls::{self, Connect, TlsStream};
 
-use crate::proto::{ImapCodec, ImapTls, ImapTransport, ResponseData};
+use crate::proto::{ImapCodec, ImapTransport, ResponseData};
 use imap_proto::builders::command::Command;
 use imap_proto::{Request, RequestId, State};
 
@@ -23,26 +24,27 @@ pub mod builder {
     };
 }
 
-pub trait ImapClient {
-    type Transport: ImapTransport;
-    fn into_parts(self) -> (Self::Transport, ClientState);
-    fn rebuild(transport: Self::Transport, state: ClientState) -> Self;
+pub type TlsClient = Client<TlsStream<TcpStream>>;
 
-    fn call(self, cmd: Command) -> ResponseStream<Self>
-    where
-        Self: ImapClient + Sized,
-    {
-        let (transport, mut state) = self.into_parts();
+pub struct Client<T> {
+    transport: ImapTransport<T>,
+    state: ClientState,
+}
+
+impl<T> Client<T>
+where
+    T: AsyncRead + AsyncWrite,
+{
+    pub fn call(self, cmd: Command) -> ResponseStream<T> {
+        let Client {
+            transport,
+            mut state,
+        } = self;
         let request_id = state.request_ids.next().unwrap(); // safe: never returns Err
         let (cmd_bytes, next_state) = cmd.into_parts();
         let future = transport.send(Request(request_id.clone(), cmd_bytes));
         ResponseStream::new(future, state, request_id, next_state)
     }
-}
-
-pub struct TlsClient {
-    transport: ImapTls,
-    state: ClientState,
 }
 
 impl TlsClient {
@@ -60,37 +62,24 @@ impl TlsClient {
     }
 }
 
-impl ImapClient for TlsClient {
-    type Transport = ImapTls;
-
-    fn into_parts(self) -> (ImapTls, ClientState) {
-        let Self { transport, state } = self;
-        (transport, state)
-    }
-
-    fn rebuild(transport: ImapTls, state: ClientState) -> TlsClient {
-        TlsClient { transport, state }
-    }
-}
-
-pub struct ResponseStream<E>
+pub struct ResponseStream<T>
 where
-    E: ImapClient,
+    T: AsyncRead + AsyncWrite,
 {
-    future: Option<Send<E::Transport>>,
-    transport: Option<E::Transport>,
+    future: Option<Send<ImapTransport<T>>>,
+    transport: Option<ImapTransport<T>>,
     state: Option<ClientState>,
     request_id: RequestId,
     next_state: Option<State>,
     done: bool,
 }
 
-impl<E> ResponseStream<E>
+impl<T> ResponseStream<T>
 where
-    E: ImapClient,
+    T: AsyncRead + AsyncWrite,
 {
     pub fn new(
-        future: Send<E::Transport>,
+        future: Send<ImapTransport<T>>,
         state: ClientState,
         request_id: RequestId,
         next_state: Option<State>,
@@ -106,12 +95,12 @@ where
     }
 }
 
-impl<E> StateStream for ResponseStream<E>
+impl<T> StateStream for ResponseStream<T>
 where
-    E: ImapClient,
+    T: AsyncRead + AsyncWrite,
 {
     type Item = ResponseData;
-    type State = E;
+    type State = Client<T>;
     type Error = io::Error;
     fn poll(&mut self) -> Poll<StreamEvent<Self::Item, Self::State>, Self::Error> {
         if let Some(mut future) = self.future.take() {
@@ -137,9 +126,7 @@ where
             if let Some(next_state) = self.next_state.take() {
                 state.state = next_state;
             }
-            return Ok(Async::Ready(StreamEvent::Done(E::rebuild(
-                transport, state,
-            ))));
+            return Ok(Async::Ready(StreamEvent::Done(Client { transport, state })));
         }
         match transport.poll() {
             Ok(Async::Ready(Some(rsp))) => {
@@ -165,7 +152,7 @@ pub enum ImapConnectFuture {
     #[doc(hidden)]
     TlsHandshake(Connect<TcpStream>),
     #[doc(hidden)]
-    ServerGreeting(Option<ImapTls>),
+    ServerGreeting(Option<ImapTransport<TlsStream<TcpStream>>>),
 }
 
 impl Future for ImapConnectFuture {

@@ -10,7 +10,7 @@ use tokio_imap::client::builder::{
 };
 use tokio_imap::proto::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
-use tokio_imap::{ImapClient, TlsClient};
+use tokio_imap::TlsClient;
 
 fn main() {
     let mut args = std::env::args();
