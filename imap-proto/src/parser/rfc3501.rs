@@ -823,4 +823,12 @@ mod tests {
             Err(_)
         );
     }
+
+    #[test]
+    fn test_incomplete_fetch() {
+        match parse_response(b"* 4644 FETCH (UID ") {
+            Err(nom::Err::Incomplete(_)) => {},
+            rsp => panic!("should be incomplete: {:?}", rsp),
+        }
+    }
 }
