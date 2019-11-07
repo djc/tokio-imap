@@ -1,4 +1,4 @@
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Request(pub RequestId, pub Vec<u8>);
 
 #[derive(Clone, Debug, Eq, PartialEq)]
