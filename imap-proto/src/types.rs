@@ -230,24 +230,24 @@ pub type BodyParams<'a> = Option<Vec<(&'a str, &'a str)>>;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Envelope<'a> {
-    pub date: Option<&'a str>,
-    pub subject: Option<&'a str>,
+    pub date: Option<&'a [u8]>,
+    pub subject: Option<&'a [u8]>,
     pub from: Option<Vec<Address<'a>>>,
     pub sender: Option<Vec<Address<'a>>>,
     pub reply_to: Option<Vec<Address<'a>>>,
     pub to: Option<Vec<Address<'a>>>,
     pub cc: Option<Vec<Address<'a>>>,
     pub bcc: Option<Vec<Address<'a>>>,
-    pub in_reply_to: Option<&'a str>,
-    pub message_id: Option<&'a str>,
+    pub in_reply_to: Option<&'a [u8]>,
+    pub message_id: Option<&'a [u8]>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Address<'a> {
-    pub name: Option<&'a str>,
-    pub adl: Option<&'a str>,
-    pub mailbox: Option<&'a str>,
-    pub host: Option<&'a str>,
+    pub name: Option<&'a [u8]>,
+    pub adl: Option<&'a [u8]>,
+    pub mailbox: Option<&'a [u8]>,
+    pub host: Option<&'a [u8]>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

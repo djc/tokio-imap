@@ -305,13 +305,13 @@ named!(mailbox_data<Response>, alt!(
 // electronic mail address.
 named!(address<Address>, paren_delimited!(
     do_parse!(
-        name: nstring_utf8 >>
+        name: nstring >>
         tag!(" ") >>
-        adl: nstring_utf8 >>
+        adl: nstring >>
         tag!(" ") >>
-        mailbox: nstring_utf8 >>
+        mailbox: nstring >>
         tag!(" ") >>
-        host: nstring_utf8 >>
+        host: nstring >>
         (Address {
             name,
             adl,
@@ -334,9 +334,9 @@ named!(opt_addresses<Option<Vec<Address>>>, alt!(
 
 named!(pub(crate) envelope<Envelope>, paren_delimited!(
     do_parse!(
-        date: nstring_utf8 >>
+        date: nstring >>
         tag!(" ") >>
-        subject: nstring_utf8 >>
+        subject: nstring >>
         tag!(" ") >>
         from: opt_addresses >>
         tag!(" ") >>
@@ -350,9 +350,9 @@ named!(pub(crate) envelope<Envelope>, paren_delimited!(
         tag!(" ") >>
         bcc: opt_addresses >>
         tag!(" ") >>
-        in_reply_to: nstring_utf8 >>
+        in_reply_to: nstring >>
         tag!(" ") >>
-        message_id: nstring_utf8 >>
+        message_id: nstring >>
         (Envelope {
             date,
             subject,
@@ -695,6 +695,12 @@ mod tests {
     #[test]
     fn test_addresses() {
         match crate::parser::rfc3501::address(b"(\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\") ") {
+            Ok((_, _address)) => {},
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }
+
+        // Literal non-UTF8 address
+        match crate::parser::rfc3501::address(b"({12}\r\nJoh\xff Klensin NIL \"KLENSIN\" \"MIT.EDU\") ") {
             Ok((_, _address)) => {},
             rsp @ _ => panic!("unexpected response {:?}", rsp)
         }
