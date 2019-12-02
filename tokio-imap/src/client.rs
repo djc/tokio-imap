@@ -4,12 +4,12 @@ use std::net::ToSocketAddrs;
 use std::sync::Arc;
 
 use futures::{SinkExt, StreamExt};
-use tokio::codec::Decoder;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio::net::tcp::TcpStream;
+use tokio::net::TcpStream;
 use tokio_rustls::rustls::ClientConfig;
 use tokio_rustls::webpki::DNSNameRef;
 use tokio_rustls::{client::TlsStream, TlsConnector};
+use tokio_util::codec::Decoder;
 
 use crate::proto::{ImapCodec, ImapTransport, ResponseData};
 use imap_proto::builders::command::Command;

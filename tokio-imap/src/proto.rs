@@ -3,7 +3,7 @@ use std::mem;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use nom::{self, Needed};
-use tokio::codec::{Decoder, Encoder, Framed};
+use tokio_util::codec::{Decoder, Encoder, Framed};
 
 use imap_proto;
 use imap_proto::types::{Request, RequestId, Response};
@@ -62,9 +62,9 @@ impl Encoder for ImapCodec {
     type Error = io::Error;
     fn encode(&mut self, msg: Self::Item, dst: &mut BytesMut) -> Result<(), io::Error> {
         dst.put(msg.0.as_bytes());
-        dst.put(b' ');
-        dst.put(&msg.1);
-        dst.put("\r\n");
+        dst.put_u8(b' ');
+        dst.put_slice(&msg.1);
+        dst.put("\r\n".as_bytes());
         Ok(())
     }
 }

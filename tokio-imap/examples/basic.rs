@@ -2,8 +2,6 @@ use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
-use tokio::runtime::current_thread;
-
 use tokio_imap::client::builder::{
     CommandBuilder, FetchBuilderAttributes, FetchBuilderMessages, FetchBuilderModifiers,
 };
@@ -11,7 +9,8 @@ use tokio_imap::proto::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
 use tokio_imap::TlsClient;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let mut args = std::env::args();
     let _ = args.next();
     let server = args.next().expect("no server provided");
@@ -19,12 +18,9 @@ fn main() {
     let password = args.next().expect("no password provided");
     let mailbox = args.next().expect("no mailbox provided");
 
-    let mut rt = current_thread::Runtime::new().unwrap();
-    rt.block_on(async move {
-        if let Err(cause) = imap_fetch(&server, login, password, mailbox).await {
-            eprintln!("Fatal error: {}", cause);
-        }
-    });
+    if let Err(cause) = imap_fetch(&server, login, password, mailbox).await {
+        eprintln!("Fatal error: {}", cause);
+    }
 }
 
 async fn imap_fetch(
