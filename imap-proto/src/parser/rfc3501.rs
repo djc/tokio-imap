@@ -471,7 +471,8 @@ named!(resp_text<(Option<ResponseCode>, Option<&str>)>, do_parse!(
 ));
 
 named!(continue_req<Response>, do_parse!(
-    tag!("+ ") >>
+    tag!("+") >>
+    opt!(tag!(" ")) >> // Some servers do not send the space :/
     text: resp_text >> // TODO: base64
     tag!("\r\n") >>
     (Response::Continue {
@@ -836,5 +837,26 @@ mod tests {
             Err(nom::Err::Incomplete(_)) => {},
             rsp => panic!("should be incomplete: {:?}", rsp),
         }
+    }
+
+    #[test]
+    fn test_continuation() {
+        // regular RFC compliant
+        match parse_response(b"+ \r\n") {
+            Ok((_, Response::Continue {
+                code: None,
+                information: None,
+            })) => {}
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }        
+
+        // short version, sent by yandex
+        match parse_response(b"+\r\n") {
+            Ok((_, Response::Continue {
+                code: None,
+                information: None,
+            })) => {}
+            rsp @ _ => panic!("unexpected response {:?}", rsp)
+        }        
     }
 }
