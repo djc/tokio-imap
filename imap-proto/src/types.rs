@@ -104,6 +104,7 @@ pub enum Capability<'a> {
     Imap4rev1,
     Auth(&'a str),
     Atom(&'a str),
+    Idle
 }
 
 #[derive(Debug, Eq, PartialEq)]

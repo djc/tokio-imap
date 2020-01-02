@@ -161,6 +161,7 @@ named!(resp_text_code<ResponseCode>, do_parse!(
 
 named!(capability<Capability>, alt!(
     map!(tag_no_case!("IMAP4rev1"), |_| Capability::Imap4rev1) |
+    map!(tag_no_case!("IDLE"), |_| Capability::Idle) |
     map!(preceded!(tag_no_case!("AUTH="), atom), |a| Capability::Auth(a)) |
     map!(atom, |a| Capability::Atom(a))
 ));
@@ -848,7 +849,7 @@ mod tests {
                 information: None,
             })) => {}
             rsp @ _ => panic!("unexpected response {:?}", rsp)
-        }        
+        }
 
         // short version, sent by yandex
         match parse_response(b"+\r\n") {
@@ -857,6 +858,6 @@ mod tests {
                 information: None,
             })) => {}
             rsp @ _ => panic!("unexpected response {:?}", rsp)
-        }        
+        }
     }
 }
