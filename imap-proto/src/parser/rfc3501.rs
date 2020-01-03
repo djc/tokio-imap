@@ -6,7 +6,6 @@
 
 // rustfmt doesn't do a very good job on nom parser invocations.
 #![cfg_attr(rustfmt, rustfmt_skip)]
-#![cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
 
 use nom::IResult;
 
@@ -848,7 +847,7 @@ mod tests {
                 information: None,
             })) => {}
             rsp @ _ => panic!("unexpected response {:?}", rsp)
-        }        
+        }
 
         // short version, sent by yandex
         match parse_response(b"+\r\n") {
@@ -857,6 +856,6 @@ mod tests {
                 information: None,
             })) => {}
             rsp @ _ => panic!("unexpected response {:?}", rsp)
-        }        
+        }
     }
 }

@@ -29,43 +29,45 @@ enum EntryParseStage<'a> {
 
 fn check_private_shared(i: &[u8]) -> EntryParseStage {
     if i.starts_with(b"/private") {
-        return EntryParseStage::VendorComment(8);
+        EntryParseStage::VendorComment(8)
     } else if i.starts_with(b"/shared") {
-        return EntryParseStage::Admin(7);
+        EntryParseStage::Admin(7)
+    } else {
+        EntryParseStage::Fail(nom::Err::Error(
+            b"Entry Name doesn't start with /private or /shared",
+        ))
     }
-    return EntryParseStage::Fail(nom::Err::Error(
-        b"Entry Name doesn't start with /private or /shared",
-    ));
 }
 
 fn check_admin(i: &[u8], l: usize) -> EntryParseStage {
     if i[l..].starts_with(b"/admin") {
-        return EntryParseStage::Path(l + 6);
+        EntryParseStage::Path(l + 6)
+    } else {
+        EntryParseStage::VendorComment(l)
     }
-    return EntryParseStage::VendorComment(l);
 }
 
 fn check_vendor_comment(i: &[u8], l: usize) -> EntryParseStage {
     if i[l..].starts_with(b"/comment") {
         return EntryParseStage::Path(l + 8);
-    }
-    if i[l..].starts_with(b"/vendor") {
+    } else if i[l..].starts_with(b"/vendor") {
         //make sure vendor name is present
         if i.len() < l + 9 || i[l + 7] != b'/' || !is_entry_component_char(i[l + 8]) {
-            return EntryParseStage::Fail(nom::Err::Incomplete(nom::Needed::Unknown));
+            EntryParseStage::Fail(nom::Err::Incomplete(nom::Needed::Unknown))
+        } else {
+            EntryParseStage::Path(l + 7)
         }
-        return EntryParseStage::Path(l + 7);
+    } else {
+        EntryParseStage::Fail(nom::Err::Error(
+            b"Entry name is not continued with /admin, /vendor or /comment",
+        ))
     }
-    EntryParseStage::Fail(nom::Err::Error(
-        b"Entry name is not continued with /admin, /vendor or /comment",
-    ))
 }
 
 fn check_path(i: &[u8], l: usize) -> EntryParseStage {
     if i.len() == l || i[l] == b' ' || i[l] == b'\r' {
         return EntryParseStage::Done(l);
-    }
-    if i[l] != b'/' {
+    } else if i[l] != b'/' {
         return EntryParseStage::Fail(nom::Err::Error(b"Entry name path is corrupted"));
     }
     for j in 1..(i.len() - l) {
