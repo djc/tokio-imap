@@ -14,11 +14,17 @@ struct BodyFields<'a> {
     pub octets: u32,
 }
 
+// body-fields     = body-fld-param SP body-fld-id SP body-fld-desc SP
+//                   body-fld-enc SP body-fld-octets
 named!(body_fields<BodyFields>, do_parse!(
     param: body_param >>
     tag!(" ") >>
+    // body id seems to refer to the Message-ID or possibly Content-ID header, which
+    // by the definition in RFC 2822 seems to resolve to all ASCII characters (through
+    // a large amount of indirection which I did not have the patience to fully explore)
     id: nstring_utf8 >>
     tag!(" ") >>
+    // Per https://tools.ietf.org/html/rfc2045#section-8, description should be all ASCII
     description: nstring_utf8 >>
     tag!(" ") >>
     transfer_encoding: body_encoding >>
@@ -35,10 +41,16 @@ struct BodyExt1Part<'a> {
     pub extension: Option<BodyExtension<'a>>,
 }
 
+// body-ext-1part  = body-fld-md5 [SP body-fld-dsp [SP body-fld-lang
+//                   [SP body-fld-loc *(SP body-extension)]]]
+//                     ; MUST NOT be returned on non-extensible
+//                     ; "BODY" fetch
 named!(body_ext_1part<BodyExt1Part>, do_parse!(
+    // Per RFC 1864, MD5 values are base64-encoded
     md5: opt_opt!(preceded!(tag!(" "), nstring_utf8)) >>
     disposition: opt_opt!(preceded!(tag!(" "), body_disposition)) >>
     language: opt_opt!(preceded!(tag!(" "), body_lang)) >>
+    // Location appears to reference a URL, which by RFC 1738 (section 2.2) should be ASCII
     location: opt_opt!(preceded!(tag!(" "), nstring_utf8)) >>
     extension: opt!(preceded!(tag!(" "), body_extension)) >>
     (BodyExt1Part { md5, disposition, language, location, extension })
@@ -52,10 +64,15 @@ struct BodyExtMPart<'a> {
     pub extension: Option<BodyExtension<'a>>,
 }
 
+// body-ext-mpart  = body-fld-param [SP body-fld-dsp [SP body-fld-lang
+//                   [SP body-fld-loc *(SP body-extension)]]]
+//                     ; MUST NOT be returned on non-extensible
+//                     ; "BODY" fetch
 named!(body_ext_mpart<BodyExtMPart>, do_parse!(
     param: opt_opt!(preceded!(tag!(" "), body_param)) >>
     disposition: opt_opt!(preceded!(tag!(" "), body_disposition)) >>
     language: opt_opt!(preceded!(tag!(" "), body_lang)) >>
+    // Location appears to reference a URL, which by RFC 1738 (section 2.2) should be ASCII
     location: opt_opt!(preceded!(tag!(" "), nstring_utf8)) >>
     extension: opt!(preceded!(tag!(" "), body_extension)) >>
     (BodyExtMPart { param, disposition, language, location, extension })
@@ -73,6 +90,7 @@ named!(body_encoding<ContentEncoding>, alt!(
 ));
 
 named!(body_lang<Option<Vec<&str>>>, alt!(
+    // body language seems to refer to RFC 3066 language tags, which should be ASCII-only
     map!(nstring_utf8, |v| v.map(|s| vec![s])) |
     map!(parenthesized_nonempty_list!(string_utf8), Option::from)
 ));
@@ -89,6 +107,8 @@ named!(body_param<BodyParams>, alt!(
 
 named!(body_extension<BodyExtension>, alt!(
     map!(number, |n| BodyExtension::Num(n)) |
+    // Cannot find documentation on character encoding for body extension values.
+    // So far, assuming UTF-8 seems fine, please report if you run into issues here.
     map!(nstring_utf8, |s| BodyExtension::Str(s)) |
     map!(parenthesized_nonempty_list!(body_extension), |ext| BodyExtension::List(ext))
 ));
