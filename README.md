@@ -1,6 +1,6 @@
 # imap-proto and tokio-imap
 
-[![Build Status](https://dev.azure.com/dochtman/Projects/_apis/build/status/tokio-imap?branchName=master)](https://dev.azure.com/dochtman/Projects/_build/latest?definitionId=4&branchName=master)
+[![Build status](https://github.com/djc/tokio-imap/workflows/CI/badge.svg)](https://github.com/djc/tokio-imap/actions?query=workflow%3ACI)
 [![Join the chat at https://gitter.im/djc/tokio-imap](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/djc/tokio-imap?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE-MIT)
 [![Apache License 2.0](https://img.shields.io/badge/license-ALv2-blue.svg)](./LICENSE-APACHE)
