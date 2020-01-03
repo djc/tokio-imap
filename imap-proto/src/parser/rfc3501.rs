@@ -555,7 +555,7 @@ mod tests {
                 code: Some(ResponseCode::Unseen(3)),
                 information: Some("Message 3 is first unseen"),
             }) => {},
-            rsp @ _ => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
@@ -570,7 +570,7 @@ mod tests {
                     data: Some(b"foo"),
                 }, "body = {:?}", body);
             },
-            rsp @ _ => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
@@ -580,9 +580,9 @@ mod tests {
         match parse_response(RESPONSE) {
             Ok((_, Response::Fetch(_, attrs))) => {
                 let body = &attrs[0];
-                assert!(if let &AttributeValue::BodyStructure(_) = body { true } else { false }, "body = {:?}", body);
+                assert!(if let AttributeValue::BodyStructure(_) = *body { true } else { false }, "body = {:?}", body);
             },
-            rsp @ _ => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
@@ -596,7 +596,7 @@ mod tests {
                     StatusAttribute::UidNext(44292),
                 ]);
             },
-            rsp @ _ => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
@@ -604,15 +604,15 @@ mod tests {
     fn test_notify() {
         match parse_response(b"* 3501 EXPUNGE\r\n") {
             Ok((_, Response::Expunge(3501))) => {},
-            rsp @ _ => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {:?}", rsp),
         }
         match parse_response(b"* 3501 EXISTS\r\n") {
             Ok((_, Response::MailboxData(MailboxDatum::Exists(3501)))) => {},
-            rsp @ _ => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {:?}", rsp),
         }
         match parse_response(b"+ idling\r\n") {
             Ok((_, Response::Continue { code: None, information: Some("idling") })) => {},
-            rsp @ _ => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
@@ -622,14 +622,14 @@ mod tests {
             Ok((_, Response::IDs(ids))) => {
                 assert!(ids.is_empty());
             },
-            rsp @ _ => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {:?}", rsp),
         }
         match parse_response(b"* SEARCH 12345 67890\r\n") {
             Ok((_, Response::IDs(ids))) => {
                 assert_eq!(ids[0], 12345);
                 assert_eq!(ids[1], 67890);
             },
-            rsp @ _ => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
@@ -652,7 +652,7 @@ mod tests {
 
         match parse_response(b"* LIST (\\HasNoChildren) \".\" INBOX.Tests\r\n") {
             Ok((_, Response::MailboxData(_))) => {},
-            rsp @ _ => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
@@ -670,7 +670,7 @@ mod tests {
         let env = r#"ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" "IMAP4rev1 WG mtg summary and minutes" (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) ((NIL NIL "imap" "cac.washington.edu")) ((NIL NIL "minutes" "CNRI.Reston.VA.US") ("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL "<B27397-0100000@cac.washington.edu>") "#;
         match crate::parser::rfc3501::msg_att_envelope(env.as_bytes()) {
             Ok((_, AttributeValue::Envelope(_))) => {},
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
     }
 
@@ -679,7 +679,7 @@ mod tests {
         let addr = b"((NIL NIL \"minutes\" \"CNRI.Reston.VA.US\") (\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\")) ";
             match crate::parser::rfc3501::opt_addresses(addr) {
             Ok((_, _addresses)) => {},
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
     }
 
@@ -688,7 +688,7 @@ mod tests {
         let addr = br#"((NIL NIL "test" "example@example.com")(NIL NIL "test" "example@example.com"))"#;
             match super::opt_addresses(addr) {
             Ok((_, _addresses)) => {},
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
     }
 
@@ -696,13 +696,13 @@ mod tests {
     fn test_addresses() {
         match crate::parser::rfc3501::address(b"(\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\") ") {
             Ok((_, _address)) => {},
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
 
         // Literal non-UTF8 address
         match crate::parser::rfc3501::address(b"({12}\r\nJoh\xff Klensin NIL \"KLENSIN\" \"MIT.EDU\") ") {
             Ok((_, _address)) => {},
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
     }
 
@@ -710,12 +710,12 @@ mod tests {
     fn test_response_codes() {
         match parse_response(b"* OK [ALERT] Alert!\r\n") {
             Ok((_, Response::Data { status: Status::Ok, code: Some(ResponseCode::Alert), information: Some("Alert!") })) => {}
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
 
         match parse_response(b"* NO [PARSE] Something\r\n") {
             Ok((_, Response::Data { status: Status::No, code: Some(ResponseCode::Parse), information: Some("Something") })) => {}
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
 
         match parse_response(b"* OK [CAPABILITY IMAP4rev1 IDLE] Logged in\r\n") {
@@ -728,7 +728,7 @@ mod tests {
                 assert_eq!(c[0], Capability::Imap4rev1);
                 assert_eq!(c[1], Capability::Atom("IDLE"));
             }
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
 
         match parse_response(b"* OK [CAPABILITY UIDPLUS IMAP4rev1 IDLE] Logged in\r\n") {
@@ -742,7 +742,7 @@ mod tests {
                 assert_eq!(c[1], Capability::Imap4rev1);
                 assert_eq!(c[2], Capability::Atom("IDLE"));
             }
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
 
         // Missing IMAP4rev1
@@ -752,7 +752,7 @@ mod tests {
                 code: None,
                 information: Some("[CAPABILITY UIDPLUS IDLE] Logged in")
             })) => {}
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
 
         match parse_response(b"* NO [BADCHARSET] error\r\n") {
@@ -761,7 +761,7 @@ mod tests {
                 code: Some(ResponseCode::BadCharset(None)),
                 information: Some("error")
             })) => {},
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
 
         match parse_response(b"* NO [BADCHARSET (utf-8 latin1)] error\r\n") {
@@ -774,7 +774,7 @@ mod tests {
                 assert_eq!(v[0], "utf-8");
                 assert_eq!(v[1], "latin1");
             },
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
 
         match parse_response(b"* NO [BADCHARSET ()] error\r\n") {
@@ -783,7 +783,7 @@ mod tests {
                 code: None,
                 information: Some("[BADCHARSET ()] error")
             })) => {}
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
     }
 
@@ -846,7 +846,7 @@ mod tests {
                 code: None,
                 information: None,
             })) => {}
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
 
         // short version, sent by yandex
@@ -855,7 +855,7 @@ mod tests {
                 code: None,
                 information: None,
             })) => {}
-            rsp @ _ => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp)
         }
     }
 }

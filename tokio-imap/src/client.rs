@@ -82,7 +82,7 @@ where
     pub fn new(client: &mut Client<T>, cmd: Command) -> ResponseStream<'_, T> {
         let request_id = client.state.request_ids.next().unwrap(); // safe: never returns Err
         let (cmd_bytes, next_state) = cmd.into_parts();
-        let request = Request(request_id.clone(), cmd_bytes);
+        let request = Request(request_id, cmd_bytes);
 
         ResponseStream {
             client,
@@ -93,6 +93,7 @@ where
         }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub async fn next(&mut self) -> Option<Result<ResponseData, io::Error>> {
         if self.done {
             return None;

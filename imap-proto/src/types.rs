@@ -132,6 +132,7 @@ pub enum SectionPath {
     Part(Vec<u32>, Option<MessageSection>),
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Eq, PartialEq)]
 pub enum AttributeValue<'a> {
     BodySection {
@@ -151,6 +152,7 @@ pub enum AttributeValue<'a> {
     Uid(u32),
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Eq, PartialEq)]
 pub enum BodyStructure<'a> {
     Basic {

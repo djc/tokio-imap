@@ -6,7 +6,6 @@
 
 // rustfmt doesn't do a very good job on nom parser invocations.
 #![cfg_attr(rustfmt, rustfmt_skip)]
-#![cfg_attr(feature = "cargo-clippy", allow(redundant_closure))]
 
 use nom::IResult;
 
@@ -49,7 +48,7 @@ fn check_admin(i: &[u8], l: usize) -> EntryParseStage {
 
 fn check_vendor_comment(i: &[u8], l: usize) -> EntryParseStage {
     if i[l..].starts_with(b"/comment") {
-        return EntryParseStage::Path(l + 8);
+        EntryParseStage::Path(l + 8)
     } else if i[l..].starts_with(b"/vendor") {
         //make sure vendor name is present
         if i.len() < l + 9 || i[l + 7] != b'/' || !is_entry_component_char(i[l + 8]) {

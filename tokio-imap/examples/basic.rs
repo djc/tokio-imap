@@ -63,9 +63,9 @@ async fn imap_fetch(
         .all_after(1_u32)
         .attr(Attribute::Uid)
         .attr(Attribute::Rfc822);
-    let _ = tls_client
+    tls_client
         .call(cmd.build())
-        .try_for_each(move |response_data| process_email(response_data))
+        .try_for_each(process_email)
         .await
         .map_err(|e| ImapError::UidFetch { cause: e })?;
 

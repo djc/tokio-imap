@@ -141,7 +141,7 @@ mod tests {
     fn test_string_literal() {
         match string(b"{3}\r\nXYZ") {
             Ok((_, value)) => {
-                assert_eq!(value, "XYZ".as_bytes());
+                assert_eq!(value, b"XYZ");
             }
             rsp => panic!("unexpected response {:?}", rsp),
         }
@@ -151,7 +151,7 @@ mod tests {
     fn test_astring() {
         match astring(b"text ") {
             Ok((_, value)) => {
-                assert_eq!(value, "text".as_bytes());
+                assert_eq!(value, b"text");
             }
             rsp => panic!("unexpected response {:?}", rsp),
         }
