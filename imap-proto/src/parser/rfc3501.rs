@@ -675,6 +675,16 @@ mod tests {
     }
 
     #[test]
+    fn test_header_fields() {
+        const RESPONSE: &[u8] = b"* 1 FETCH (UID 1 BODY[HEADER.FIELDS (CHAT-VERSION)] {21}\r\nChat-Version: 1.0\r\n\r\n)\r\n";
+
+        match parse_response(RESPONSE) {
+            Ok((_, Response::Fetch(_, _))) => {},
+            rsp => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
     fn test_opt_addresses() {
         let addr = b"((NIL NIL \"minutes\" \"CNRI.Reston.VA.US\") (\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\")) ";
             match crate::parser::rfc3501::opt_addresses(addr) {
