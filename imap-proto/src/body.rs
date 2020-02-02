@@ -15,6 +15,12 @@ named!(pub section_part<Vec<u32>>, do_parse!(
 ));
 
 named!(pub section_msgtext<MessageSection>, alt!(
+    do_parse!(
+        tag_no_case!("HEADER.FIELDS") >>
+        opt!(tag_no_case!(".NOT")) >>
+        tag!(" ") >>
+        parenthesized_list!(astring) >>
+        (MessageSection::Header)) |
     do_parse!(tag_no_case!("HEADER") >> (MessageSection::Header)) |
     do_parse!(tag_no_case!("TEXT") >> (MessageSection::Text))
 ));
