@@ -64,7 +64,7 @@ impl Encoder for ImapCodec {
         dst.put(msg.0.as_bytes());
         dst.put_u8(b' ');
         dst.put_slice(&msg.1);
-        dst.put("\r\n".as_bytes());
+        dst.put(b"\r\n".as_ref());
         Ok(())
     }
 }
