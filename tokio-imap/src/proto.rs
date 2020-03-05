@@ -57,10 +57,9 @@ impl<'a> Decoder for ImapCodec {
     }
 }
 
-impl Encoder for ImapCodec {
-    type Item = Request;
+impl Encoder<&Request> for ImapCodec {
     type Error = io::Error;
-    fn encode(&mut self, msg: Self::Item, dst: &mut BytesMut) -> Result<(), io::Error> {
+    fn encode(&mut self, msg: &Request, dst: &mut BytesMut) -> Result<(), io::Error> {
         dst.put(msg.0.as_bytes());
         dst.put_u8(b' ');
         dst.put_slice(&msg.1);

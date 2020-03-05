@@ -100,7 +100,7 @@ where
         }
 
         if self.sending {
-            match self.client.transport.send(self.request.clone()).await {
+            match self.client.transport.send(&self.request).await {
                 Ok(()) => {
                     self.sending = false;
                 }
