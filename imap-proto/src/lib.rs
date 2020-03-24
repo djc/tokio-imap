@@ -5,12 +5,11 @@ extern crate nom;
 mod macros;
 
 mod parser;
-pub use crate::parser::{parse_response, resp_metadata, ParseResult};
+pub use crate::parser::{core, parse_response, resp_metadata, ParseResult};
 
 pub mod body;
 pub mod body_structure;
 pub mod builders;
-pub mod core;
 pub mod types;
 pub use crate::types::*;
 
