@@ -14,6 +14,22 @@ struct BodyFields<'a> {
     pub octets: u32,
 }
 
+struct BodyExt1Part<'a> {
+    pub md5: Option<&'a str>,
+    pub disposition: Option<ContentDisposition<'a>>,
+    pub language: Option<Vec<&'a str>>,
+    pub location: Option<&'a str>,
+    pub extension: Option<BodyExtension<'a>>,
+}
+
+struct BodyExtMPart<'a> {
+    pub param: BodyParams<'a>,
+    pub disposition: Option<ContentDisposition<'a>>,
+    pub language: Option<Vec<&'a str>>,
+    pub location: Option<&'a str>,
+    pub extension: Option<BodyExtension<'a>>,
+}
+
 // body-fields     = body-fld-param SP body-fld-id SP body-fld-desc SP
 //                   body-fld-enc SP body-fld-octets
 named!(body_fields<BodyFields>, do_parse!(
@@ -33,14 +49,6 @@ named!(body_fields<BodyFields>, do_parse!(
     (BodyFields { param, id, description, transfer_encoding, octets })
 ));
 
-struct BodyExt1Part<'a> {
-    pub md5: Option<&'a str>,
-    pub disposition: Option<ContentDisposition<'a>>,
-    pub language: Option<Vec<&'a str>>,
-    pub location: Option<&'a str>,
-    pub extension: Option<BodyExtension<'a>>,
-}
-
 // body-ext-1part  = body-fld-md5 [SP body-fld-dsp [SP body-fld-lang
 //                   [SP body-fld-loc *(SP body-extension)]]]
 //                     ; MUST NOT be returned on non-extensible
@@ -55,14 +63,6 @@ named!(body_ext_1part<BodyExt1Part>, do_parse!(
     extension: opt!(preceded!(tag!(" "), body_extension)) >>
     (BodyExt1Part { md5, disposition, language, location, extension })
 ));
-
-struct BodyExtMPart<'a> {
-    pub param: BodyParams<'a>,
-    pub disposition: Option<ContentDisposition<'a>>,
-    pub language: Option<Vec<&'a str>>,
-    pub location: Option<&'a str>,
-    pub extension: Option<BodyExtension<'a>>,
-}
 
 // body-ext-mpart  = body-fld-param [SP body-fld-dsp [SP body-fld-lang
 //                   [SP body-fld-loc *(SP body-extension)]]]
