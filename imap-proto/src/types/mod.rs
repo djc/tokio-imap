@@ -268,3 +268,29 @@ pub enum State {
     Selected,
     Logout,
 }
+
+// Body Structure
+
+pub struct BodyFields<'a> {
+    pub param: BodyParams<'a>,
+    pub id: Option<&'a str>,
+    pub description: Option<&'a str>,
+    pub transfer_encoding: ContentEncoding<'a>,
+    pub octets: u32,
+}
+
+pub struct BodyExt1Part<'a> {
+    pub md5: Option<&'a str>,
+    pub disposition: Option<ContentDisposition<'a>>,
+    pub language: Option<Vec<&'a str>>,
+    pub location: Option<&'a str>,
+    pub extension: Option<BodyExtension<'a>>,
+}
+
+pub struct BodyExtMPart<'a> {
+    pub param: BodyParams<'a>,
+    pub disposition: Option<ContentDisposition<'a>>,
+    pub language: Option<Vec<&'a str>>,
+    pub location: Option<&'a str>,
+    pub extension: Option<BodyExtension<'a>>,
+}
