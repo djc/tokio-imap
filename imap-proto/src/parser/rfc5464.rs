@@ -8,9 +8,10 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 use nom::IResult;
-
-use crate::core::*;
-use crate::types::*;
+use crate::{
+    core::*,
+    types::*,
+};
 use std::str;
 
 fn is_entry_component_char(c: u8) -> bool {

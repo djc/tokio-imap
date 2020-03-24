@@ -8,16 +8,17 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 use nom::IResult;
-
 use std::str;
-
-use crate::parser::rfc4551;
-use crate::parser::rfc5464::resp_metadata;
-use crate::types::*;
-use crate::parser::core::*;
-use crate::body::*;
-use crate::body_structure::*;
-
+use crate::{
+    parser::{
+        rfc4551,
+        rfc5464::resp_metadata,
+        core::*,
+    },
+    types::*,
+    body::*,
+    body_structure::*,
+};
 
 fn tag_char(c: u8) -> bool {
     c != b'+' && astring_char(c)

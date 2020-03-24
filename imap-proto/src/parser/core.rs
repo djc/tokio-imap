@@ -1,5 +1,4 @@
 use nom::{self, IResult};
-
 use std::str;
 
 // list-wildcards = "%" / "*"

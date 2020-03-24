@@ -3,15 +3,19 @@ extern crate nom;
 
 #[macro_use]
 mod macros;
-
 mod parser;
-pub use crate::parser::{core, parse_response, resp_metadata, ParseResult};
 
 pub mod body;
 pub mod body_structure;
 pub mod builders;
 pub mod types;
-pub use crate::types::*;
+
+pub use crate::{
+    parser::{core, parse_response, resp_metadata, ParseResult},
+    types::*,
+};
+
+// Utils
 
 use std::borrow::Cow;
 
