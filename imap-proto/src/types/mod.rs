@@ -8,6 +8,9 @@ pub enum AttrMacro {
     Full,
 }
 
+// TODO: why not derive(Copy)?
+// Is "derive strategy will also place a Copy bound on type parameters"
+// relevant? https://doc.rust-lang.org/std/marker/trait.Copy.html
 impl Copy for AttrMacro {}
 
 #[derive(Debug, Eq, PartialEq)]
