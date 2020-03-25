@@ -1,44 +1,32 @@
 use nom::{character::streaming::digit1, IResult};
 
-// list-wildcards = "%" / "*"
-pub fn list_wildcards(c: u8) -> bool {
-    c == b'%' || c == b'*'
-}
+// ----- number -----
 
-// quoted-specials = DQUOTE / "\"
-pub fn quoted_specials(c: u8) -> bool {
-    c == b'"' || c == b'\\'
-}
+// number          = 1*DIGIT
+//                    ; Unsigned 32-bit integer
+//                    ; (0 <= n < 4,294,967,296)
+named!(pub number<u32>, flat_map!(digit1, parse_to!(u32)));
 
-// resp-specials = "]"
-pub fn resp_specials(c: u8) -> bool {
-    c == b']'
-}
+// same as `number` but 64-bit
+named!(pub number_64<u64>, flat_map!(digit1, parse_to!(u64)));
 
-// atom-specials = "(" / ")" / "{" / SP / CTL / list-wildcards / quoted-specials / resp-specials
-pub fn atom_specials(c: u8) -> bool {
-    c == b'('
-        || c == b')'
-        || c == b'{'
-        || c == b' '
-        || c < 32
-        || list_wildcards(c)
-        || quoted_specials(c)
-        || resp_specials(c)
-}
+// ----- string -----
 
-// ATOM-CHAR = <any CHAR except atom-specials>
-pub fn atom_char(c: u8) -> bool {
-    !atom_specials(c)
-}
+// string = quoted / literal
+named!(pub string<&[u8]>, alt!(quoted | literal));
 
-// nil = "NIL"
-named!(pub nil, tag_no_case!("NIL"));
+// string bytes as utf8
+named!(pub string_utf8<&str>, map_res!(string, std::str::from_utf8));
 
-// ASTRING-CHAR = ATOM-CHAR / resp-specials
-pub fn astring_char(c: u8) -> bool {
-    atom_char(c) || resp_specials(c)
-}
+// quoted = DQUOTE *QUOTED-CHAR DQUOTE
+named!(pub quoted<&[u8]>, delimited!(
+    char!('"'),
+    quoted_data,
+    char!('"')
+));
+
+// quoted bytes as as utf8
+named!(pub quoted_utf8<&str>, map_res!(quoted, std::str::from_utf8));
 
 // QUOTED-CHAR = <any TEXT-CHAR except quoted-specials> / "\" quoted-specials
 pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
@@ -60,15 +48,10 @@ pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
     Ok((&i[len..], &i[..len]))
 }
 
-// quoted = DQUOTE *QUOTED-CHAR DQUOTE
-named!(pub quoted<&[u8]>, delimited!(
-    char!('"'),
-    quoted_data,
-    char!('"')
-));
-
-// quoted bytes as as utf8
-named!(pub quoted_utf8<&str>, map_res!(quoted, std::str::from_utf8));
+// quoted-specials = DQUOTE / "\"
+pub fn quoted_specials(c: u8) -> bool {
+    c == b'"' || c == b'\\'
+}
 
 // literal = "{" number "}" CRLF *CHAR8
 //            ; Number represents the number of CHAR8s
@@ -77,15 +60,54 @@ named!(pub literal<&[u8]>, do_parse!(
     len: number >>
     tag!("}") >>
     tag!("\r\n") >>
-    data: take!(len) >>
+    data: take!(len) >> // FIXME: 0x00 is not allowed
     (data)
 ));
 
-// string = quoted / literal
-named!(pub string<&[u8]>, alt!(quoted | literal));
+// ----- astring ----- atom (roughly) or string
 
-// string bytes as as utf8
-named!(pub string_utf8<&str>, map_res!(string, std::str::from_utf8));
+// astring = 1*ASTRING-CHAR / string
+named!(pub astring<&[u8]>, alt!(
+    take_while1!(astring_char) |
+    string
+));
+
+// astring bytes as utf8
+named!(pub astring_utf8<&str>, map_res!(astring, std::str::from_utf8));
+
+// ASTRING-CHAR = ATOM-CHAR / resp-specials
+pub fn astring_char(c: u8) -> bool {
+    atom_char(c) || resp_specials(c)
+}
+
+// ATOM-CHAR = <any CHAR except atom-specials>
+pub fn atom_char(c: u8) -> bool {
+    !atom_specials(c)
+}
+
+// atom-specials = "(" / ")" / "{" / SP / CTL / list-wildcards / quoted-specials / resp-specials
+pub fn atom_specials(c: u8) -> bool {
+    c == b'('
+        || c == b')'
+        || c == b'{'
+        || c == b' '
+        || c < 32
+        || list_wildcards(c)
+        || quoted_specials(c)
+        || resp_specials(c)
+}
+
+// resp-specials = "]"
+pub fn resp_specials(c: u8) -> bool {
+    c == b']'
+}
+
+// atom = 1*ATOM-CHAR
+named!(pub atom<&str>, map_res!(take_while1!(atom_char),
+    std::str::from_utf8
+));
+
+// ----- nstring ----- nil or string
 
 // nstring = string / nil
 named!(pub nstring<Option<&[u8]>>, alt!(
@@ -99,27 +121,10 @@ named!(pub nstring_utf8<Option<&str>>, alt!(
     map!(string_utf8, |s| Some(s))
 ));
 
-// number          = 1*DIGIT
-//                    ; Unsigned 32-bit integer
-//                    ; (0 <= n < 4,294,967,296)
-named!(pub number<u32>, flat_map!(digit1, parse_to!(u32)));
+// nil = "NIL"
+named!(pub nil, tag_no_case!("NIL"));
 
-// same as `number` but 64-bit
-named!(pub number_64<u64>, flat_map!(digit1, parse_to!(u64)));
-
-// atom = 1*ATOM-CHAR
-named!(pub atom<&str>, map_res!(take_while1!(atom_char),
-    std::str::from_utf8
-));
-
-// astring = 1*ASTRING-CHAR / string
-named!(pub astring<&[u8]>, alt!(
-    take_while1!(astring_char) |
-    string
-));
-
-// astring bytes as as utf8
-named!(pub astring_utf8<&str>, map_res!(astring, std::str::from_utf8));
+// ----- text -----
 
 // text = 1*TEXT-CHAR
 named!(pub text<&str>, map_res!(take_while!(text_char),
@@ -129,6 +134,13 @@ named!(pub text<&str>, map_res!(take_while!(text_char),
 // TEXT-CHAR = <any CHAR except CR and LF>
 pub fn text_char(c: u8) -> bool {
     c != b'\r' && c != b'\n'
+}
+
+// ----- others -----
+
+// list-wildcards = "%" / "*"
+pub fn list_wildcards(c: u8) -> bool {
+    c == b'%' || c == b'*'
 }
 
 #[cfg(test)]

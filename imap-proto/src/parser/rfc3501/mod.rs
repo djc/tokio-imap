@@ -23,6 +23,46 @@ use crate::{
 pub mod body;
 pub mod body_structure;
 
+pub fn parse_response(msg: &[u8]) -> ParseResult {
+    response(msg)
+}
+
+named!(pub(crate) envelope<Envelope>, paren_delimited!(
+    do_parse!(
+        date: nstring >>
+        tag!(" ") >>
+        subject: nstring >>
+        tag!(" ") >>
+        from: opt_addresses >>
+        tag!(" ") >>
+        sender: opt_addresses >>
+        tag!(" ") >>
+        reply_to: opt_addresses >>
+        tag!(" ") >>
+        to: opt_addresses >>
+        tag!(" ") >>
+        cc: opt_addresses >>
+        tag!(" ") >>
+        bcc: opt_addresses >>
+        tag!(" ") >>
+        in_reply_to: nstring >>
+        tag!(" ") >>
+        message_id: nstring >>
+        (Envelope {
+            date,
+            subject,
+            from,
+            sender,
+            reply_to,
+            to,
+            cc,
+            bcc,
+            in_reply_to,
+            message_id,
+        })
+    )
+));
+
 fn tag_char(c: u8) -> bool {
     c != b'+' && astring_char(c)
 }
@@ -335,42 +375,6 @@ named!(opt_addresses<Option<Vec<Address>>>, alt!(
     ), |v| Some(v))
 ));
 
-named!(pub(crate) envelope<Envelope>, paren_delimited!(
-    do_parse!(
-        date: nstring >>
-        tag!(" ") >>
-        subject: nstring >>
-        tag!(" ") >>
-        from: opt_addresses >>
-        tag!(" ") >>
-        sender: opt_addresses >>
-        tag!(" ") >>
-        reply_to: opt_addresses >>
-        tag!(" ") >>
-        to: opt_addresses >>
-        tag!(" ") >>
-        cc: opt_addresses >>
-        tag!(" ") >>
-        bcc: opt_addresses >>
-        tag!(" ") >>
-        in_reply_to: nstring >>
-        tag!(" ") >>
-        message_id: nstring >>
-        (Envelope {
-            date,
-            subject,
-            from,
-            sender,
-            reply_to,
-            to,
-            cc,
-            bcc,
-            in_reply_to,
-            message_id,
-        })
-    )
-));
-
 named!(msg_att_envelope<AttributeValue>, do_parse!(
     tag_no_case!("ENVELOPE ") >>
     envelope: envelope >>
@@ -529,11 +533,6 @@ named!(response<Response>, alt!(
     response_data |
     response_tagged
 ));
-
-pub fn parse_response(msg: &[u8]) -> ParseResult {
-    response(msg)
-}
-
 
 #[cfg(test)]
 mod tests {
