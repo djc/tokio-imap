@@ -7,9 +7,11 @@ mod macros;
 // Public API
 
 pub use crate::parser::{rfc3501::parse_response, rfc5464::resp_metadata, ParseResult};
+
+// TODO: move builders module later to command::CommandBuilder and response::ResponseBuilder.
 pub mod builders;
 pub mod parser;
-pub mod types; // TODO: move later.
+pub mod types;
 
 // Utils
 
