@@ -8,11 +8,10 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 use nom::IResult;
-use super::core::*;
 use crate::{
+    parser::core::*,
     types::*,
 };
-use std::str;
 
 fn is_entry_component_char(c: u8) -> bool {
     c < 0x80 && c > 0x19 && c != b'*' && c != b'%' && c != b'/'
@@ -118,7 +117,7 @@ fn entry_name(i: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 fn slice_to_str(i: &[u8]) -> &str {
-    str::from_utf8(i).unwrap()
+    std::str::from_utf8(i).unwrap()
 }
 
 named!(nil_value<Option<String>>, do_parse!(

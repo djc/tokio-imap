@@ -4,7 +4,7 @@
 use crate::{
     parser::{
         rfc3501::envelope,
-        core::{nstring_utf8, number, string_utf8, nil}
+        core::*,
     },
     types::*,
 };

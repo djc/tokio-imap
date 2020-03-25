@@ -10,7 +10,7 @@
 use crate::{
     parser::{
         ParseResult,
-        core::{astring_char, astring_utf8, atom_char, atom, number, quoted_utf8, nil, nstring, nstring_utf8, text},
+        core::*,
         rfc3501::{
             body::msg_att_body_section,
             body_structure::msg_att_body_structure,
