@@ -13,7 +13,7 @@ use tokio_util::codec::Decoder;
 
 use crate::proto::{ImapCodec, ImapTransport, ResponseData};
 use imap_proto::builders::command::Command;
-use imap_proto::{Request, RequestId, State};
+use imap_proto::types::{Request, RequestId, State};
 
 pub mod builder {
     pub use imap_proto::builders::command::{
