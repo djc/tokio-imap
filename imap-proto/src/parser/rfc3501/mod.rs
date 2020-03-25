@@ -64,7 +64,7 @@ named!(pub(crate) envelope<Envelope>, paren_delimited!(
 ));
 
 fn tag_char(c: u8) -> bool {
-    c != b'+' && astring_char(c)
+    c != b'+' && is_astring_char(c)
 }
 
 named!(status_ok<Status>, map!(tag_no_case!("OK"),
@@ -103,7 +103,7 @@ named!(mailbox<&str>, map!(
 ));
 
 named!(flag_extension<&str>, map_res!(
-    recognize!(pair!(tag!("\\"), take_while!(atom_char))),
+    recognize!(pair!(tag!("\\"), take_while!(is_atom_char))),
     std::str::from_utf8
 ));
 

@@ -49,7 +49,7 @@ pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 // quoted-specials = DQUOTE / "\"
-pub fn quoted_specials(c: u8) -> bool {
+pub fn is_quoted_specials(c: u8) -> bool {
     c == b'"' || c == b'\\'
 }
 
@@ -68,7 +68,7 @@ named!(pub literal<&[u8]>, do_parse!(
 
 // astring = 1*ASTRING-CHAR / string
 named!(pub astring<&[u8]>, alt!(
-    take_while1!(astring_char) |
+    take_while1!(is_astring_char) |
     string
 ));
 
@@ -76,34 +76,34 @@ named!(pub astring<&[u8]>, alt!(
 named!(pub astring_utf8<&str>, map_res!(astring, std::str::from_utf8));
 
 // ASTRING-CHAR = ATOM-CHAR / resp-specials
-pub fn astring_char(c: u8) -> bool {
-    atom_char(c) || resp_specials(c)
+pub fn is_astring_char(c: u8) -> bool {
+    is_atom_char(c) || is_resp_specials(c)
 }
 
 // ATOM-CHAR = <any CHAR except atom-specials>
-pub fn atom_char(c: u8) -> bool {
-    !atom_specials(c)
+pub fn is_atom_char(c: u8) -> bool {
+    !is_atom_specials(c)
 }
 
 // atom-specials = "(" / ")" / "{" / SP / CTL / list-wildcards / quoted-specials / resp-specials
-pub fn atom_specials(c: u8) -> bool {
+pub fn is_atom_specials(c: u8) -> bool {
     c == b'('
         || c == b')'
         || c == b'{'
         || c == b' '
         || c < 32
-        || list_wildcards(c)
-        || quoted_specials(c)
-        || resp_specials(c)
+        || is_list_wildcards(c)
+        || is_quoted_specials(c)
+        || is_resp_specials(c)
 }
 
 // resp-specials = "]"
-pub fn resp_specials(c: u8) -> bool {
+pub fn is_resp_specials(c: u8) -> bool {
     c == b']'
 }
 
 // atom = 1*ATOM-CHAR
-named!(pub atom<&str>, map_res!(take_while1!(atom_char),
+named!(pub atom<&str>, map_res!(take_while1!(is_atom_char),
     std::str::from_utf8
 ));
 
@@ -127,19 +127,19 @@ named!(pub nil, tag_no_case!("NIL"));
 // ----- text -----
 
 // text = 1*TEXT-CHAR
-named!(pub text<&str>, map_res!(take_while!(text_char),
+named!(pub text<&str>, map_res!(take_while!(is_text_char),
     std::str::from_utf8
 ));
 
 // TEXT-CHAR = <any CHAR except CR and LF>
-pub fn text_char(c: u8) -> bool {
+pub fn is_text_char(c: u8) -> bool {
     c != b'\r' && c != b'\n'
 }
 
 // ----- others -----
 
 // list-wildcards = "%" / "*"
-pub fn list_wildcards(c: u8) -> bool {
+pub fn is_list_wildcards(c: u8) -> bool {
     c == b'%' || c == b'*'
 }
 
