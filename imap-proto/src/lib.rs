@@ -3,17 +3,13 @@ extern crate nom;
 
 #[macro_use]
 mod macros;
-mod parser;
 
-pub mod body;
-pub mod body_structure;
+// Public API
+
+pub use crate::parser::{rfc3501::parse_response, rfc5464::resp_metadata, ParseResult};
 pub mod builders;
-pub mod types;
-
-pub use crate::{
-    parser::{core, parse_response, resp_metadata, ParseResult},
-    types::*,
-};
+pub mod parser;
+pub mod types; // TODO: move later.
 
 // Utils
 

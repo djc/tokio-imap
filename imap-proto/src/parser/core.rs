@@ -1,5 +1,4 @@
-use nom::{self, IResult};
-use std::str;
+use nom::{character::streaming::digit1, IResult};
 
 // list-wildcards = "%" / "*"
 pub fn list_wildcards(c: u8) -> bool {
@@ -69,7 +68,7 @@ named!(pub quoted<&[u8]>, delimited!(
 ));
 
 // quoted bytes as as utf8
-named!(pub quoted_utf8<&str>, map_res!(quoted, str::from_utf8));
+named!(pub quoted_utf8<&str>, map_res!(quoted, std::str::from_utf8));
 
 // literal = "{" number "}" CRLF *CHAR8
 //            ; Number represents the number of CHAR8s
@@ -86,7 +85,7 @@ named!(pub literal<&[u8]>, do_parse!(
 named!(pub string<&[u8]>, alt!(quoted | literal));
 
 // string bytes as as utf8
-named!(pub string_utf8<&str>, map_res!(string, str::from_utf8));
+named!(pub string_utf8<&str>, map_res!(string, std::str::from_utf8));
 
 // nstring = string / nil
 named!(pub nstring<Option<&[u8]>>, alt!(
@@ -103,14 +102,14 @@ named!(pub nstring_utf8<Option<&str>>, alt!(
 // number          = 1*DIGIT
 //                    ; Unsigned 32-bit integer
 //                    ; (0 <= n < 4,294,967,296)
-named!(pub number<u32>, flat_map!(nom::character::streaming::digit1, parse_to!(u32)));
+named!(pub number<u32>, flat_map!(digit1, parse_to!(u32)));
 
 // same as `number` but 64-bit
-named!(pub number_64<u64>, flat_map!(nom::character::streaming::digit1, parse_to!(u64)));
+named!(pub number_64<u64>, flat_map!(digit1, parse_to!(u64)));
 
 // atom = 1*ATOM-CHAR
 named!(pub atom<&str>, map_res!(take_while1!(atom_char),
-    str::from_utf8
+    std::str::from_utf8
 ));
 
 // astring = 1*ASTRING-CHAR / string
@@ -120,11 +119,11 @@ named!(pub astring<&[u8]>, alt!(
 ));
 
 // astring bytes as as utf8
-named!(pub astring_utf8<&str>, map_res!(astring, str::from_utf8));
+named!(pub astring_utf8<&str>, map_res!(astring, std::str::from_utf8));
 
 // text = 1*TEXT-CHAR
 named!(pub text<&str>, map_res!(take_while!(text_char),
-    str::from_utf8
+    std::str::from_utf8
 ));
 
 // TEXT-CHAR = <any CHAR except CR and LF>

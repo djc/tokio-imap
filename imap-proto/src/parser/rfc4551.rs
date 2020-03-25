@@ -9,7 +9,7 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 use crate::{
-    core::number_64,
+    parser::core::number_64,
     types::*,
 };
 

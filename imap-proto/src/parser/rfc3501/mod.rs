@@ -7,18 +7,21 @@
 // rustfmt doesn't do a very good job on nom parser invocations.
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-use nom::IResult;
-use std::str;
 use crate::{
     parser::{
-        rfc4551,
+        ParseResult,
+        core::{astring_char, astring_utf8, atom_char, atom, number, quoted_utf8, nil, nstring, nstring_utf8, text},
+        rfc3501::{
+            body::msg_att_body_section,
+            body_structure::msg_att_body_structure,
+        },
         rfc5464::resp_metadata,
-        core::*,
     },
-    types::*,
-    body::*,
-    body_structure::*,
+    types::{Address, Status, ResponseCode, Capability, Response, MailboxDatum, StatusAttribute, AttributeValue, Envelope, RequestId},
 };
+
+pub mod body;
+pub mod body_structure;
 
 fn tag_char(c: u8) -> bool {
     c != b'+' && astring_char(c)
@@ -61,7 +64,7 @@ named!(mailbox<&str>, map!(
 
 named!(flag_extension<&str>, map_res!(
     recognize!(pair!(tag!("\\"), take_while!(atom_char))),
-    str::from_utf8
+    std::str::from_utf8
 ));
 
 named!(flag<&str>, alt!(flag_extension | atom));
@@ -69,7 +72,7 @@ named!(flag<&str>, alt!(flag_extension | atom));
 named!(flag_list<Vec<&str>>, parenthesized_list!(flag));
 
 named!(flag_perm<&str>, alt!(
-    map_res!(tag!("\\*"), str::from_utf8) |
+    map_res!(tag!("\\*"), std::str::from_utf8) |
     flag
 ));
 
@@ -151,7 +154,7 @@ named!(resp_text_code<ResponseCode>, do_parse!(
         resp_text_code_read_only |
         resp_text_code_read_write |
         resp_text_code_try_create |
-        rfc4551::resp_text_code_highest_mod_seq
+        super::rfc4551::resp_text_code_highest_mod_seq
     ) >>
     // Per the spec, the closing tag should be "] ".
     // See `resp_text` for more on why this is done differently.
@@ -244,7 +247,7 @@ named!(mailbox_data_lsub<Response>, do_parse!(
 // Unlike `status_att` in the RFC syntax, this includes the value,
 // so that it can return a valid enum object instead of just a key.
 named!(status_att<StatusAttribute>, alt!(
-    rfc4551::status_att_val_highest_mod_seq |
+    super::rfc4551::status_att_val_highest_mod_seq |
     do_parse!(
         tag_no_case!("MESSAGES ") >>
         val: number >>
@@ -423,7 +426,7 @@ named!(msg_att<AttributeValue>, alt!(
     msg_att_envelope |
     msg_att_internal_date |
     msg_att_flags |
-    rfc4551::msg_att_mod_seq |
+    super::rfc4551::msg_att_mod_seq |
     msg_att_rfc822 |
     msg_att_rfc822_header |
     msg_att_rfc822_size |
@@ -447,7 +450,7 @@ named!(message_data_expunge<Response>, do_parse!(
 ));
 
 named!(tag<RequestId>, map!(
-    map_res!(take_while1!(tag_char), str::from_utf8),
+    map_res!(take_while1!(tag_char), std::str::from_utf8),
     |s| RequestId(s.to_string())
 ));
 
@@ -526,8 +529,6 @@ named!(response<Response>, alt!(
     response_data |
     response_tagged
 ));
-
-pub type ParseResult<'a> = IResult<&'a [u8], Response<'a>>;
 
 pub fn parse_response(msg: &[u8]) -> ParseResult {
     response(msg)

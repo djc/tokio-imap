@@ -2,9 +2,11 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 use crate::{
-    core::*,
+    parser::{
+        rfc3501::envelope,
+        core::{nstring_utf8, number, string_utf8, nil}
+    },
     types::*,
-    parser::envelope,
 };
 
 // body-fields     = body-fld-param SP body-fld-id SP body-fld-desc SP
