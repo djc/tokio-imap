@@ -63,7 +63,7 @@ named!(pub(crate) envelope<Envelope>, paren_delimited!(
     )
 ));
 
-fn tag_char(c: u8) -> bool {
+fn is_tag_char(c: u8) -> bool {
     c != b'+' && is_astring_char(c)
 }
 
@@ -454,7 +454,7 @@ named!(message_data_expunge<Response>, do_parse!(
 ));
 
 named!(tag<RequestId>, map!(
-    map_res!(take_while1!(tag_char), std::str::from_utf8),
+    map_res!(take_while1!(is_tag_char), std::str::from_utf8),
     |s| RequestId(s.to_string())
 ));
 
