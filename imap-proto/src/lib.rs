@@ -1,6 +1,10 @@
 #[macro_use]
 extern crate nom;
 
+#[cfg(test)]
+#[macro_use]
+extern crate assert_matches;
+
 #[macro_use]
 mod macros;
 
@@ -59,10 +63,6 @@ fn quoted_string(s: &str) -> Result<Cow<str>, &'static str> {
         Ok(Cow::Owned(String::from_utf8(new).unwrap()))
     }
 }
-
-#[cfg(test)]
-#[macro_use]
-extern crate assert_matches;
 
 #[cfg(test)]
 mod tests {
