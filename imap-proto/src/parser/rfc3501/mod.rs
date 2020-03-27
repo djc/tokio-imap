@@ -14,7 +14,7 @@ use std::str;
 use crate::parser::rfc4551;
 use crate::parser::rfc5464::resp_metadata;
 use crate::types::*;
-use crate::core::*;
+use crate::parser::core::*;
 use crate::body::*;
 use crate::body_structure::*;
 
