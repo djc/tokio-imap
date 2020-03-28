@@ -8,12 +8,11 @@ extern crate assert_matches;
 #[macro_use]
 mod macros;
 
-pub mod body_structure;
 pub mod builders;
 mod parser;
 pub mod types;
 
-pub use crate::parser::{body, core, parse_response, resp_metadata, ParseResult};
+pub use crate::parser::{body, body_structure, core, parse_response, resp_metadata, ParseResult};
 pub use crate::types::*;
 
 use std::borrow::Cow;

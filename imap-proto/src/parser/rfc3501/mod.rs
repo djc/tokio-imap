@@ -14,9 +14,10 @@ use crate::parser::rfc5464::resp_metadata;
 use crate::types::*;
 use crate::parser::core::*;
 use crate::parser::body::*;
-use crate::body_structure::*;
+use crate::parser::body_structure::*;
 
 pub mod body;
+pub mod body_structure;
 
 fn is_tag_char(c: u8) -> bool {
     c != b'+' && is_astring_char(c)
