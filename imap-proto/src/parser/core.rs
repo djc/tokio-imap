@@ -8,6 +8,16 @@ use nom::{
 
 use std::str;
 
+// ----- number -----
+
+// number          = 1*DIGIT
+//                    ; Unsigned 32-bit integer
+//                    ; (0 <= n < 4,294,967,296)
+named!(pub number<u32>, flat_map!(digit1, parse_to!(u32)));
+
+// same as `number` but 64-bit
+named!(pub number_64<u64>, flat_map!(digit1, parse_to!(u64)));
+
 // list-wildcards = "%" / "*"
 pub fn is_list_wildcards(c: u8) -> bool {
     c == b'%' || c == b'*'
@@ -117,14 +127,6 @@ named!(pub nstring_utf8<Option<&str>>, alt!(
     map!(nil, |_| None) |
     map!(string_utf8, |s| Some(s))
 ));
-
-// number          = 1*DIGIT
-//                    ; Unsigned 32-bit integer
-//                    ; (0 <= n < 4,294,967,296)
-named!(pub number<u32>, flat_map!(digit1, parse_to!(u32)));
-
-// same as `number` but 64-bit
-named!(pub number_64<u64>, flat_map!(digit1, parse_to!(u64)));
 
 // atom = 1*ATOM-CHAR
 named!(pub atom<&str>, map_res!(take_while1!(is_atom_char),
