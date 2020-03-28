@@ -13,8 +13,8 @@ use crate::parser::{ParseResult, rfc4551};
 use crate::parser::rfc5464::resp_metadata;
 use crate::types::*;
 use crate::parser::core::*;
-use crate::parser::body::*;
-use crate::parser::body_structure::*;
+use crate::parser::rfc3501::body::*;
+use crate::parser::rfc3501::body_structure::*;
 
 pub mod body;
 pub mod body_structure;
