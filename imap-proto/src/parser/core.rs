@@ -31,7 +31,7 @@ pub fn is_atom_specials(c: u8) -> bool {
 
 // ATOM-CHAR = <any CHAR except atom-specials>
 pub fn is_atom_char(c: u8) -> bool {
-    !is_atom_specials(c)
+    is_char(c) && !is_atom_specials(c)
 }
 
 // nil = "NIL"
@@ -130,7 +130,18 @@ named!(pub text<&str>, map_res!(take_while!(is_text_char),
 
 // TEXT-CHAR = <any CHAR except CR and LF>
 pub fn is_text_char(c: u8) -> bool {
-    c != b'\r' && c != b'\n'
+    is_char(c) && c != b'\r' && c != b'\n'
+}
+
+// CHAR = %x01-7F
+//          ; any 7-bit US-ASCII character,
+//          ;  excluding NUL
+// From RFC5234
+pub fn is_char(c: u8) -> bool {
+    match c {
+        0x01..=0x7F => true,
+        _ => false,
+    }
 }
 
 #[cfg(test)]
