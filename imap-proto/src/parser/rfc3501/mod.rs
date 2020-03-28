@@ -9,12 +9,17 @@
 
 use std::str;
 
-use crate::parser::{ParseResult, rfc4551};
-use crate::parser::rfc5464::resp_metadata;
-use crate::types::*;
-use crate::parser::core::*;
-use crate::parser::rfc3501::body::*;
-use crate::parser::rfc3501::body_structure::*;
+use crate::{
+    parser::{
+        core::*,
+        ParseResult,
+        rfc3501::body::*,
+        rfc3501::body_structure::*,
+        rfc4551,
+        rfc5464::resp_metadata,
+    },
+    types::*,
+};
 
 pub mod body;
 pub mod body_structure;

@@ -1,10 +1,13 @@
 // rustfmt doesn't do a very good job on nom parser invocations.
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-use crate::parser::core::*;
-use crate::types::*;
-
-use crate::parser::rfc3501::envelope;
+use crate::{
+    parser::{
+        core::*,
+        rfc3501::envelope,
+    },
+    types::*,
+};
 
 // body-fields     = body-fld-param SP body-fld-id SP body-fld-desc SP
 //                   body-fld-enc SP body-fld-octets
