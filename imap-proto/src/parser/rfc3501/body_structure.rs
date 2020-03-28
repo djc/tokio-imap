@@ -1,7 +1,7 @@
 // rustfmt doesn't do a very good job on nom parser invocations.
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-use crate::core::*;
+use crate::parser::core::*;
 use crate::types::*;
 
 use crate::parser::envelope;

@@ -9,7 +9,7 @@
 
 use nom::IResult;
 
-use crate::core::*;
+use crate::parser::core::*;
 use crate::types::*;
 use std::str;
 
