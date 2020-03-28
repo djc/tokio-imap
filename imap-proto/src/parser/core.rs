@@ -1,4 +1,4 @@
-use nom::{self, IResult};
+use nom::{self, character::streaming::digit1, IResult};
 
 use std::str;
 
@@ -104,10 +104,10 @@ named!(pub nstring_utf8<Option<&str>>, alt!(
 // number          = 1*DIGIT
 //                    ; Unsigned 32-bit integer
 //                    ; (0 <= n < 4,294,967,296)
-named!(pub number<u32>, flat_map!(nom::character::streaming::digit1, parse_to!(u32)));
+named!(pub number<u32>, flat_map!(digit1, parse_to!(u32)));
 
 // same as `number` but 64-bit
-named!(pub number_64<u64>, flat_map!(nom::character::streaming::digit1, parse_to!(u64)));
+named!(pub number_64<u64>, flat_map!(digit1, parse_to!(u64)));
 
 // atom = 1*ATOM-CHAR
 named!(pub atom<&str>, map_res!(take_while1!(atom_char),
