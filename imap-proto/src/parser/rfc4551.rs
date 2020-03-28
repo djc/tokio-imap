@@ -8,7 +8,7 @@
 // rustfmt doesn't do a very good job on nom parser invocations.
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-use crate::core::number_64;
+use crate::parser::core::number_64;
 use crate::types::*;
 
 // The highest mod-sequence value of all messages in the mailbox.

@@ -9,10 +9,10 @@ extern crate assert_matches;
 mod macros;
 
 pub mod builders;
-mod parser;
+pub mod parser;
 pub mod types;
 
-pub use crate::parser::{core, body, body_structure, parse_response, resp_metadata, ParseResult};
+pub use crate::parser::{parse_response, resp_metadata, ParseResult};
 pub use crate::types::*;
 
 use std::borrow::Cow;
