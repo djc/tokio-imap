@@ -18,14 +18,74 @@ named!(pub number<u32>, flat_map!(digit1, parse_to!(u32)));
 // same as `number` but 64-bit
 named!(pub number_64<u64>, flat_map!(digit1, parse_to!(u64)));
 
-// list-wildcards = "%" / "*"
-pub fn is_list_wildcards(c: u8) -> bool {
-    c == b'%' || c == b'*'
+// ----- string -----
+
+// string = quoted / literal
+named!(pub string<&[u8]>, alt!(quoted | literal));
+
+// string bytes as as utf8
+named!(pub string_utf8<&str>, map_res!(string, str::from_utf8));
+
+// quoted = DQUOTE *QUOTED-CHAR DQUOTE
+named!(pub quoted<&[u8]>, delimited!(
+    char!('"'),
+    quoted_data,
+    char!('"')
+));
+
+// quoted bytes as as utf8
+named!(pub quoted_utf8<&str>, map_res!(quoted, str::from_utf8));
+
+// QUOTED-CHAR = <any TEXT-CHAR except quoted-specials> / "\" quoted-specials
+pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
+    // Ideally this should use nom's `escaped` macro, but it suffers from broken
+    // type inference unless compiled with the verbose-errors feature enabled.
+    let mut escape = false;
+    let mut len = 0;
+    for c in i {
+        if *c == b'"' && !escape {
+            break;
+        }
+        len += 1;
+        if *c == b'\\' && !escape {
+            escape = true
+        } else if escape {
+            escape = false;
+        }
+    }
+    Ok((&i[len..], &i[..len]))
 }
 
 // quoted-specials = DQUOTE / "\"
 pub fn is_quoted_specials(c: u8) -> bool {
     c == b'"' || c == b'\\'
+}
+
+/// literal = "{" number "}" CRLF *CHAR8
+///            ; Number represents the number of CHAR8s
+pub fn literal(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    let parser = tuple((tag(b"{"), number, tag(b"}"), tag("\r\n")));
+
+    let (remaining, (_, count, _, _)) = parser(input)?;
+
+    let (remaining, data) = take(count)(remaining)?;
+
+    if !data.iter().all(|byte| is_char8(*byte)) {
+        // FIXME: what ErrorKind should this have?
+        return Err(nom::Err::Error((remaining, nom::error::ErrorKind::Verify)));
+    }
+
+    Ok((remaining, data))
+}
+
+/// CHAR8 = %x01-ff ; any OCTET except NUL, %x00
+pub fn is_char8(i: u8) -> bool {
+    i != 0
+}
+
+// list-wildcards = "%" / "*"
+pub fn is_list_wildcards(c: u8) -> bool {
+    c == b'%' || c == b'*'
 }
 
 // resp-specials = "]"
@@ -57,64 +117,6 @@ named!(pub nil, tag_no_case!("NIL"));
 pub fn is_astring_char(c: u8) -> bool {
     is_atom_char(c) || is_resp_specials(c)
 }
-
-// QUOTED-CHAR = <any TEXT-CHAR except quoted-specials> / "\" quoted-specials
-pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
-    // Ideally this should use nom's `escaped` macro, but it suffers from broken
-    // type inference unless compiled with the verbose-errors feature enabled.
-    let mut escape = false;
-    let mut len = 0;
-    for c in i {
-        if *c == b'"' && !escape {
-            break;
-        }
-        len += 1;
-        if *c == b'\\' && !escape {
-            escape = true
-        } else if escape {
-            escape = false;
-        }
-    }
-    Ok((&i[len..], &i[..len]))
-}
-
-// quoted = DQUOTE *QUOTED-CHAR DQUOTE
-named!(pub quoted<&[u8]>, delimited!(
-    char!('"'),
-    quoted_data,
-    char!('"')
-));
-
-// quoted bytes as as utf8
-named!(pub quoted_utf8<&str>, map_res!(quoted, str::from_utf8));
-
-/// literal = "{" number "}" CRLF *CHAR8
-///            ; Number represents the number of CHAR8s
-pub fn literal(input: &[u8]) -> IResult<&[u8], &[u8]> {
-    let parser = tuple((tag(b"{"), number, tag(b"}"), tag("\r\n")));
-
-    let (remaining, (_, count, _, _)) = parser(input)?;
-
-    let (remaining, data) = take(count)(remaining)?;
-
-    if !data.iter().all(|byte| is_char8(*byte)) {
-        // FIXME: what ErrorKind should this have?
-        return Err(nom::Err::Error((remaining, nom::error::ErrorKind::Verify)));
-    }
-
-    Ok((remaining, data))
-}
-
-/// CHAR8 = %x01-ff ; any OCTET except NUL, %x00
-pub fn is_char8(i: u8) -> bool {
-    i != 0
-}
-
-// string = quoted / literal
-named!(pub string<&[u8]>, alt!(quoted | literal));
-
-// string bytes as as utf8
-named!(pub string_utf8<&str>, map_res!(string, str::from_utf8));
 
 // nstring = string / nil
 named!(pub nstring<Option<&[u8]>>, alt!(
