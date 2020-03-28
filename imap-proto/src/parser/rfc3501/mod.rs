@@ -7,11 +7,9 @@
 // rustfmt doesn't do a very good job on nom parser invocations.
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-use nom::IResult;
-
 use std::str;
 
-use crate::parser::rfc4551;
+use crate::parser::{ParseResult, rfc4551};
 use crate::parser::rfc5464::resp_metadata;
 use crate::types::*;
 use crate::parser::core::*;
@@ -525,8 +523,6 @@ named!(response<Response>, alt!(
     response_data |
     response_tagged
 ));
-
-pub type ParseResult<'a> = IResult<&'a [u8], Response<'a>>;
 
 pub fn parse_response(msg: &[u8]) -> ParseResult {
     response(msg)
