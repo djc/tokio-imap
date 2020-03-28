@@ -143,10 +143,7 @@ named!(pub nstring_utf8<Option<&str>>, alt!(
 // nil = "NIL"
 named!(pub nil, tag_no_case!("NIL"));
 
-// list-wildcards = "%" / "*"
-pub fn is_list_wildcards(c: u8) -> bool {
-    c == b'%' || c == b'*'
-}
+// ----- text -----
 
 // text = 1*TEXT-CHAR
 named!(pub text<&str>, map_res!(take_while!(is_text_char),
@@ -167,6 +164,11 @@ pub fn is_char(c: u8) -> bool {
         0x01..=0x7F => true,
         _ => false,
     }
+}
+
+// list-wildcards = "%" / "*"
+pub fn is_list_wildcards(c: u8) -> bool {
+    c == b'%' || c == b'*'
 }
 
 #[cfg(test)]
