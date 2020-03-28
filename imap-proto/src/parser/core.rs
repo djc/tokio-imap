@@ -83,14 +83,25 @@ pub fn is_char8(i: u8) -> bool {
     i != 0
 }
 
-// list-wildcards = "%" / "*"
-pub fn is_list_wildcards(c: u8) -> bool {
-    c == b'%' || c == b'*'
+// ----- astring ----- atom (roughly) or string
+
+// astring = 1*ASTRING-CHAR / string
+named!(pub astring<&[u8]>, alt!(
+    take_while1!(is_astring_char) |
+    string
+));
+
+// astring bytes as as utf8
+named!(pub astring_utf8<&str>, map_res!(astring, str::from_utf8));
+
+// ASTRING-CHAR = ATOM-CHAR / resp-specials
+pub fn is_astring_char(c: u8) -> bool {
+    is_atom_char(c) || is_resp_specials(c)
 }
 
-// resp-specials = "]"
-pub fn is_resp_specials(c: u8) -> bool {
-    c == b']'
+// ATOM-CHAR = <any CHAR except atom-specials>
+pub fn is_atom_char(c: u8) -> bool {
+    is_char(c) && !is_atom_specials(c)
 }
 
 // atom-specials = "(" / ")" / "{" / SP / CTL / list-wildcards / quoted-specials / resp-specials
@@ -105,18 +116,23 @@ pub fn is_atom_specials(c: u8) -> bool {
         || is_resp_specials(c)
 }
 
-// ATOM-CHAR = <any CHAR except atom-specials>
-pub fn is_atom_char(c: u8) -> bool {
-    is_char(c) && !is_atom_specials(c)
+// resp-specials = "]"
+pub fn is_resp_specials(c: u8) -> bool {
+    c == b']'
+}
+
+// atom = 1*ATOM-CHAR
+named!(pub atom<&str>, map_res!(take_while1!(is_atom_char),
+    str::from_utf8
+));
+
+// list-wildcards = "%" / "*"
+pub fn is_list_wildcards(c: u8) -> bool {
+    c == b'%' || c == b'*'
 }
 
 // nil = "NIL"
 named!(pub nil, tag_no_case!("NIL"));
-
-// ASTRING-CHAR = ATOM-CHAR / resp-specials
-pub fn is_astring_char(c: u8) -> bool {
-    is_atom_char(c) || is_resp_specials(c)
-}
 
 // nstring = string / nil
 named!(pub nstring<Option<&[u8]>>, alt!(
@@ -129,20 +145,6 @@ named!(pub nstring_utf8<Option<&str>>, alt!(
     map!(nil, |_| None) |
     map!(string_utf8, |s| Some(s))
 ));
-
-// atom = 1*ATOM-CHAR
-named!(pub atom<&str>, map_res!(take_while1!(is_atom_char),
-    str::from_utf8
-));
-
-// astring = 1*ASTRING-CHAR / string
-named!(pub astring<&[u8]>, alt!(
-    take_while1!(is_astring_char) |
-    string
-));
-
-// astring bytes as as utf8
-named!(pub astring_utf8<&str>, map_res!(astring, str::from_utf8));
 
 // text = 1*TEXT-CHAR
 named!(pub text<&str>, map_res!(take_while!(is_text_char),
