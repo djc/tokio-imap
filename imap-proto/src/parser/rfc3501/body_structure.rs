@@ -4,7 +4,7 @@
 use crate::parser::core::*;
 use crate::types::*;
 
-use crate::parser::envelope;
+use crate::parser::rfc3501::envelope;
 
 // body-fields     = body-fld-param SP body-fld-id SP body-fld-desc SP
 //                   body-fld-enc SP body-fld-octets
