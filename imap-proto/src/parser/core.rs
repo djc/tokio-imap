@@ -23,7 +23,7 @@ named!(pub number_64<u64>, flat_map!(digit1, parse_to!(u64)));
 // string = quoted / literal
 named!(pub string<&[u8]>, alt!(quoted | literal));
 
-// string bytes as as utf8
+// string bytes as utf8
 named!(pub string_utf8<&str>, map_res!(string, str::from_utf8));
 
 // quoted = DQUOTE *QUOTED-CHAR DQUOTE
@@ -33,7 +33,7 @@ named!(pub quoted<&[u8]>, delimited!(
     char!('"')
 ));
 
-// quoted bytes as as utf8
+// quoted bytes as utf8
 named!(pub quoted_utf8<&str>, map_res!(quoted, str::from_utf8));
 
 // QUOTED-CHAR = <any TEXT-CHAR except quoted-specials> / "\" quoted-specials
@@ -91,7 +91,7 @@ named!(pub astring<&[u8]>, alt!(
     string
 ));
 
-// astring bytes as as utf8
+// astring bytes as utf8
 named!(pub astring_utf8<&str>, map_res!(astring, str::from_utf8));
 
 // ASTRING-CHAR = ATOM-CHAR / resp-specials
