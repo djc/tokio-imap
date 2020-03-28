@@ -1,4 +1,10 @@
-use nom::{self, IResult, character::streaming::digit1, sequence::tuple, bytes::streaming::{tag, take}};
+use nom::{
+    self,
+    bytes::streaming::{tag, take},
+    character::streaming::digit1,
+    IResult,
+    sequence::tuple,
+};
 
 use std::str;
 

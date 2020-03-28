@@ -9,8 +9,11 @@
 
 use nom::IResult;
 
-use crate::parser::core::*;
-use crate::types::*;
+use crate::{
+    parser::core::*,
+    types::*,
+};
+
 use std::str;
 
 fn is_entry_component_char(c: u8) -> bool {

@@ -1,5 +1,11 @@
-use crate::quoted_string;
-use crate::types::{AttrMacro, Attribute, State};
+use crate::{
+    quoted_string,
+    types::{
+        Attribute,
+        AttrMacro,
+        State,
+    },
+};
 
 pub struct CommandBuilder {}
 

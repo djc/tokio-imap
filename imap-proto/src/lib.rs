@@ -12,7 +12,11 @@ pub mod builders;
 pub mod parser;
 pub mod types;
 
-pub use crate::parser::{rfc3501::parse_response, rfc5464::resp_metadata, ParseResult};
+pub use crate::parser::{
+    ParseResult,
+    rfc3501::parse_response,
+    rfc5464::resp_metadata,
+};
 pub use crate::types::*;
 
 use std::borrow::Cow;
