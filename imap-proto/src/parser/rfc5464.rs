@@ -9,10 +9,7 @@
 
 use nom::IResult;
 
-use crate::{
-    parser::core::*,
-    types::*,
-};
+use crate::{parser::core::*, types::*};
 
 use std::str;
 

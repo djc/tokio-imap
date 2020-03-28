@@ -11,12 +11,8 @@ use std::str;
 
 use crate::{
     parser::{
-        core::*,
+        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5464::resp_metadata,
         ParseResult,
-        rfc3501::body::*,
-        rfc3501::body_structure::*,
-        rfc4551,
-        rfc5464::resp_metadata,
     },
     types::*,
 };
@@ -169,7 +165,9 @@ named!(capability<Capability>, alt!(
     map!(atom, |a| Capability::Atom(a))
 ));
 
-fn ensure_capabilities_contains_imap4rev<'a>(capabilities: Vec<Capability<'a>>) -> Result<Vec<Capability<'a>>, ()> {
+fn ensure_capabilities_contains_imap4rev<'a>(
+    capabilities: Vec<Capability<'a>>,
+) -> Result<Vec<Capability<'a>>, ()> {
     if capabilities.contains(&Capability::Imap4rev1) {
         Ok(capabilities)
     } else {
@@ -535,17 +533,16 @@ pub fn parse_response(msg: &[u8]) -> ParseResult {
     response(msg)
 }
 
-
 #[cfg(test)]
 mod tests {
-    use nom;
     use super::parse_response;
     use crate::types::*;
+    use nom;
 
     #[test]
     fn test_number_overflow() {
         match parse_response(b"* 2222222222222222222222222222222222222222222C\r\n") {
-            Err(_) => {},
+            Err(_) => {}
             _ => panic!("error required for integer overflow"),
         }
     }
@@ -553,11 +550,14 @@ mod tests {
     #[test]
     fn test_unseen() {
         match parse_response(b"* OK [UNSEEN 3] Message 3 is first unseen\r\n").unwrap() {
-            (_, Response::Data {
-                status: Status::Ok,
-                code: Some(ResponseCode::Unseen(3)),
-                information: Some("Message 3 is first unseen"),
-            }) => {},
+            (
+                _,
+                Response::Data {
+                    status: Status::Ok,
+                    code: Some(ResponseCode::Unseen(3)),
+                    information: Some("Message 3 is first unseen"),
+                },
+            ) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
@@ -567,12 +567,17 @@ mod tests {
         match parse_response(b"* 2 FETCH (BODY[TEXT] {3}\r\nfoo)\r\n") {
             Ok((_, Response::Fetch(_, attrs))) => {
                 let body = &attrs[0];
-                assert_eq!(body, &AttributeValue::BodySection {
-                    section: Some(SectionPath::Full(MessageSection::Text)),
-                    index: None,
-                    data: Some(b"foo"),
-                }, "body = {:?}", body);
-            },
+                assert_eq!(
+                    body,
+                    &AttributeValue::BodySection {
+                        section: Some(SectionPath::Full(MessageSection::Text)),
+                        index: None,
+                        data: Some(b"foo"),
+                    },
+                    "body = {:?}",
+                    body
+                );
+            }
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
@@ -583,8 +588,16 @@ mod tests {
         match parse_response(RESPONSE) {
             Ok((_, Response::Fetch(_, attrs))) => {
                 let body = &attrs[0];
-                assert!(if let AttributeValue::BodyStructure(_) = *body { true } else { false }, "body = {:?}", body);
-            },
+                assert!(
+                    if let AttributeValue::BodyStructure(_) = *body {
+                        true
+                    } else {
+                        false
+                    },
+                    "body = {:?}",
+                    body
+                );
+            }
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
@@ -594,11 +607,14 @@ mod tests {
         match parse_response(b"* STATUS blurdybloop (MESSAGES 231 UIDNEXT 44292)\r\n") {
             Ok((_, Response::MailboxData(MailboxDatum::Status { mailbox, status }))) => {
                 assert_eq!(mailbox, "blurdybloop");
-                assert_eq!(status, [
-                    StatusAttribute::Messages(231),
-                    StatusAttribute::UidNext(44292),
-                ]);
-            },
+                assert_eq!(
+                    status,
+                    [
+                        StatusAttribute::Messages(231),
+                        StatusAttribute::UidNext(44292),
+                    ]
+                );
+            }
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
@@ -606,15 +622,21 @@ mod tests {
     #[test]
     fn test_notify() {
         match parse_response(b"* 3501 EXPUNGE\r\n") {
-            Ok((_, Response::Expunge(3501))) => {},
+            Ok((_, Response::Expunge(3501))) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
         match parse_response(b"* 3501 EXISTS\r\n") {
-            Ok((_, Response::MailboxData(MailboxDatum::Exists(3501)))) => {},
+            Ok((_, Response::MailboxData(MailboxDatum::Exists(3501)))) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
         match parse_response(b"+ idling\r\n") {
-            Ok((_, Response::Continue { code: None, information: Some("idling") })) => {},
+            Ok((
+                _,
+                Response::Continue {
+                    code: None,
+                    information: Some("idling"),
+                },
+            )) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
@@ -624,14 +646,14 @@ mod tests {
         match parse_response(b"* SEARCH\r\n") {
             Ok((_, Response::IDs(ids))) => {
                 assert!(ids.is_empty());
-            },
+            }
             rsp => panic!("unexpected response {:?}", rsp),
         }
         match parse_response(b"* SEARCH 12345 67890\r\n") {
             Ok((_, Response::IDs(ids))) => {
                 assert_eq!(ids[0], 12345);
                 assert_eq!(ids[1], 67890);
-            },
+            }
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
@@ -639,7 +661,7 @@ mod tests {
     #[test]
     fn test_uid_fetch() {
         match parse_response(b"* 4 FETCH (UID 71372 RFC822.HEADER {10275}\r\n") {
-            Err(nom::Err::Incomplete(nom::Needed::Size(10275))) => {},
+            Err(nom::Err::Incomplete(nom::Needed::Size(10275))) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
@@ -649,12 +671,12 @@ mod tests {
         match crate::parser::rfc3501::mailbox(b"iNboX ") {
             Ok((_, mb)) => {
                 assert_eq!(mb, "INBOX");
-            },
+            }
             rsp => panic!("unexpected response {:?}", rsp),
         }
 
         match parse_response(b"* LIST (\\HasNoChildren) \".\" INBOX.Tests\r\n") {
-            Ok((_, Response::MailboxData(_))) => {},
+            Ok((_, Response::MailboxData(_))) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
@@ -663,7 +685,7 @@ mod tests {
     fn test_uid_fetch_extra_space() {
         // DavMail inserts an extra space after RFC822.HEADER
         match parse_response(b"* 4 FETCH (UID 71372 RFC822.HEADER  {10275}\r\n") {
-            Err(nom::Err::Incomplete(nom::Needed::Size(10275))) => {},
+            Err(nom::Err::Incomplete(nom::Needed::Size(10275))) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
@@ -672,8 +694,8 @@ mod tests {
     fn test_envelope() {
         let env = br#"ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" "IMAP4rev1 WG mtg summary and minutes" (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) ((NIL NIL "imap" "cac.washington.edu")) ((NIL NIL "minutes" "CNRI.Reston.VA.US") ("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL "<B27397-0100000@cac.washington.edu>") "#;
         match crate::parser::rfc3501::msg_att_envelope(env) {
-            Ok((_, AttributeValue::Envelope(_))) => {},
-            rsp => panic!("unexpected response {:?}", rsp)
+            Ok((_, AttributeValue::Envelope(_))) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
@@ -682,7 +704,7 @@ mod tests {
         const RESPONSE: &[u8] = b"* 1 FETCH (UID 1 BODY[HEADER.FIELDS (CHAT-VERSION)] {21}\r\nChat-Version: 1.0\r\n\r\n)\r\n";
 
         match parse_response(RESPONSE) {
-            Ok((_, Response::Fetch(_, _))) => {},
+            Ok((_, Response::Fetch(_, _))) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
@@ -690,113 +712,148 @@ mod tests {
     #[test]
     fn test_opt_addresses() {
         let addr = b"((NIL NIL \"minutes\" \"CNRI.Reston.VA.US\") (\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\")) ";
-            match crate::parser::rfc3501::opt_addresses(addr) {
-            Ok((_, _addresses)) => {},
-            rsp => panic!("unexpected response {:?}", rsp)
+        match crate::parser::rfc3501::opt_addresses(addr) {
+            Ok((_, _addresses)) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
     #[test]
     fn test_opt_addresses_no_space() {
-        let addr = br#"((NIL NIL "test" "example@example.com")(NIL NIL "test" "example@example.com"))"#;
-            match super::opt_addresses(addr) {
-            Ok((_, _addresses)) => {},
-            rsp => panic!("unexpected response {:?}", rsp)
+        let addr =
+            br#"((NIL NIL "test" "example@example.com")(NIL NIL "test" "example@example.com"))"#;
+        match super::opt_addresses(addr) {
+            Ok((_, _addresses)) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
     #[test]
     fn test_addresses() {
         match crate::parser::rfc3501::address(b"(\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\") ") {
-            Ok((_, _address)) => {},
-            rsp => panic!("unexpected response {:?}", rsp)
+            Ok((_, _address)) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
 
         // Literal non-UTF8 address
-        match crate::parser::rfc3501::address(b"({12}\r\nJoh\xff Klensin NIL \"KLENSIN\" \"MIT.EDU\") ") {
-            Ok((_, _address)) => {},
-            rsp => panic!("unexpected response {:?}", rsp)
+        match crate::parser::rfc3501::address(
+            b"({12}\r\nJoh\xff Klensin NIL \"KLENSIN\" \"MIT.EDU\") ",
+        ) {
+            Ok((_, _address)) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
     #[test]
     fn test_response_codes() {
         match parse_response(b"* OK [ALERT] Alert!\r\n") {
-            Ok((_, Response::Data { status: Status::Ok, code: Some(ResponseCode::Alert), information: Some("Alert!") })) => {}
-            rsp => panic!("unexpected response {:?}", rsp)
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::Ok,
+                    code: Some(ResponseCode::Alert),
+                    information: Some("Alert!"),
+                },
+            )) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
 
         match parse_response(b"* NO [PARSE] Something\r\n") {
-            Ok((_, Response::Data { status: Status::No, code: Some(ResponseCode::Parse), information: Some("Something") })) => {}
-            rsp => panic!("unexpected response {:?}", rsp)
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::No,
+                    code: Some(ResponseCode::Parse),
+                    information: Some("Something"),
+                },
+            )) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
 
         match parse_response(b"* OK [CAPABILITY IMAP4rev1 IDLE] Logged in\r\n") {
-            Ok((_, Response::Data {
-                status: Status::Ok,
-                code: Some(ResponseCode::Capabilities(c)),
-                information: Some("Logged in")
-            })) => {
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::Ok,
+                    code: Some(ResponseCode::Capabilities(c)),
+                    information: Some("Logged in"),
+                },
+            )) => {
                 assert_eq!(c.len(), 2);
                 assert_eq!(c[0], Capability::Imap4rev1);
                 assert_eq!(c[1], Capability::Atom("IDLE"));
             }
-            rsp => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp),
         }
 
         match parse_response(b"* OK [CAPABILITY UIDPLUS IMAP4rev1 IDLE] Logged in\r\n") {
-            Ok((_, Response::Data {
-                status: Status::Ok,
-                code: Some(ResponseCode::Capabilities(c)),
-                information: Some("Logged in")
-            })) => {
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::Ok,
+                    code: Some(ResponseCode::Capabilities(c)),
+                    information: Some("Logged in"),
+                },
+            )) => {
                 assert_eq!(c.len(), 3);
                 assert_eq!(c[0], Capability::Atom("UIDPLUS"));
                 assert_eq!(c[1], Capability::Imap4rev1);
                 assert_eq!(c[2], Capability::Atom("IDLE"));
             }
-            rsp => panic!("unexpected response {:?}", rsp)
+            rsp => panic!("unexpected response {:?}", rsp),
         }
 
         // Missing IMAP4rev1
         match parse_response(b"* OK [CAPABILITY UIDPLUS IDLE] Logged in\r\n") {
-            Ok((_, Response::Data {
-                status: Status::Ok,
-                code: None,
-                information: Some("[CAPABILITY UIDPLUS IDLE] Logged in")
-            })) => {}
-            rsp => panic!("unexpected response {:?}", rsp)
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::Ok,
+                    code: None,
+                    information: Some("[CAPABILITY UIDPLUS IDLE] Logged in"),
+                },
+            )) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
 
         match parse_response(b"* NO [BADCHARSET] error\r\n") {
-            Ok((_, Response::Data {
-                status: Status::No,
-                code: Some(ResponseCode::BadCharset(None)),
-                information: Some("error")
-            })) => {},
-            rsp => panic!("unexpected response {:?}", rsp)
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::No,
+                    code: Some(ResponseCode::BadCharset(None)),
+                    information: Some("error"),
+                },
+            )) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
 
         match parse_response(b"* NO [BADCHARSET (utf-8 latin1)] error\r\n") {
-            Ok((_, Response::Data {
-                status: Status::No,
-                code: Some(ResponseCode::BadCharset(Some(v))),
-                information: Some("error")
-            })) => {
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::No,
+                    code: Some(ResponseCode::BadCharset(Some(v))),
+                    information: Some("error"),
+                },
+            )) => {
                 assert_eq!(v.len(), 2);
                 assert_eq!(v[0], "utf-8");
                 assert_eq!(v[1], "latin1");
-            },
-            rsp => panic!("unexpected response {:?}", rsp)
+            }
+            rsp => panic!("unexpected response {:?}", rsp),
         }
 
         match parse_response(b"* NO [BADCHARSET ()] error\r\n") {
-            Ok((_, Response::Data {
-                status: Status::No,
-                code: None,
-                information: Some("[BADCHARSET ()] error")
-            })) => {}
-            rsp => panic!("unexpected response {:?}", rsp)
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::No,
+                    code: None,
+                    information: Some("[BADCHARSET ()] error"),
+                },
+            )) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 
@@ -846,7 +903,7 @@ mod tests {
     #[test]
     fn test_incomplete_fetch() {
         match parse_response(b"* 4644 FETCH (UID ") {
-            Err(nom::Err::Incomplete(_)) => {},
+            Err(nom::Err::Incomplete(_)) => {}
             rsp => panic!("should be incomplete: {:?}", rsp),
         }
     }
@@ -855,20 +912,26 @@ mod tests {
     fn test_continuation() {
         // regular RFC compliant
         match parse_response(b"+ \r\n") {
-            Ok((_, Response::Continue {
-                code: None,
-                information: None,
-            })) => {}
-            rsp => panic!("unexpected response {:?}", rsp)
+            Ok((
+                _,
+                Response::Continue {
+                    code: None,
+                    information: None,
+                },
+            )) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
 
         // short version, sent by yandex
         match parse_response(b"+\r\n") {
-            Ok((_, Response::Continue {
-                code: None,
-                information: None,
-            })) => {}
-            rsp => panic!("unexpected response {:?}", rsp)
+            Ok((
+                _,
+                Response::Continue {
+                    code: None,
+                    information: None,
+                },
+            )) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 }

@@ -8,10 +8,7 @@
 // rustfmt doesn't do a very good job on nom parser invocations.
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-use crate::{
-    parser::core::number_64,
-    types::*,
-};
+use crate::{parser::core::number_64, types::*};
 
 // The highest mod-sequence value of all messages in the mailbox.
 // Extends resp-test-code defined in rfc3501.

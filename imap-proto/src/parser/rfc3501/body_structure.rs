@@ -2,10 +2,7 @@
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
 use crate::{
-    parser::{
-        core::*,
-        rfc3501::envelope,
-    },
+    parser::{core::*, rfc3501::envelope},
     types::*,
 };
 
@@ -270,16 +267,13 @@ mod tests {
                 },
                 lines: 42,
                 extension: None,
-            }
+            },
         )
     }
 
     #[test]
     fn test_body_param_data() {
-        assert_matches!(
-            body_param(br#"NIL"#),
-            Ok((EMPTY, None))
-        );
+        assert_matches!(body_param(br#"NIL"#), Ok((EMPTY, None)));
 
         assert_matches!(
             body_param(br#"("foo" "bar")"#),
@@ -305,10 +299,7 @@ mod tests {
             }
         );
 
-        assert_matches!(
-            body_lang(br#"NIL"#),
-            Ok((EMPTY, None))
-        );
+        assert_matches!(body_lang(br#"NIL"#), Ok((EMPTY, None)));
     }
 
     #[test]
@@ -340,10 +331,7 @@ mod tests {
 
     #[test]
     fn test_body_disposition_data() {
-        assert_matches!(
-            body_disposition(br#"NIL"#),
-            Ok((EMPTY, None))
-        );
+        assert_matches!(body_disposition(br#"NIL"#), Ok((EMPTY, None)));
 
         assert_matches!(
             body_disposition(br#"("attachment" ("FILENAME" "pages.pdf"))"#),
@@ -421,7 +409,10 @@ mod tests {
     fn test_body_structure_message() {
         let (text_body_str, _) = mock_body_text();
         let envelope_str = r#"("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" "IMAP4rev1 WG mtg summary and minutes" (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) ((NIL NIL "imap" "cac.washington.edu")) ((NIL NIL "minutes" "CNRI.Reston.VA.US") ("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL "<B27397-0100000@cac.washington.edu>")"#;
-        let body_str = format!(r#"("MESSAGE" "RFC822" {} {} {} 42)"#, BODY_FIELDS, envelope_str, text_body_str);
+        let body_str = format!(
+            r#"("MESSAGE" "RFC822" {} {} {} 42)"#,
+            BODY_FIELDS, envelope_str, text_body_str
+        );
 
         assert_matches!(
             body(body_str.as_bytes()),
