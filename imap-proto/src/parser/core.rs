@@ -126,13 +126,7 @@ named!(pub atom<&str>, map_res!(take_while1!(is_atom_char),
     str::from_utf8
 ));
 
-// list-wildcards = "%" / "*"
-pub fn is_list_wildcards(c: u8) -> bool {
-    c == b'%' || c == b'*'
-}
-
-// nil = "NIL"
-named!(pub nil, tag_no_case!("NIL"));
+// ----- nstring ----- nil or string
 
 // nstring = string / nil
 named!(pub nstring<Option<&[u8]>>, alt!(
@@ -145,6 +139,14 @@ named!(pub nstring_utf8<Option<&str>>, alt!(
     map!(nil, |_| None) |
     map!(string_utf8, |s| Some(s))
 ));
+
+// nil = "NIL"
+named!(pub nil, tag_no_case!("NIL"));
+
+// list-wildcards = "%" / "*"
+pub fn is_list_wildcards(c: u8) -> bool {
+    c == b'%' || c == b'*'
+}
 
 // text = 1*TEXT-CHAR
 named!(pub text<&str>, map_res!(take_while!(is_text_char),
