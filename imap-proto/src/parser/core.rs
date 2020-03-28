@@ -166,6 +166,8 @@ pub fn is_char(c: u8) -> bool {
     }
 }
 
+// ----- others -----
+
 // list-wildcards = "%" / "*"
 pub fn is_list_wildcards(c: u8) -> bool {
     c == b'%' || c == b'*'
