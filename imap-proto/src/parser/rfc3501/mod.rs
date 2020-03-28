@@ -19,8 +19,8 @@ use crate::body::*;
 use crate::body_structure::*;
 
 
-fn tag_char(c: u8) -> bool {
-    c != b'+' && astring_char(c)
+fn is_tag_char(c: u8) -> bool {
+    c != b'+' && is_astring_char(c)
 }
 
 named!(status_ok<Status>, map!(tag_no_case!("OK"),
@@ -59,7 +59,7 @@ named!(mailbox<&str>, map!(
 ));
 
 named!(flag_extension<&str>, map_res!(
-    recognize!(pair!(tag!("\\"), take_while!(atom_char))),
+    recognize!(pair!(tag!("\\"), take_while!(is_atom_char))),
     str::from_utf8
 ));
 
@@ -446,7 +446,7 @@ named!(message_data_expunge<Response>, do_parse!(
 ));
 
 named!(tag<RequestId>, map!(
-    map_res!(take_while1!(tag_char), str::from_utf8),
+    map_res!(take_while1!(is_tag_char), str::from_utf8),
     |s| RequestId(s.to_string())
 ));
 
