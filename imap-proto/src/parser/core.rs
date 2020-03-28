@@ -1,4 +1,10 @@
-use nom::{self, character::streaming::digit1, IResult};
+use nom::{
+    self,
+    bytes::streaming::{tag, take},
+    character::streaming::digit1,
+    sequence::tuple,
+    IResult,
+};
 
 use std::str;
 
@@ -72,16 +78,27 @@ named!(pub quoted<&[u8]>, delimited!(
 // quoted bytes as as utf8
 named!(pub quoted_utf8<&str>, map_res!(quoted, str::from_utf8));
 
-// literal = "{" number "}" CRLF *CHAR8
-//            ; Number represents the number of CHAR8s
-named!(pub literal<&[u8]>, do_parse!(
-    tag!("{") >>
-    len: number >>
-    tag!("}") >>
-    tag!("\r\n") >>
-    data: take!(len) >>
-    (data)
-));
+/// literal = "{" number "}" CRLF *CHAR8
+///            ; Number represents the number of CHAR8s
+pub fn literal(input: &[u8]) -> IResult<&[u8], &[u8]> {
+    let parser = tuple((tag(b"{"), number, tag(b"}"), tag("\r\n")));
+
+    let (remaining, (_, count, _, _)) = parser(input)?;
+
+    let (remaining, data) = take(count)(remaining)?;
+
+    if !data.iter().all(|byte| is_char8(*byte)) {
+        // FIXME: what ErrorKind should this have?
+        return Err(nom::Err::Error((remaining, nom::error::ErrorKind::Verify)));
+    }
+
+    Ok((remaining, data))
+}
+
+/// CHAR8 = %x01-ff ; any OCTET except NUL, %x00
+pub fn is_char8(i: u8) -> bool {
+    i != 0
+}
 
 // string = quoted / literal
 named!(pub string<&[u8]>, alt!(quoted | literal));
