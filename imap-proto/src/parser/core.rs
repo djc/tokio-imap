@@ -1,40 +1,70 @@
 use nom::{
     self,
-    bytes::streaming::{tag, take},
-    character::streaming::digit1,
-    sequence::tuple,
+    branch::alt,
+    bytes::streaming::{tag, tag_no_case, take, take_while, take_while1},
+    character::streaming::{char, digit1},
+    combinator::{map, map_res},
+    sequence::{delimited, tuple},
     IResult,
 };
 
-use std::str;
+use std::str::{self, FromStr};
 
 // ----- number -----
 
 // number          = 1*DIGIT
 //                    ; Unsigned 32-bit integer
 //                    ; (0 <= n < 4,294,967,296)
-named!(pub number<u32>, flat_map!(digit1, parse_to!(u32)));
+pub fn number(i: &[u8]) -> IResult<&[u8], u32> {
+    let (i, bytes) = digit1(i)?;
+    match str::from_utf8(bytes)
+        .ok()
+        .and_then(|s| u32::from_str(s).ok())
+    {
+        Some(v) => Ok((i, v)),
+        None => Err(nom::Err::Error(nom::error::make_error(
+            i,
+            nom::error::ErrorKind::ParseTo,
+        ))),
+    }
+}
 
 // same as `number` but 64-bit
-named!(pub number_64<u64>, flat_map!(digit1, parse_to!(u64)));
+pub fn number_64(i: &[u8]) -> IResult<&[u8], u64> {
+    let (i, bytes) = digit1(i)?;
+    match str::from_utf8(bytes)
+        .ok()
+        .and_then(|s| u64::from_str(s).ok())
+    {
+        Some(v) => Ok((i, v)),
+        None => Err(nom::Err::Error(nom::error::make_error(
+            i,
+            nom::error::ErrorKind::ParseTo,
+        ))),
+    }
+}
 
 // ----- string -----
 
 // string = quoted / literal
-named!(pub string<&[u8]>, alt!(quoted | literal));
+pub fn string(i: &[u8]) -> IResult<&[u8], &[u8]> {
+    alt((quoted, literal))(i)
+}
 
 // string bytes as utf8
-named!(pub string_utf8<&str>, map_res!(string, str::from_utf8));
+pub fn string_utf8(i: &[u8]) -> IResult<&[u8], &str> {
+    map_res(string, str::from_utf8)(i)
+}
 
 // quoted = DQUOTE *QUOTED-CHAR DQUOTE
-named!(pub quoted<&[u8]>, delimited!(
-    char!('"'),
-    quoted_data,
-    char!('"')
-));
+pub fn quoted(i: &[u8]) -> IResult<&[u8], &[u8]> {
+    delimited(char('"'), quoted_data, char('"'))(i)
+}
 
 // quoted bytes as utf8
-named!(pub quoted_utf8<&str>, map_res!(quoted, str::from_utf8));
+pub fn quoted_utf8(i: &[u8]) -> IResult<&[u8], &str> {
+    map_res(quoted, str::from_utf8)(i)
+}
 
 // QUOTED-CHAR = <any TEXT-CHAR except quoted-specials> / "\" quoted-specials
 pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
@@ -86,13 +116,14 @@ pub fn is_char8(i: u8) -> bool {
 // ----- astring ----- atom (roughly) or string
 
 // astring = 1*ASTRING-CHAR / string
-named!(pub astring<&[u8]>, alt!(
-    take_while1!(is_astring_char) |
-    string
-));
+pub fn astring(i: &[u8]) -> IResult<&[u8], &[u8]> {
+    alt((take_while1(is_astring_char), string))(i)
+}
 
 // astring bytes as utf8
-named!(pub astring_utf8<&str>, map_res!(astring, str::from_utf8));
+pub fn astring_utf8(i: &[u8]) -> IResult<&[u8], &str> {
+    map_res(astring, str::from_utf8)(i)
+}
 
 // ASTRING-CHAR = ATOM-CHAR / resp-specials
 pub fn is_astring_char(c: u8) -> bool {
@@ -122,33 +153,33 @@ pub fn is_resp_specials(c: u8) -> bool {
 }
 
 // atom = 1*ATOM-CHAR
-named!(pub atom<&str>, map_res!(take_while1!(is_atom_char),
-    str::from_utf8
-));
+pub fn atom(i: &[u8]) -> IResult<&[u8], &str> {
+    map_res(take_while1(is_atom_char), str::from_utf8)(i)
+}
 
 // ----- nstring ----- nil or string
 
 // nstring = string / nil
-named!(pub nstring<Option<&[u8]>>, alt!(
-    map!(nil, |_| None) |
-    map!(string, |s| Some(s))
-));
+pub fn nstring(i: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
+    alt((map(nil, |_| None), map(string, Some)))(i)
+}
 
 // nstring bytes as utf8
-named!(pub nstring_utf8<Option<&str>>, alt!(
-    map!(nil, |_| None) |
-    map!(string_utf8, |s| Some(s))
-));
+pub fn nstring_utf8(i: &[u8]) -> IResult<&[u8], Option<&str>> {
+    alt((map(nil, |_| None), map(string_utf8, Some)))(i)
+}
 
 // nil = "NIL"
-named!(pub nil, tag_no_case!("NIL"));
+pub fn nil(i: &[u8]) -> IResult<&[u8], &[u8]> {
+    tag_no_case("NIL")(i)
+}
 
 // ----- text -----
 
 // text = 1*TEXT-CHAR
-named!(pub text<&str>, map_res!(take_while!(is_text_char),
-    str::from_utf8
-));
+pub fn text(i: &[u8]) -> IResult<&[u8], &str> {
+    map_res(take_while(is_text_char), str::from_utf8)(i)
+}
 
 // TEXT-CHAR = <any CHAR except CR and LF>
 pub fn is_text_char(c: u8) -> bool {
