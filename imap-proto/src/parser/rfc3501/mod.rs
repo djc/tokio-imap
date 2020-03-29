@@ -11,7 +11,7 @@ use std::str;
 
 use crate::{
     parser::{
-        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5464::resp_metadata,
+        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5161, rfc5464::resp_metadata,
         ParseResult,
     },
     types::*,
@@ -517,7 +517,8 @@ named!(response_data<Response>, do_parse!(
         message_data_expunge |
         message_data_fetch |
         resp_capability |
-        resp_metadata
+        resp_metadata |
+        rfc5161::resp_enabled
     ) >>
     tag!("\r\n") >>
     (contents)
@@ -932,6 +933,21 @@ mod tests {
                 },
             )) => {}
             rsp => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_enabled() {
+        match parse_response(b"* ENABLED QRESYNC X-GOOD-IDEA\r\n") {
+            Ok((_, capabilities)) => {
+                assert_eq!(capabilities,
+                    Response::Capabilities(vec![
+                        Capability::Atom("QRESYNC"),
+                        Capability::Atom("X-GOOD-IDEA"),
+                    ])
+                )
+            }
+            rsp => panic!("Unexpected response: {:?}", rsp),
         }
     }
 }
