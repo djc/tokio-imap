@@ -205,6 +205,14 @@ pub fn is_list_wildcards(c: u8) -> bool {
     c == b'%' || c == b'*'
 }
 
+pub fn paren_delimited<'a, F, O, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
+where
+    F: Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
+    E: nom::error::ParseError<&'a [u8]>,
+{
+    delimited(char('('), f, char(')'))
+}
+
 pub fn parenthesized_nonempty_list<'a, F, O, E>(
     f: F,
 ) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Vec<O>, E>
@@ -221,6 +229,17 @@ where
     E: nom::error::ParseError<&'a [u8]>,
 {
     delimited(char('('), separated_list(char(' '), f), char(')'))
+}
+
+pub fn opt_opt<'a, F, O, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Option<O>, E>
+where
+    F: Fn(&'a [u8]) -> IResult<&'a [u8], Option<O>, E>,
+{
+    move |i: &[u8]| match f(i.clone()) {
+        Ok((i, o)) => Ok((i, o)),
+        Err(nom::Err::Error(_)) => Ok((i, None)),
+        Err(e) => Err(e),
+    }
 }
 
 #[cfg(test)]
