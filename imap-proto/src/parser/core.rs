@@ -235,7 +235,7 @@ pub fn opt_opt<'a, F, O, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Opti
 where
     F: Fn(&'a [u8]) -> IResult<&'a [u8], Option<O>, E>,
 {
-    move |i: &[u8]| match f(i.clone()) {
+    move |i: &[u8]| match f(i) {
         Ok((i, o)) => Ok((i, o)),
         Err(nom::Err::Error(_)) => Ok((i, None)),
         Err(e) => Err(e),

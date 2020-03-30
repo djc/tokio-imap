@@ -42,7 +42,7 @@ pub fn section_text(i: &[u8]) -> IResult<&[u8], MessageSection> {
 
 pub fn section_spec(i: &[u8]) -> IResult<&[u8], SectionPath> {
     alt((
-        map(section_msgtext, |val| SectionPath::Full(val)),
+        map(section_msgtext, SectionPath::Full),
         map(
             tuple((section_part, opt(preceded(char('.'), section_text)))),
             |(part, text)| SectionPath::Part(part, text),
