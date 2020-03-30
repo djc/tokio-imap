@@ -1,64 +1,72 @@
+use nom::{
+    self,
+    branch::alt,
+    bytes::streaming::{tag, tag_no_case},
+    character::streaming::char,
+    combinator::{map, opt},
+    multi::many0,
+    sequence::{delimited, preceded, tuple},
+    IResult,
+};
+
 use crate::{parser::core::*, types::*};
 
-named!(pub section_part<Vec<u32>>, do_parse!(
-    part: number >>
-    rest: many0!(do_parse!(
-        tag!(".") >>
-        part: number >>
-        (part)
-    ))  >> ({
-        let mut res = vec![part];
-        res.extend(rest);
-        res
-    })
-));
+pub fn section_part(i: &[u8]) -> IResult<&[u8], Vec<u32>> {
+    let (i, (part, mut rest)) = tuple((number, many0(preceded(char('.'), number))))(i)?;
+    rest.insert(0, part);
+    Ok((i, rest))
+}
 
-named!(pub section_msgtext<MessageSection>, alt!(
-    do_parse!(
-        tag_no_case!("HEADER.FIELDS") >>
-        opt!(tag_no_case!(".NOT")) >>
-        tag!(" ") >>
-        parenthesized_list!(astring) >>
-        (MessageSection::Header)) |
-    do_parse!(tag_no_case!("HEADER") >> (MessageSection::Header)) |
-    do_parse!(tag_no_case!("TEXT") >> (MessageSection::Text))
-));
+pub fn section_msgtext(i: &[u8]) -> IResult<&[u8], MessageSection> {
+    alt((
+        map(
+            tuple((
+                tag_no_case("HEADER.FIELDS"),
+                opt(tag_no_case(".NOT")),
+                tag(" "),
+                parenthesized_list(astring),
+            )),
+            |_| MessageSection::Header,
+        ),
+        map(tag_no_case("HEADER"), |_| MessageSection::Header),
+        map(tag_no_case("TEXT"), |_| MessageSection::Text),
+    ))(i)
+}
 
-named!(pub section_text<MessageSection>, alt!(
-    section_msgtext |
-    do_parse!(tag_no_case!("MIME") >> (MessageSection::Mime))
-));
+pub fn section_text(i: &[u8]) -> IResult<&[u8], MessageSection> {
+    alt((
+        section_msgtext,
+        map(tag_no_case("MIME"), |_| MessageSection::Mime),
+    ))(i)
+}
 
-named!(pub section_spec<SectionPath>, alt!(
-    map!(section_msgtext, |val| SectionPath::Full(val)) |
-    do_parse!(
-        part: section_part >>
-        text: opt!(do_parse!(
-            tag!(".") >>
-            text: section_text >>
-            (text)
-        )) >>
-        (SectionPath::Part(part, text))
-    )
-));
+pub fn section_spec(i: &[u8]) -> IResult<&[u8], SectionPath> {
+    alt((
+        map(section_msgtext, |val| SectionPath::Full(val)),
+        map(
+            tuple((section_part, opt(preceded(char('.'), section_text)))),
+            |(part, text)| SectionPath::Part(part, text),
+        ),
+    ))(i)
+}
 
-named!(pub section<Option<SectionPath>>, do_parse!(
-    tag!("[") >>
-    spec: opt!(section_spec) >>
-    tag!("]") >>
-    (spec)
-));
+pub fn section(i: &[u8]) -> IResult<&[u8], Option<SectionPath>> {
+    delimited(char('['), opt(section_spec), char(']'))(i)
+}
 
-named!(pub msg_att_body_section<AttributeValue>, do_parse!(
-    tag_no_case!("BODY") >>
-    section: section >>
-    index: opt!(do_parse!(
-        tag!("<") >>
-        num: number >>
-        tag!(">") >>
-        (num)
-    )) >>
-    tag!(" ") >>
-    data: nstring >>
-    (AttributeValue::BodySection { section, index, data })
-));
+pub fn msg_att_body_section(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+    map(
+        tuple((
+            tag_no_case("BODY"),
+            section,
+            opt(delimited(char('<'), number, char('>'))),
+            tag(" "),
+            nstring,
+        )),
+        |(_, section, index, _, data)| AttributeValue::BodySection {
+            section,
+            index,
+            data,
+        },
+    )(i)
+}
