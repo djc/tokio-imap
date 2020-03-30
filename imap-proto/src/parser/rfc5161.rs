@@ -6,7 +6,6 @@
 
 // rustfmt doesn't do a very good job on nom parser invocations.
 #![cfg_attr(rustfmt, rustfmt_skip)]
-#![cfg_attr(feature = "cargo-clippy", allow(clippy::redundant_closure))]
 
 use crate::types::*;
 use crate::parser::core::atom;
@@ -16,7 +15,7 @@ use crate::parser::core::atom;
 // [RFC5161 - 3.2 The ENABLED Response](https://tools.ietf.org/html/rfc5161#section-3.2)
 named!(pub (crate) resp_enabled<Response>, map!(
     enabled_data,
-    |c| Response::Capabilities(c)
+    Response::Capabilities
 ));
 
 named!(enabled_data<Vec<Capability>>, do_parse!(
@@ -26,5 +25,5 @@ named!(enabled_data<Vec<Capability>>, do_parse!(
 ));
 
 named!(capability<Capability>,
-       map!(atom, |a| Capability::Atom(a))
+       map!(atom, Capability::Atom)
 );
