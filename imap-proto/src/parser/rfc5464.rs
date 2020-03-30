@@ -4,10 +4,15 @@
 //! IMAP METADATA extension
 //!
 
-// rustfmt doesn't do a very good job on nom parser invocations.
-#![cfg_attr(rustfmt, rustfmt_skip)]
-
-use nom::IResult;
+use nom::{
+    self,
+    branch::alt,
+    bytes::streaming::{tag, tag_no_case},
+    combinator::{map, map_opt},
+    multi::separated_list,
+    sequence::tuple,
+    IResult,
+};
 
 use crate::{parser::core::*, types::*};
 
@@ -120,62 +125,67 @@ fn slice_to_str(i: &[u8]) -> &str {
     str::from_utf8(i).unwrap()
 }
 
-named!(nil_value<Option<String>>, do_parse!(
-    tag_no_case!("NIL") >>
-        (None)
-));
+fn nil_value(i: &[u8]) -> IResult<&[u8], Option<String>> {
+    map_opt(tag_no_case("NIL"), |_| None)(i)
+}
 
-named!(string_value<Option<String>>, do_parse!(
-    value: map!(alt!(quoted | literal), slice_to_str) >>
-        (Some(value.to_string()))
-));
+fn string_value(i: &[u8]) -> IResult<&[u8], Option<String>> {
+    map(alt((quoted, literal)), |s| {
+        Some(slice_to_str(s).to_string())
+    })(i)
+}
 
-named!(keyval_list<Vec<Metadata>>, do_parse!(
-    list: parenthesized_nonempty_list!(do_parse!(
-        key: map!(entry_name, slice_to_str) >>
-            tag!(" ") >>
-            value: alt!(nil_value | string_value) >>
-            (Metadata{entry: key.to_string(), value})
-    )) >>
-        (list)
-));
+fn keyval_list(i: &[u8]) -> IResult<&[u8], Vec<Metadata>> {
+    parenthesized_nonempty_list(map(
+        tuple((
+            map(entry_name, slice_to_str),
+            tag(" "),
+            alt((nil_value, string_value)),
+        )),
+        |(key, _, value)| Metadata {
+            entry: key.to_string(),
+            value,
+        },
+    ))(i)
+}
 
-named!(entry_list<Vec<&str>>, do_parse!(
-    list: separated_list!(tag!(" "), map!(entry_name, slice_to_str)) >>
-        (list)
-));
+fn entry_list(i: &[u8]) -> IResult<&[u8], Vec<&str>> {
+    separated_list(tag(" "), map(entry_name, slice_to_str))(i)
+}
 
-named!(metadata_common<&[u8]>, do_parse!(
-    tag_no_case!("METADATA ") >>
-        mbox: quoted >>
-        tag!(" ") >>
-        (mbox)
-));
+fn metadata_common(i: &[u8]) -> IResult<&[u8], &[u8]> {
+    let (i, (_, mbox, _)) = tuple((tag_no_case("METADATA "), quoted, tag(" ")))(i)?;
+    Ok((i, mbox))
+}
 
 // [RFC5464 - 4.4.1 METADATA Response with values]
-named!(metadata_solicited<Response>, do_parse!(
-    mbox: metadata_common >>
-    tail: keyval_list >>
-        (Response::MailboxData(MailboxDatum::MetadataSolicited {
-            mailbox:slice_to_str(mbox), values:tail
-        }))
-));
+fn metadata_solicited(i: &[u8]) -> IResult<&[u8], Response> {
+    let (i, (mailbox, values)) = tuple((metadata_common, keyval_list))(i)?;
+    Ok((
+        i,
+        Response::MailboxData(MailboxDatum::MetadataSolicited {
+            mailbox: slice_to_str(mailbox),
+            values,
+        }),
+    ))
+}
 
 // [RFC5464 - 4.4.2 Unsolicited METADATA Response without values]
-named!(metadata_unsolicited<Response>, do_parse!(
-    mbox: metadata_common >>
-        tail: entry_list >>
-        (Response::MailboxData(MailboxDatum::MetadataUnsolicited {
-            mailbox:slice_to_str(mbox), values:tail
-        }))
-));
+fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response> {
+    let (i, (mailbox, values)) = tuple((metadata_common, entry_list))(i)?;
+    Ok((
+        i,
+        Response::MailboxData(MailboxDatum::MetadataUnsolicited {
+            mailbox: slice_to_str(mailbox),
+            values,
+        }),
+    ))
+}
 
 // Parse solicited or unsolicited METADATA response.
-named!(pub resp_metadata<Response>, do_parse!(
-    r: alt!(metadata_solicited |
-            metadata_unsolicited) >>
-        (r)
-));
+pub fn resp_metadata(i: &[u8]) -> IResult<&[u8], Response> {
+    alt((metadata_solicited, metadata_unsolicited))(i)
+}
 
 #[cfg(test)]
 mod tests {

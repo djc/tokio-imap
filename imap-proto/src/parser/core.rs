@@ -4,7 +4,7 @@ use nom::{
     bytes::streaming::{tag, tag_no_case, take, take_while, take_while1},
     character::streaming::{char, digit1},
     combinator::{map, map_res},
-    multi::separated_list,
+    multi::{separated_list, separated_nonempty_list},
     sequence::{delimited, tuple},
     IResult,
 };
@@ -203,6 +203,16 @@ pub fn is_char(c: u8) -> bool {
 // list-wildcards = "%" / "*"
 pub fn is_list_wildcards(c: u8) -> bool {
     c == b'%' || c == b'*'
+}
+
+pub fn parenthesized_nonempty_list<'a, F, O, E>(
+    f: F,
+) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Vec<O>, E>
+where
+    F: Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
+    E: nom::error::ParseError<&'a [u8]>,
+{
+    delimited(char('('), separated_nonempty_list(char(' '), f), char(')'))
 }
 
 pub fn parenthesized_list<'a, F, O, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Vec<O>, E>
