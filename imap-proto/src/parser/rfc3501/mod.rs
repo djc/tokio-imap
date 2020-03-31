@@ -583,6 +583,7 @@ pub fn parse_response(msg: &[u8]) -> ParseResult {
 mod tests {
     use super::parse_response;
     use crate::types::*;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_list() {

@@ -304,6 +304,7 @@ pub(crate) fn msg_att_body_structure(i: &[u8]) -> IResult<&[u8], AttributeValue>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
 
     const EMPTY: &[u8] = &[];
 

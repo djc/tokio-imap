@@ -1,7 +1,3 @@
-#[cfg(test)]
-#[macro_use]
-extern crate assert_matches;
-
 pub mod builders;
 pub mod parser;
 pub mod types;
