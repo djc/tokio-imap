@@ -3,6 +3,7 @@ use nom::{
     bytes::streaming::{tag, tag_no_case},
     character::streaming::char,
     combinator::{map, opt},
+    multi::many1,
     sequence::{delimited, preceded, tuple},
     IResult,
 };
@@ -265,29 +266,25 @@ fn body_type_message(i: &[u8]) -> IResult<&[u8], BodyStructure> {
     )(i)
 }
 
-named!(
-    body_type_multipart<BodyStructure>,
-    do_parse!(
-        bodies: many1!(body)
-            >> tag!(" ")
-            >> media_subtype: string_utf8
-            >> ext: body_ext_mpart
-            >> (BodyStructure::Multipart {
-                common: BodyContentCommon {
-                    ty: ContentType {
-                        ty: "MULTIPART",
-                        subtype: media_subtype,
-                        params: ext.param,
-                    },
-                    disposition: ext.disposition,
-                    language: ext.language,
-                    location: ext.location,
+fn body_type_multipart(i: &[u8]) -> IResult<&[u8], BodyStructure> {
+    map(
+        tuple((many1(body), tag(" "), string_utf8, body_ext_mpart)),
+        |(bodies, _, subtype, ext)| BodyStructure::Multipart {
+            common: BodyContentCommon {
+                ty: ContentType {
+                    ty: "MULTIPART",
+                    subtype,
+                    params: ext.param,
                 },
-                bodies,
-                extension: ext.extension,
-            })
-    )
-);
+                disposition: ext.disposition,
+                language: ext.language,
+                location: ext.location,
+            },
+            bodies,
+            extension: ext.extension,
+        },
+    )(i)
+}
 
 pub(crate) fn body(i: &[u8]) -> IResult<&[u8], BodyStructure> {
     paren_delimited(alt((
