@@ -30,9 +30,16 @@ fn body_fields(i: &[u8]) -> IResult<&[u8], BodyFields> {
         tag(" "),
         number,
     ))(i)?;
-    Ok((i, BodyFields {
-        param, id, description, transfer_encoding, octets,
-    }))
+    Ok((
+        i,
+        BodyFields {
+            param,
+            id,
+            description,
+            transfer_encoding,
+            octets,
+        },
+    ))
 }
 
 // body-ext-1part  = body-fld-md5 [SP body-fld-dsp [SP body-fld-lang
@@ -49,9 +56,16 @@ fn body_ext_1part(i: &[u8]) -> IResult<&[u8], BodyExt1Part> {
         opt_opt(preceded(tag(" "), nstring_utf8)),
         opt(preceded(tag(" "), body_extension)),
     ))(i)?;
-    Ok((i, BodyExt1Part {
-        md5, disposition, language, location, extension,
-    }))
+    Ok((
+        i,
+        BodyExt1Part {
+            md5,
+            disposition,
+            language,
+            location,
+            extension,
+        },
+    ))
 }
 
 // body-ext-mpart  = body-fld-param [SP body-fld-dsp [SP body-fld-lang
@@ -67,20 +81,33 @@ fn body_ext_mpart(i: &[u8]) -> IResult<&[u8], BodyExtMPart> {
         opt_opt(preceded(tag(" "), nstring_utf8)),
         opt(preceded(tag(" "), body_extension)),
     ))(i)?;
-    Ok((i, BodyExtMPart {
-        param, disposition, language, location, extension,
-    }))
+    Ok((
+        i,
+        BodyExtMPart {
+            param,
+            disposition,
+            language,
+            location,
+            extension,
+        },
+    ))
 }
 
 fn body_encoding(i: &[u8]) -> IResult<&[u8], ContentEncoding> {
     alt((
-        delimited(char('"'), alt((
-            map(tag_no_case("7BIT"), |_| ContentEncoding::SevenBit),
-            map(tag_no_case("8BIT"), |_| ContentEncoding::EightBit),
-            map(tag_no_case("BINARY"), |_| ContentEncoding::Binary),
-            map(tag_no_case("BASE64"), |_| ContentEncoding::Base64),
-            map(tag_no_case("QUOTED-PRINTABLE"), |_| ContentEncoding::QuotedPrintable),
-        )), char('"')),
+        delimited(
+            char('"'),
+            alt((
+                map(tag_no_case("7BIT"), |_| ContentEncoding::SevenBit),
+                map(tag_no_case("8BIT"), |_| ContentEncoding::EightBit),
+                map(tag_no_case("BINARY"), |_| ContentEncoding::Binary),
+                map(tag_no_case("BASE64"), |_| ContentEncoding::Base64),
+                map(tag_no_case("QUOTED-PRINTABLE"), |_| {
+                    ContentEncoding::QuotedPrintable
+                }),
+            )),
+            char('"'),
+        ),
         map(string_utf8, |enc| ContentEncoding::Other(enc)),
     ))(i)
 }
@@ -96,10 +123,13 @@ fn body_lang(i: &[u8]) -> IResult<&[u8], Option<Vec<&str>>> {
 fn body_param(i: &[u8]) -> IResult<&[u8], BodyParams> {
     alt((
         map(nil, |_| None),
-        map(parenthesized_nonempty_list(map(
-            tuple((string_utf8, tag(" "), string_utf8)),
-            |(key, _, val)| (key, val),
-        )), Option::from)
+        map(
+            parenthesized_nonempty_list(map(
+                tuple((string_utf8, tag(" "), string_utf8)),
+                |(key, _, val)| (key, val),
+            )),
+            Option::from,
+        ),
     ))(i)
 }
 
@@ -109,7 +139,10 @@ fn body_extension(i: &[u8]) -> IResult<&[u8], BodyExtension> {
         // Cannot find documentation on character encoding for body extension values.
         // So far, assuming UTF-8 seems fine, please report if you run into issues here.
         map(nstring_utf8, BodyExtension::Str),
-        map(parenthesized_nonempty_list(body_extension), BodyExtension::List),
+        map(
+            parenthesized_nonempty_list(body_extension),
+            BodyExtension::List,
+        ),
     ))(i)
 }
 
@@ -118,14 +151,21 @@ fn body_disposition(i: &[u8]) -> IResult<&[u8], Option<ContentDisposition>> {
         map(nil, |_| None),
         paren_delimited(map(
             tuple((string_utf8, tag(" "), body_param)),
-            |(ty, _, params)| Some(ContentDisposition { ty, params })
-        ))
+            |(ty, _, params)| Some(ContentDisposition { ty, params }),
+        )),
     ))(i)
 }
 
 fn body_type_basic(i: &[u8]) -> IResult<&[u8], BodyStructure> {
     map(
-        tuple((string_utf8, tag(" "), string_utf8, tag(" "), body_fields, body_ext_1part)),
+        tuple((
+            string_utf8,
+            tag(" "),
+            string_utf8,
+            tag(" "),
+            body_fields,
+            body_ext_1part,
+        )),
         |(ty, _, subtype, _, fields, ext)| BodyStructure::Basic {
             common: BodyContentCommon {
                 ty: ContentType {
@@ -145,7 +185,7 @@ fn body_type_basic(i: &[u8]) -> IResult<&[u8], BodyStructure> {
                 transfer_encoding: fields.transfer_encoding,
             },
             extension: ext.extension,
-        }
+        },
     )(i)
 }
 
@@ -159,7 +199,7 @@ fn body_type_text(i: &[u8]) -> IResult<&[u8], BodyStructure> {
             body_fields,
             tag(" "),
             number,
-            body_ext_1part
+            body_ext_1part,
         )),
         |(_, _, subtype, _, fields, _, lines, ext)| BodyStructure::Text {
             common: BodyContentCommon {
@@ -181,7 +221,7 @@ fn body_type_text(i: &[u8]) -> IResult<&[u8], BodyStructure> {
             },
             lines,
             extension: ext.extension,
-        }
+        },
     )(i)
 }
 
@@ -197,7 +237,7 @@ fn body_type_message(i: &[u8]) -> IResult<&[u8], BodyStructure> {
             body,
             tag(" "),
             number,
-            body_ext_1part
+            body_ext_1part,
         )),
         |(_, _, fields, _, envelope, _, body, _, lines, ext)| BodyStructure::Message {
             common: BodyContentCommon {
@@ -221,42 +261,47 @@ fn body_type_message(i: &[u8]) -> IResult<&[u8], BodyStructure> {
             body: Box::new(body),
             lines,
             extension: ext.extension,
-        }
+        },
     )(i)
 }
 
-named!(body_type_multipart<BodyStructure>, do_parse!(
-    bodies: many1!(body) >>
-    tag!(" ") >>
-    media_subtype: string_utf8 >>
-    ext: body_ext_mpart >>
-    (BodyStructure::Multipart {
-        common: BodyContentCommon {
-            ty: ContentType {
-                ty: "MULTIPART",
-                subtype: media_subtype,
-                params: ext.param,
-            },
-            disposition: ext.disposition,
-            language: ext.language,
-            location: ext.location,
-        },
-        bodies,
-        extension: ext.extension,
-    })
-));
+named!(
+    body_type_multipart<BodyStructure>,
+    do_parse!(
+        bodies: many1!(body)
+            >> tag!(" ")
+            >> media_subtype: string_utf8
+            >> ext: body_ext_mpart
+            >> (BodyStructure::Multipart {
+                common: BodyContentCommon {
+                    ty: ContentType {
+                        ty: "MULTIPART",
+                        subtype: media_subtype,
+                        params: ext.param,
+                    },
+                    disposition: ext.disposition,
+                    language: ext.language,
+                    location: ext.location,
+                },
+                bodies,
+                extension: ext.extension,
+            })
+    )
+);
 
 pub(crate) fn body(i: &[u8]) -> IResult<&[u8], BodyStructure> {
     paren_delimited(alt((
-        body_type_text, body_type_message, body_type_basic, body_type_multipart,
+        body_type_text,
+        body_type_message,
+        body_type_basic,
+        body_type_multipart,
     )))(i)
 }
 
 pub(crate) fn msg_att_body_structure(i: &[u8]) -> IResult<&[u8], AttributeValue> {
-    map(
-        tuple((tag_no_case("BODYSTRUCTURE "), body)),
-        |(_, body)| AttributeValue::BodyStructure(body),
-    )(i)
+    map(tuple((tag_no_case("BODYSTRUCTURE "), body)), |(_, body)| {
+        AttributeValue::BodyStructure(body)
+    })(i)
 }
 
 #[cfg(test)]
