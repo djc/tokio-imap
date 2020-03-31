@@ -8,7 +8,7 @@ use nom::{
     IResult,
 };
 
-use std::str::{self, FromStr};
+use std::str::{from_utf8, FromStr};
 
 // ----- number -----
 
@@ -17,10 +17,7 @@ use std::str::{self, FromStr};
 //                    ; (0 <= n < 4,294,967,296)
 pub fn number(i: &[u8]) -> IResult<&[u8], u32> {
     let (i, bytes) = digit1(i)?;
-    match str::from_utf8(bytes)
-        .ok()
-        .and_then(|s| u32::from_str(s).ok())
-    {
+    match from_utf8(bytes).ok().and_then(|s| u32::from_str(s).ok()) {
         Some(v) => Ok((i, v)),
         None => Err(nom::Err::Error(nom::error::make_error(
             i,
@@ -32,10 +29,7 @@ pub fn number(i: &[u8]) -> IResult<&[u8], u32> {
 // same as `number` but 64-bit
 pub fn number_64(i: &[u8]) -> IResult<&[u8], u64> {
     let (i, bytes) = digit1(i)?;
-    match str::from_utf8(bytes)
-        .ok()
-        .and_then(|s| u64::from_str(s).ok())
-    {
+    match from_utf8(bytes).ok().and_then(|s| u64::from_str(s).ok()) {
         Some(v) => Ok((i, v)),
         None => Err(nom::Err::Error(nom::error::make_error(
             i,
@@ -53,7 +47,7 @@ pub fn string(i: &[u8]) -> IResult<&[u8], &[u8]> {
 
 // string bytes as utf8
 pub fn string_utf8(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(string, str::from_utf8)(i)
+    map_res(string, from_utf8)(i)
 }
 
 // quoted = DQUOTE *QUOTED-CHAR DQUOTE
@@ -63,7 +57,7 @@ pub fn quoted(i: &[u8]) -> IResult<&[u8], &[u8]> {
 
 // quoted bytes as utf8
 pub fn quoted_utf8(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(quoted, str::from_utf8)(i)
+    map_res(quoted, from_utf8)(i)
 }
 
 // QUOTED-CHAR = <any TEXT-CHAR except quoted-specials> / "\" quoted-specials
@@ -122,7 +116,7 @@ pub fn astring(i: &[u8]) -> IResult<&[u8], &[u8]> {
 
 // astring bytes as utf8
 pub fn astring_utf8(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(astring, str::from_utf8)(i)
+    map_res(astring, from_utf8)(i)
 }
 
 // ASTRING-CHAR = ATOM-CHAR / resp-specials
@@ -154,7 +148,7 @@ pub fn is_resp_specials(c: u8) -> bool {
 
 // atom = 1*ATOM-CHAR
 pub fn atom(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(take_while1(is_atom_char), str::from_utf8)(i)
+    map_res(take_while1(is_atom_char), from_utf8)(i)
 }
 
 // ----- nstring ----- nil or string
@@ -178,7 +172,7 @@ pub fn nil(i: &[u8]) -> IResult<&[u8], &[u8]> {
 
 // text = 1*TEXT-CHAR
 pub fn text(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(take_while(is_text_char), str::from_utf8)(i)
+    map_res(take_while(is_text_char), from_utf8)(i)
 }
 
 // TEXT-CHAR = <any CHAR except CR and LF>
