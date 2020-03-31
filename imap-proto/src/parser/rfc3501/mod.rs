@@ -4,15 +4,23 @@
 //! INTERNET MESSAGE ACCESS PROTOCOL
 //!
 
-// rustfmt doesn't do a very good job on nom parser invocations.
-#![cfg_attr(rustfmt, rustfmt_skip)]
-
 use std::str;
+
+use nom::{
+    self,
+    branch::alt,
+    bytes::streaming::{tag, tag_no_case, take_while, take_while1},
+    character::streaming::char,
+    combinator::{map, map_res, opt, recognize},
+    multi::{many0, many1},
+    sequence::{delimited, pair, preceded, terminated, tuple},
+    IResult,
+};
 
 use crate::{
     parser::{
-        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5161, rfc5464::resp_metadata,
-        ParseResult,
+        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5161,
+        rfc5464::resp_metadata, ParseResult,
     },
     types::*,
 };
@@ -24,146 +32,153 @@ fn is_tag_char(c: u8) -> bool {
     c != b'+' && is_astring_char(c)
 }
 
-named!(status_ok<Status>, map!(tag_no_case!("OK"),
-    |_s| Status::Ok
-));
-named!(status_no<Status>, map!(tag_no_case!("NO"),
-    |_s| Status::No
-));
-named!(status_bad<Status>, map!(tag_no_case!("BAD"),
-    |_s| Status::Bad
-));
-named!(status_preauth<Status>, map!(tag_no_case!("PREAUTH"),
-    |_s| Status::PreAuth
-));
-named!(status_bye<Status>, map!(tag_no_case!("BYE"),
-    |_s| Status::Bye
-));
+fn status_ok(i: &[u8]) -> IResult<&[u8], Status> {
+    map(tag_no_case("OK"), |_s| Status::Ok)(i)
+}
+fn status_no(i: &[u8]) -> IResult<&[u8], Status> {
+    map(tag_no_case("NO"), |_s| Status::No)(i)
+}
+fn status_bad(i: &[u8]) -> IResult<&[u8], Status> {
+    map(tag_no_case("BAD"), |_s| Status::Bad)(i)
+}
+fn status_preauth(i: &[u8]) -> IResult<&[u8], Status> {
+    map(tag_no_case("PREAUTH"), |_s| Status::PreAuth)(i)
+}
+fn status_bye(i: &[u8]) -> IResult<&[u8], Status> {
+    map(tag_no_case("BYE"), |_s| Status::Bye)(i)
+}
 
-named!(status<Status>, alt!(
-    status_ok |
-    status_no |
-    status_bad |
-    status_preauth |
-    status_bye
-));
+fn status(i: &[u8]) -> IResult<&[u8], Status> {
+    alt((status_ok, status_no, status_bad, status_preauth, status_bye))(i)
+}
 
-named!(mailbox<&str>, map!(
-    astring_utf8,
-    |s| {
+fn mailbox(i: &[u8]) -> IResult<&[u8], &str> {
+    map(astring_utf8, |s| {
         if s.eq_ignore_ascii_case("INBOX") {
             "INBOX"
         } else {
             s
         }
-    }
-));
+    })(i)
+}
 
-named!(flag_extension<&str>, map_res!(
-    recognize!(pair!(tag!("\\"), take_while!(is_atom_char))),
-    str::from_utf8
-));
+fn flag_extension(i: &[u8]) -> IResult<&[u8], &str> {
+    map_res(
+        recognize(pair(tag(b"\\"), take_while(is_atom_char))),
+        str::from_utf8,
+    )(i)
+}
 
-named!(flag<&str>, alt!(flag_extension | atom));
+fn flag(i: &[u8]) -> IResult<&[u8], &str> {
+    alt((flag_extension, atom))(i)
+}
 
-named!(flag_list<Vec<&str>>, parenthesized_list!(flag));
+fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<&str>> {
+    parenthesized_list(flag)(i)
+}
 
-named!(flag_perm<&str>, alt!(
-    map_res!(tag!("\\*"), str::from_utf8) |
-    flag
-));
+fn flag_perm(i: &[u8]) -> IResult<&[u8], &str> {
+    alt((map_res(tag(b"\\*"), str::from_utf8), flag))(i)
+}
 
-named!(resp_text_code_alert<ResponseCode>, do_parse!(
-    tag_no_case!("ALERT") >>
-    (ResponseCode::Alert)
-));
+fn resp_text_code_alert(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    map(tag_no_case(b"ALERT"), |_| ResponseCode::Alert)(i)
+}
 
-named!(resp_text_code_badcharset<ResponseCode>, do_parse!(
-    tag_no_case!("BADCHARSET") >>
-    ch: opt!(do_parse!(
-        tag!(" ") >>
-        charsets: parenthesized_nonempty_list!(astring_utf8) >>
-        (charsets)
-    )) >>
-    (ResponseCode::BadCharset(ch))
-));
+fn resp_text_code_badcharset(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    map(
+        preceded(
+            tag_no_case(b"BADCHARSET"),
+            opt(preceded(
+                tag(b" "),
+                parenthesized_nonempty_list(astring_utf8),
+            )),
+        ),
+        ResponseCode::BadCharset,
+    )(i)
+}
 
-named!(resp_text_code_capability<ResponseCode>, map!(
-    capability_data,
-    |c| ResponseCode::Capabilities(c)
-));
+fn resp_text_code_capability(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    map(capability_data, ResponseCode::Capabilities)(i)
+}
 
-named!(resp_text_code_parse<ResponseCode>, do_parse!(
-    tag_no_case!("PARSE") >>
-    (ResponseCode::Parse)
-));
+fn resp_text_code_parse(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    map(tag_no_case(b"PARSE"), |_| ResponseCode::Parse)(i)
+}
 
-named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
-    tag_no_case!("PERMANENTFLAGS ") >>
-    flags: parenthesized_list!(flag_perm) >>
-    (ResponseCode::PermanentFlags(flags))
-));
+fn resp_text_code_permanent_flags(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    map(
+        preceded(
+            tag_no_case(b"PERMANENTFLAGS "),
+            parenthesized_list(flag_perm),
+        ),
+        ResponseCode::PermanentFlags,
+    )(i)
+}
 
-named!(resp_text_code_read_only<ResponseCode>, do_parse!(
-    tag_no_case!("READ-ONLY") >>
-    (ResponseCode::ReadOnly)
-));
+fn resp_text_code_read_only(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    map(tag_no_case(b"READ-ONLY"), |_| ResponseCode::ReadOnly)(i)
+}
 
-named!(resp_text_code_read_write<ResponseCode>, do_parse!(
-    tag_no_case!("READ-WRITE") >>
-    (ResponseCode::ReadWrite)
-));
+fn resp_text_code_read_write(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    map(tag_no_case(b"READ-WRITE"), |_| ResponseCode::ReadWrite)(i)
+}
 
-named!(resp_text_code_try_create<ResponseCode>, do_parse!(
-    tag_no_case!("TRYCREATE") >>
-    (ResponseCode::TryCreate)
-));
+fn resp_text_code_try_create(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    map(tag_no_case(b"TRYCREATE"), |_| ResponseCode::TryCreate)(i)
+}
 
-named!(resp_text_code_uid_validity<ResponseCode>, do_parse!(
-    tag_no_case!("UIDVALIDITY ") >>
-    num: number >>
-    (ResponseCode::UidValidity(num))
-));
+fn resp_text_code_uid_validity(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    map(
+        preceded(tag_no_case(b"UIDVALIDITY "), number),
+        ResponseCode::UidValidity,
+    )(i)
+}
 
-named!(resp_text_code_uid_next<ResponseCode>, do_parse!(
-    tag_no_case!("UIDNEXT ") >>
-    num: number >>
-    (ResponseCode::UidNext(num))
-));
+fn resp_text_code_uid_next(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    map(
+        preceded(tag_no_case(b"UIDNEXT "), number),
+        ResponseCode::UidNext,
+    )(i)
+}
 
-named!(resp_text_code_unseen<ResponseCode>, do_parse!(
-    tag_no_case!("UNSEEN ") >>
-    num: number >>
-    (ResponseCode::Unseen(num))
-));
+fn resp_text_code_unseen(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    map(
+        preceded(tag_no_case(b"UNSEEN "), number),
+        ResponseCode::Unseen,
+    )(i)
+}
 
-named!(resp_text_code<ResponseCode>, do_parse!(
-    tag!("[") >>
-    coded: alt!(
-        resp_text_code_alert |
-        resp_text_code_badcharset |
-        resp_text_code_capability |
-        resp_text_code_parse |
-        resp_text_code_permanent_flags |
-        resp_text_code_uid_validity |
-        resp_text_code_uid_next |
-        resp_text_code_unseen |
-        resp_text_code_read_only |
-        resp_text_code_read_write |
-        resp_text_code_try_create |
-        rfc4551::resp_text_code_highest_mod_seq
-    ) >>
+fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode> {
     // Per the spec, the closing tag should be "] ".
     // See `resp_text` for more on why this is done differently.
-    tag!("]") >>
-    (coded)
-));
+    delimited(
+        tag(b"["),
+        alt((
+            resp_text_code_alert,
+            resp_text_code_badcharset,
+            resp_text_code_capability,
+            resp_text_code_parse,
+            resp_text_code_permanent_flags,
+            resp_text_code_uid_validity,
+            resp_text_code_uid_next,
+            resp_text_code_unseen,
+            resp_text_code_read_only,
+            resp_text_code_read_write,
+            resp_text_code_try_create,
+            rfc4551::resp_text_code_highest_mod_seq,
+        )),
+        tag(b"]"),
+    )(i)
+}
 
-named!(capability<Capability>, alt!(
-    map!(tag_no_case!("IMAP4rev1"), |_| Capability::Imap4rev1) |
-    map!(preceded!(tag_no_case!("AUTH="), atom), |a| Capability::Auth(a)) |
-    map!(atom, |a| Capability::Atom(a))
-));
+fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
+    alt((
+        map(tag_no_case(b"IMAP4rev1"), |_| Capability::Imap4rev1),
+        map(preceded(tag_no_case(b"AUTH="), atom), Capability::Auth),
+        map(atom, Capability::Atom),
+    ))(i)
+}
 
 fn ensure_capabilities_contains_imap4rev<'a>(
     capabilities: Vec<Capability<'a>>,
@@ -175,187 +190,206 @@ fn ensure_capabilities_contains_imap4rev<'a>(
     }
 }
 
-named!(capability_data<Vec<Capability>>, map_res!(
-    do_parse!(
-        tag_no_case!("CAPABILITY") >>
-        capabilities: many0!(preceded!(char!(' '), capability)) >>
-        (capabilities)
-    ),
-    ensure_capabilities_contains_imap4rev
-));
+fn capability_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
+    map_res(
+        preceded(
+            tag_no_case(b"CAPABILITY"),
+            many0(preceded(char(' '), capability)),
+        ),
+        ensure_capabilities_contains_imap4rev,
+    )(i)
+}
 
-named!(resp_capability<Response>, map!(
-    capability_data,
-    |c| Response::Capabilities(c)
-));
+fn resp_capability(i: &[u8]) -> IResult<&[u8], Response> {
+    map(capability_data, Response::Capabilities)(i)
+}
 
-named!(mailbox_data_search<Response>, do_parse!(
-    tag_no_case!("SEARCH") >>
-    ids: many0!(do_parse!(
-        tag!(" ") >>
-        id: number >>
-        (id)
-    )) >>
-    (Response::IDs(ids))
-));
+fn mailbox_data_search(i: &[u8]) -> IResult<&[u8], Response> {
+    map(
+        preceded(tag_no_case(b"SEARCH"), many0(preceded(tag(" "), number))),
+        Response::IDs,
+    )(i)
+}
 
-named!(mailbox_data_flags<Response>, do_parse!(
-    tag_no_case!("FLAGS ") >>
-    flags: flag_list >>
-    (Response::MailboxData(MailboxDatum::Flags(flags)))
-));
+fn mailbox_data_flags(i: &[u8]) -> IResult<&[u8], Response> {
+    map(preceded(tag_no_case("FLAGS "), flag_list), |flags| {
+        Response::MailboxData(MailboxDatum::Flags(flags))
+    })(i)
+}
 
-named!(mailbox_data_exists<Response>, do_parse!(
-    num: number >>
-    tag_no_case!(" EXISTS") >>
-    (Response::MailboxData(MailboxDatum::Exists(num)))
-));
+fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], Response> {
+    map(terminated(number, tag_no_case(" EXISTS")), |num| {
+        Response::MailboxData(MailboxDatum::Exists(num))
+    })(i)
+}
 
-named!(mailbox_list<(Vec<&str>, Option<&str>, &str)>, do_parse!(
-    flags: flag_list >>
-    tag!(" ") >>
-    delimiter: alt!(
-        map!(quoted_utf8, |v| Some(v)) |
-        map!(nil, |_| None)
-    ) >>
-    tag!(" ") >>
-    name: mailbox >>
-    ((flags, delimiter, name))
-));
+#[allow(clippy::type_complexity)]
+fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<&str>, Option<&str>, &str)> {
+    map(
+        tuple((
+            flag_list,
+            tag(b" "),
+            alt((map(quoted_utf8, Some), map(nil, |_| None))),
+            tag(b" "),
+            mailbox,
+        )),
+        |(flags, _, delimiter, _, name)| (flags, delimiter, name),
+    )(i)
+}
 
-named!(mailbox_data_list<Response>, do_parse!(
-    tag_no_case!("LIST ") >>
-    data: mailbox_list >>
-    (Response::MailboxData(MailboxDatum::List {
-        flags: data.0,
-        delimiter: data.1,
-        name: data.2,
-    }))
-));
+fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], Response> {
+    map(preceded(tag_no_case("LIST "), mailbox_list), |data| {
+        Response::MailboxData(MailboxDatum::List {
+            flags: data.0,
+            delimiter: data.1,
+            name: data.2,
+        })
+    })(i)
+}
 
-named!(mailbox_data_lsub<Response>, do_parse!(
-    tag_no_case!("LSUB ") >>
-    data: mailbox_list >>
-    (Response::MailboxData(MailboxDatum::List {
-        flags: data.0,
-        delimiter: data.1,
-        name: data.2,
-    }))
-));
+fn mailbox_data_lsub(i: &[u8]) -> IResult<&[u8], Response> {
+    map(preceded(tag_no_case("LSUB "), mailbox_list), |data| {
+        Response::MailboxData(MailboxDatum::List {
+            flags: data.0,
+            delimiter: data.1,
+            name: data.2,
+        })
+    })(i)
+}
 
 // Unlike `status_att` in the RFC syntax, this includes the value,
 // so that it can return a valid enum object instead of just a key.
-named!(status_att<StatusAttribute>, alt!(
-    rfc4551::status_att_val_highest_mod_seq |
-    do_parse!(
-        tag_no_case!("MESSAGES ") >>
-        val: number >>
-        (StatusAttribute::Messages(val))
-    ) |
-    do_parse!(
-        tag_no_case!("RECENT ") >>
-        val: number >>
-        (StatusAttribute::Recent(val))
-    ) |
-    do_parse!(
-        tag_no_case!("UIDNEXT ") >>
-        val: number >>
-        (StatusAttribute::UidNext(val))
-    ) |
-    do_parse!(
-        tag_no_case!("UIDVALIDITY ") >>
-        val: number >>
-        (StatusAttribute::UidValidity(val))
-    ) |
-    do_parse!(
-        tag_no_case!("UNSEEN ") >>
-        val: number >>
-        (StatusAttribute::Unseen(val))
-    )
-));
+fn status_att(i: &[u8]) -> IResult<&[u8], StatusAttribute> {
+    alt((
+        rfc4551::status_att_val_highest_mod_seq,
+        map(
+            preceded(tag_no_case("MESSAGES "), number),
+            StatusAttribute::Messages,
+        ),
+        map(
+            preceded(tag_no_case("RECENT "), number),
+            StatusAttribute::Recent,
+        ),
+        map(
+            preceded(tag_no_case("UIDNEXT "), number),
+            StatusAttribute::UidNext,
+        ),
+        map(
+            preceded(tag_no_case("UIDVALIDITY "), number),
+            StatusAttribute::UidValidity,
+        ),
+        map(
+            preceded(tag_no_case("UNSEEN "), number),
+            StatusAttribute::Unseen,
+        ),
+    ))(i)
+}
 
-named!(status_att_list<Vec<StatusAttribute>>, parenthesized_nonempty_list!(status_att));
+fn status_att_list(i: &[u8]) -> IResult<&[u8], Vec<StatusAttribute>> {
+    parenthesized_nonempty_list(status_att)(i)
+}
 
-named!(mailbox_data_status<Response>, do_parse!(
-    tag_no_case!("STATUS ") >>
-    mailbox: mailbox >>
-    tag!(" ") >>
-    status: status_att_list >>
-    (Response::MailboxData(MailboxDatum::Status {
-        mailbox,
-        status,
-    }))
-));
+fn mailbox_data_status(i: &[u8]) -> IResult<&[u8], Response> {
+    map(
+        tuple((tag_no_case("STATUS "), mailbox, tag(" "), status_att_list)),
+        |(_, mailbox, _, status)| Response::MailboxData(MailboxDatum::Status { mailbox, status }),
+    )(i)
+}
 
-named!(mailbox_data_recent<Response>, do_parse!(
-    num: number >>
-    tag_no_case!(" RECENT") >>
-    (Response::MailboxData(MailboxDatum::Recent(num)))
-));
+fn mailbox_data_recent(i: &[u8]) -> IResult<&[u8], Response> {
+    map(terminated(number, tag_no_case(" RECENT")), |num| {
+        Response::MailboxData(MailboxDatum::Recent(num))
+    })(i)
+}
 
-named!(mailbox_data<Response>, alt!(
-    mailbox_data_flags |
-    mailbox_data_exists |
-    mailbox_data_list |
-    mailbox_data_lsub |
-    mailbox_data_status |
-    mailbox_data_recent |
-    mailbox_data_search
-));
+fn mailbox_data(i: &[u8]) -> IResult<&[u8], Response> {
+    alt((
+        mailbox_data_flags,
+        mailbox_data_exists,
+        mailbox_data_list,
+        mailbox_data_lsub,
+        mailbox_data_status,
+        mailbox_data_recent,
+        mailbox_data_search,
+    ))(i)
+}
 
 // An address structure is a parenthesized list that describes an
 // electronic mail address.
-named!(address<Address>, paren_delimited!(
-    do_parse!(
-        name: nstring >>
-        tag!(" ") >>
-        adl: nstring >>
-        tag!(" ") >>
-        mailbox: nstring >>
-        tag!(" ") >>
-        host: nstring >>
-        (Address {
+fn address(i: &[u8]) -> IResult<&[u8], Address> {
+    paren_delimited(map(
+        tuple((
+            nstring,
+            tag(" "),
+            nstring,
+            tag(" "),
+            nstring,
+            tag(" "),
+            nstring,
+        )),
+        |(name, _, adl, _, mailbox, _, host)| Address {
             name,
             adl,
             mailbox,
             host,
-        })
-    )
-));
+        },
+    ))(i)
+}
 
-named!(opt_addresses<Option<Vec<Address>>>, alt!(
-    map!(nil, |_s| None) |
-    map!(paren_delimited!(
-        many1!(do_parse!(
-            addr: address >>
-            opt!(char!(' ')) >>
-            (addr)
-        ))
-    ), |v| Some(v))
-));
+fn opt_addresses(i: &[u8]) -> IResult<&[u8], Option<Vec<Address>>> {
+    alt((
+        map(nil, |_s| None),
+        map(
+            paren_delimited(many1(terminated(address, opt(char(' '))))),
+            Some,
+        ),
+    ))(i)
+}
 
-named!(pub(crate) envelope<Envelope>, paren_delimited!(
-    do_parse!(
-        date: nstring >>
-        tag!(" ") >>
-        subject: nstring >>
-        tag!(" ") >>
-        from: opt_addresses >>
-        tag!(" ") >>
-        sender: opt_addresses >>
-        tag!(" ") >>
-        reply_to: opt_addresses >>
-        tag!(" ") >>
-        to: opt_addresses >>
-        tag!(" ") >>
-        cc: opt_addresses >>
-        tag!(" ") >>
-        bcc: opt_addresses >>
-        tag!(" ") >>
-        in_reply_to: nstring >>
-        tag!(" ") >>
-        message_id: nstring >>
-        (Envelope {
+pub(crate) fn envelope(i: &[u8]) -> IResult<&[u8], Envelope> {
+    paren_delimited(map(
+        tuple((
+            nstring,
+            tag(" "),
+            nstring,
+            tag(" "),
+            opt_addresses,
+            tag(" "),
+            opt_addresses,
+            tag(" "),
+            opt_addresses,
+            tag(" "),
+            opt_addresses,
+            tag(" "),
+            opt_addresses,
+            tag(" "),
+            opt_addresses,
+            tag(" "),
+            nstring,
+            tag(" "),
+            nstring,
+        )),
+        |(
+            date,
+            _,
+            subject,
+            _,
+            from,
+            _,
+            sender,
+            _,
+            reply_to,
+            _,
+            to,
+            _,
+            cc,
+            _,
+            bcc,
+            _,
+            in_reply_to,
+            _,
+            message_id,
+        )| Envelope {
             date,
             subject,
             from,
@@ -366,101 +400,109 @@ named!(pub(crate) envelope<Envelope>, paren_delimited!(
             bcc,
             in_reply_to,
             message_id,
-        })
-    )
-));
+        },
+    ))(i)
+}
 
-named!(msg_att_envelope<AttributeValue>, do_parse!(
-    tag_no_case!("ENVELOPE ") >>
-    envelope: envelope >>
-    (AttributeValue::Envelope(Box::new(envelope)))
-));
+fn msg_att_envelope(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+    map(preceded(tag_no_case("ENVELOPE "), envelope), |envelope| {
+        AttributeValue::Envelope(Box::new(envelope))
+    })(i)
+}
 
-named!(msg_att_internal_date<AttributeValue>, do_parse!(
-    tag_no_case!("INTERNALDATE ") >>
-    date: nstring_utf8 >>
-    (AttributeValue::InternalDate(date.unwrap()))
-));
+fn msg_att_internal_date(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+    map(
+        preceded(tag_no_case("INTERNALDATE "), nstring_utf8),
+        |date| AttributeValue::InternalDate(date.unwrap()),
+    )(i)
+}
 
-named!(msg_att_flags<AttributeValue>, do_parse!(
-    tag_no_case!("FLAGS ") >>
-    flags: flag_list >>
-    (AttributeValue::Flags(flags))
-));
+fn msg_att_flags(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+    map(
+        preceded(tag_no_case("FLAGS "), flag_list),
+        AttributeValue::Flags,
+    )(i)
+}
 
-named!(msg_att_rfc822<AttributeValue>, do_parse!(
-    tag_no_case!("RFC822 ") >>
-    raw: nstring >>
-    (AttributeValue::Rfc822(raw))
-));
+fn msg_att_rfc822(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+    map(
+        preceded(tag_no_case("RFC822 "), nstring),
+        AttributeValue::Rfc822,
+    )(i)
+}
 
-named!(msg_att_rfc822_header<AttributeValue>, do_parse!(
-    tag_no_case!("RFC822.HEADER ") >>
-    opt!(tag!(" ")) >> // extra space workaround for DavMail
-    raw: nstring >>
-    (AttributeValue::Rfc822Header(raw))
-));
+fn msg_att_rfc822_header(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+    // extra space workaround for DavMail
+    map(
+        tuple((tag_no_case("RFC822.HEADER "), opt(tag(b" ")), nstring)),
+        |(_, _, raw)| AttributeValue::Rfc822Header(raw),
+    )(i)
+}
 
-named!(msg_att_rfc822_size<AttributeValue>, do_parse!(
-    tag_no_case!("RFC822.SIZE ") >>
-    num: number >>
-    (AttributeValue::Rfc822Size(num))
-));
+fn msg_att_rfc822_size(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+    map(
+        preceded(tag_no_case("RFC822.SIZE "), number),
+        AttributeValue::Rfc822Size,
+    )(i)
+}
 
-named!(msg_att_rfc822_text<AttributeValue>, do_parse!(
-    tag_no_case!("RFC822.TEXT ") >>
-    raw: nstring >>
-    (AttributeValue::Rfc822Text(raw))
-));
+fn msg_att_rfc822_text(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+    map(
+        preceded(tag_no_case("RFC822.TEXT "), nstring),
+        AttributeValue::Rfc822Text,
+    )(i)
+}
 
-named!(msg_att_uid<AttributeValue>, do_parse!(
-    tag_no_case!("UID ") >>
-    num: number >>
-    (AttributeValue::Uid(num))
-));
+fn msg_att_uid(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+    map(preceded(tag_no_case("UID "), number), AttributeValue::Uid)(i)
+}
 
-named!(msg_att<AttributeValue>, alt!(
-    msg_att_body_section |
-    msg_att_body_structure |
-    msg_att_envelope |
-    msg_att_internal_date |
-    msg_att_flags |
-    rfc4551::msg_att_mod_seq |
-    msg_att_rfc822 |
-    msg_att_rfc822_header |
-    msg_att_rfc822_size |
-    msg_att_rfc822_text |
-    msg_att_uid
-));
+fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+    alt((
+        msg_att_body_section,
+        msg_att_body_structure,
+        msg_att_envelope,
+        msg_att_internal_date,
+        msg_att_flags,
+        rfc4551::msg_att_mod_seq,
+        msg_att_rfc822,
+        msg_att_rfc822_header,
+        msg_att_rfc822_size,
+        msg_att_rfc822_text,
+        msg_att_uid,
+    ))(i)
+}
 
-named!(msg_att_list<Vec<AttributeValue>>, parenthesized_nonempty_list!(msg_att));
+fn msg_att_list(i: &[u8]) -> IResult<&[u8], Vec<AttributeValue>> {
+    parenthesized_nonempty_list(msg_att)(i)
+}
 
-named!(message_data_fetch<Response>, do_parse!(
-    num: number >>
-    tag_no_case!(" FETCH ") >>
-    attrs: msg_att_list >>
-    (Response::Fetch(num, attrs))
-));
+fn message_data_fetch(i: &[u8]) -> IResult<&[u8], Response> {
+    map(
+        tuple((number, tag_no_case(" FETCH "), msg_att_list)),
+        |(num, _, attrs)| Response::Fetch(num, attrs),
+    )(i)
+}
 
-named!(message_data_expunge<Response>, do_parse!(
-    num: number >>
-    tag_no_case!(" EXPUNGE") >>
-    (Response::Expunge(num))
-));
+fn message_data_expunge(i: &[u8]) -> IResult<&[u8], Response> {
+    map(
+        terminated(number, tag_no_case(" EXPUNGE")),
+        Response::Expunge,
+    )(i)
+}
 
-named!(tag<RequestId>, map!(
-    map_res!(take_while1!(is_tag_char), str::from_utf8),
-    |s| RequestId(s.to_string())
-));
+fn imap_tag(i: &[u8]) -> IResult<&[u8], RequestId> {
+    map(map_res(take_while1(is_tag_char), str::from_utf8), |s| {
+        RequestId(s.to_string())
+    })(i)
+}
 
 // This is not quite according to spec, which mandates the following:
 //     ["[" resp-text-code "]" SP] text
 // However, examples in RFC 4551 (Conditional STORE) counteract this by giving
 // examples of `resp-text` that do not include the trailing space and text.
-named!(resp_text<(Option<ResponseCode>, Option<&str>)>, do_parse!(
-    code: opt!(resp_text_code) >>
-    text: text >>
-    ({
+fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode>, Option<&str>)> {
+    map(tuple((opt(resp_text_code), text)), |(code, text)| {
         let res = if text.is_empty() {
             None
         } else if code.is_some() {
@@ -469,66 +511,70 @@ named!(resp_text<(Option<ResponseCode>, Option<&str>)>, do_parse!(
             Some(text)
         };
         (code, res)
-    })
-));
+    })(i)
+}
 
-named!(continue_req<Response>, do_parse!(
-    tag!("+") >>
-    opt!(tag!(" ")) >> // Some servers do not send the space :/
-    text: resp_text >> // TODO: base64
-    tag!("\r\n") >>
-    (Response::Continue {
-        code: text.0,
-        information: text.1,
-    })
-));
+fn continue_req(i: &[u8]) -> IResult<&[u8], Response> {
+    // Some servers do not send the space :/
+    // TODO: base64
+    map(
+        tuple((tag("+"), opt(tag(" ")), resp_text, tag("\r\n"))),
+        |(_, _, text, _)| Response::Continue {
+            code: text.0,
+            information: text.1,
+        },
+    )(i)
+}
 
-named!(response_tagged<Response>, do_parse!(
-    tag: tag >>
-    tag!(" ") >>
-    status: status >>
-    tag!(" ") >>
-    text: resp_text >>
-    tag!("\r\n") >>
-    (Response::Done {
-        tag,
-        status,
-        code: text.0,
-        information: text.1,
-    })
-));
+fn response_tagged(i: &[u8]) -> IResult<&[u8], Response> {
+    map(
+        tuple((
+            imap_tag,
+            tag(b" "),
+            status,
+            tag(b" "),
+            resp_text,
+            tag(b"\r\n"),
+        )),
+        |(tag, _, status, _, text, _)| Response::Done {
+            tag,
+            status,
+            code: text.0,
+            information: text.1,
+        },
+    )(i)
+}
 
-named!(resp_cond<Response>, do_parse!(
-    status: status >>
-    tag!(" ") >>
-    text: resp_text >>
-    (Response::Data {
-        status,
-        code: text.0,
-        information: text.1,
-    })
-));
+fn resp_cond(i: &[u8]) -> IResult<&[u8], Response> {
+    map(
+        tuple((status, tag(b" "), resp_text)),
+        |(status, _, text)| Response::Data {
+            status,
+            code: text.0,
+            information: text.1,
+        },
+    )(i)
+}
 
-named!(response_data<Response>, do_parse!(
-    tag!("* ") >>
-    contents: alt!(
-        resp_cond |
-        mailbox_data |
-        message_data_expunge |
-        message_data_fetch |
-        resp_capability |
-        resp_metadata |
-        rfc5161::resp_enabled
-    ) >>
-    tag!("\r\n") >>
-    (contents)
-));
+fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
+    delimited(
+        tag(b"* "),
+        alt((
+            resp_cond,
+            mailbox_data,
+            message_data_expunge,
+            message_data_fetch,
+            resp_capability,
+            resp_metadata,
+            rfc5161::resp_enabled,
+        )),
+        tag(b"\r\n"),
+    )(i)
+}
 
-named!(response<Response>, alt!(
-    continue_req |
-    response_data |
-    response_tagged
-));
+fn response(i: &[u8]) -> IResult<&[u8], Response> {
+    alt((continue_req, response_data, response_tagged))(i)
+}
 
 pub fn parse_response(msg: &[u8]) -> ParseResult {
     response(msg)
@@ -939,14 +985,13 @@ mod tests {
     #[test]
     fn test_enabled() {
         match parse_response(b"* ENABLED QRESYNC X-GOOD-IDEA\r\n") {
-            Ok((_, capabilities)) => {
-                assert_eq!(capabilities,
-                    Response::Capabilities(vec![
-                        Capability::Atom("QRESYNC"),
-                        Capability::Atom("X-GOOD-IDEA"),
-                    ])
-                )
-            }
+            Ok((_, capabilities)) => assert_eq!(
+                capabilities,
+                Response::Capabilities(vec![
+                    Capability::Atom("QRESYNC"),
+                    Capability::Atom("X-GOOD-IDEA"),
+                ])
+            ),
             rsp => panic!("Unexpected response: {:?}", rsp),
         }
     }
