@@ -1,5 +1,4 @@
 use nom::{
-    self,
     branch::alt,
     bytes::streaming::{tag, tag_no_case},
     character::streaming::char,
