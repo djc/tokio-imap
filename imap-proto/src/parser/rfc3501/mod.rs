@@ -4,7 +4,7 @@
 //! INTERNET MESSAGE ACCESS PROTOCOL
 //!
 
-use std::str;
+use std::str::from_utf8;
 
 use nom::{
     branch::alt,
@@ -64,7 +64,7 @@ fn mailbox(i: &[u8]) -> IResult<&[u8], &str> {
 fn flag_extension(i: &[u8]) -> IResult<&[u8], &str> {
     map_res(
         recognize(pair(tag(b"\\"), take_while(is_atom_char))),
-        str::from_utf8,
+        from_utf8,
     )(i)
 }
 
@@ -77,7 +77,7 @@ fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<&str>> {
 }
 
 fn flag_perm(i: &[u8]) -> IResult<&[u8], &str> {
-    alt((map_res(tag(b"\\*"), str::from_utf8), flag))(i)
+    alt((map_res(tag(b"\\*"), from_utf8), flag))(i)
 }
 
 fn resp_text_code_alert(i: &[u8]) -> IResult<&[u8], ResponseCode> {
@@ -491,7 +491,7 @@ fn message_data_expunge(i: &[u8]) -> IResult<&[u8], Response> {
 }
 
 fn imap_tag(i: &[u8]) -> IResult<&[u8], RequestId> {
-    map(map_res(take_while1(is_tag_char), str::from_utf8), |s| {
+    map(map_res(take_while1(is_tag_char), from_utf8), |s| {
         RequestId(s.to_string())
     })(i)
 }
