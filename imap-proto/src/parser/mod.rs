@@ -8,4 +8,7 @@ pub mod rfc4551;
 pub mod rfc5161;
 pub mod rfc5464;
 
+#[cfg(test)]
+mod tests;
+
 pub type ParseResult<'a> = IResult<&'a [u8], Response<'a>>;
