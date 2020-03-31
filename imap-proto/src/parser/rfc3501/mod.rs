@@ -587,7 +587,7 @@ mod tests {
 
     #[test]
     fn test_list() {
-        match crate::parser::rfc3501::mailbox(b"iNboX ") {
+        match super::mailbox(b"iNboX ") {
             Ok((_, mb)) => {
                 assert_eq!(mb, "INBOX");
             }
@@ -603,7 +603,7 @@ mod tests {
     #[test]
     fn test_envelope() {
         let env = br#"ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" "IMAP4rev1 WG mtg summary and minutes" (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) ((NIL NIL "imap" "cac.washington.edu")) ((NIL NIL "minutes" "CNRI.Reston.VA.US") ("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL "<B27397-0100000@cac.washington.edu>") "#;
-        match crate::parser::rfc3501::msg_att_envelope(env) {
+        match super::msg_att_envelope(env) {
             Ok((_, AttributeValue::Envelope(_))) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
@@ -612,7 +612,7 @@ mod tests {
     #[test]
     fn test_opt_addresses() {
         let addr = b"((NIL NIL \"minutes\" \"CNRI.Reston.VA.US\") (\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\")) ";
-        match crate::parser::rfc3501::opt_addresses(addr) {
+        match super::opt_addresses(addr) {
             Ok((_, _addresses)) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
@@ -630,15 +630,13 @@ mod tests {
 
     #[test]
     fn test_addresses() {
-        match crate::parser::rfc3501::address(b"(\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\") ") {
+        match super::address(b"(\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\") ") {
             Ok((_, _address)) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
 
         // Literal non-UTF8 address
-        match crate::parser::rfc3501::address(
-            b"({12}\r\nJoh\xff Klensin NIL \"KLENSIN\" \"MIT.EDU\") ",
-        ) {
+        match super::address(b"({12}\r\nJoh\xff Klensin NIL \"KLENSIN\" \"MIT.EDU\") ") {
             Ok((_, _address)) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
