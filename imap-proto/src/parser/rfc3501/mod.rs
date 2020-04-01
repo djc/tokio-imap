@@ -9,6 +9,17 @@
 
 use std::str;
 
+use nom::{
+    self,
+    branch::alt,
+    bytes::streaming::{tag, tag_no_case, take, take_while, take_while1},
+    character::streaming::{char, digit1},
+    combinator::{map, map_res},
+    multi::{separated_list, separated_nonempty_list},
+    sequence::{delimited, tuple},
+    IResult,
+};
+
 use crate::{
     parser::{
         core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5161, rfc5464::resp_metadata,
@@ -24,31 +35,31 @@ fn is_tag_char(c: u8) -> bool {
     c != b'+' && is_astring_char(c)
 }
 
-named!(status_ok<Status>, map!(tag_no_case!("OK"),
+fn status_ok(i: &[u8]) -> IResult<&[u8], Status> { map(tag_no_case("OK"),
     |_s| Status::Ok
-));
-named!(status_no<Status>, map!(tag_no_case!("NO"),
+) }
+fn status_no(i: &[u8]) -> IResult<&[u8], Status> { map(tag_no_case("NO"),
     |_s| Status::No
-));
-named!(status_bad<Status>, map!(tag_no_case!("BAD"),
+) }
+fn status_bad(i: &[u8]) -> IResult<&[u8], Status> { map(tag_no_case("BAD"),
     |_s| Status::Bad
-));
-named!(status_preauth<Status>, map!(tag_no_case!("PREAUTH"),
+) }
+fn status_preauth(i: &[u8]) -> IResult<&[u8], Status> { map(tag_no_case("PREAUTH"),
     |_s| Status::PreAuth
-));
-named!(status_bye<Status>, map!(tag_no_case!("BYE"),
+) }
+fn status_bye(i: &[u8]) -> IResult<&[u8], Status> { map(tag_no_case("BYE"),
     |_s| Status::Bye
-));
+) }
 
-named!(status<Status>, alt!(
+fn status(i: &[u8]) -> IResult<&[u8], Status> { alt(
     status_ok |
     status_no |
     status_bad |
     status_preauth |
     status_bye
-));
+) }
 
-named!(mailbox<&str>, map!(
+fn mailbox(i: &[u8]) -> IResult<&[u8], &str> {map(
     astring_utf8,
     |s| {
         if s.eq_ignore_ascii_case("INBOX") {
@@ -57,89 +68,89 @@ named!(mailbox<&str>, map!(
             s
         }
     }
-));
+) }
 
-named!(flag_extension<&str>, map_res!(
-    recognize!(pair!(tag!("\\"), take_while!(is_atom_char))),
+fn flag_extension(i: &[u8]) -> IResult<&[u8], &str> {map_res(
+    recognize(pair(tag("\\"), take_while(is_atom_char))),
     str::from_utf8
-));
+) }
 
-named!(flag<&str>, alt!(flag_extension | atom));
+fn flag(i: &[u8]) -> IResult<&[u8], &str> {alt(flag_extension | atom) }
 
-named!(flag_list<Vec<&str>>, parenthesized_list!(flag));
+fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<&str>> { parenthesized_list(flag) }
 
-named!(flag_perm<&str>, alt!(
-    map_res!(tag!("\\*"), str::from_utf8) |
+fn flag_perm(i: &[u8]) -> IResult<&[u8], &str> {alt(
+    map_res(tag("\\*"), str::from_utf8) |
     flag
-));
+) }
 
-named!(resp_text_code_alert<ResponseCode>, do_parse!(
-    tag_no_case!("ALERT") >>
+fn resp_text_code_alert(i: &[u8]) -> IResult<&[u8], ResponseCode> { do_parse(
+    tag_no_case("ALERT") >>
     (ResponseCode::Alert)
-));
+) }
 
-named!(resp_text_code_badcharset<ResponseCode>, do_parse!(
-    tag_no_case!("BADCHARSET") >>
-    ch: opt!(do_parse!(
-        tag!(" ") >>
-        charsets: parenthesized_nonempty_list!(astring_utf8) >>
+fn resp_text_code_badcharset(i: &[u8]) -> IResult<&[u8], ResponseCode> { do_parse(
+    tag_no_case("BADCHARSET") >>
+    ch: opt(do_parse(
+        tag(" ") >>
+        charsets: parenthesized_nonempty_list(astring_utf8) >>
         (charsets)
     )) >>
     (ResponseCode::BadCharset(ch))
-));
+) }
 
-named!(resp_text_code_capability<ResponseCode>, map!(
+fn resp_text_code_capability(i: &[u8]) -> IResult<&[u8], ResponseCode> { map(
     capability_data,
     |c| ResponseCode::Capabilities(c)
-));
+) }
 
-named!(resp_text_code_parse<ResponseCode>, do_parse!(
-    tag_no_case!("PARSE") >>
+fn resp_text_code_parse(i: &[u8]) -> IResult<&[u8], ResponseCode> { do_parse(
+    tag_no_case("PARSE") >>
     (ResponseCode::Parse)
-));
+) }
 
-named!(resp_text_code_permanent_flags<ResponseCode>, do_parse!(
-    tag_no_case!("PERMANENTFLAGS ") >>
-    flags: parenthesized_list!(flag_perm) >>
+fn resp_text_code_permanent_flags(i: &[u8]) -> IResult<&[u8], ResponseCode> { do_parse(
+    tag_no_case("PERMANENTFLAGS ") >>
+    flags: parenthesized_list(flag_perm) >>
     (ResponseCode::PermanentFlags(flags))
-));
+) }
 
-named!(resp_text_code_read_only<ResponseCode>, do_parse!(
-    tag_no_case!("READ-ONLY") >>
+fn resp_text_code_read_only(i: &[u8]) -> IResult<&[u8], ResponseCode> { do_parse(
+    tag_no_case("READ-ONLY") >>
     (ResponseCode::ReadOnly)
-));
+) }
 
-named!(resp_text_code_read_write<ResponseCode>, do_parse!(
-    tag_no_case!("READ-WRITE") >>
+fn resp_text_code_read_write(i: &[u8]) -> IResult<&[u8], ResponseCode> { do_parse(
+    tag_no_case("READ-WRITE") >>
     (ResponseCode::ReadWrite)
-));
+) }
 
-named!(resp_text_code_try_create<ResponseCode>, do_parse!(
-    tag_no_case!("TRYCREATE") >>
+fn resp_text_code_try_create(i: &[u8]) -> IResult<&[u8], ResponseCode> { do_parse(
+    tag_no_case("TRYCREATE") >>
     (ResponseCode::TryCreate)
-));
+) }
 
-named!(resp_text_code_uid_validity<ResponseCode>, do_parse!(
-    tag_no_case!("UIDVALIDITY ") >>
+fn resp_text_code_uid_validity(i: &[u8]) -> IResult<&[u8], ResponseCode> { do_parse(
+    tag_no_case("UIDVALIDITY ") >>
     num: number >>
     (ResponseCode::UidValidity(num))
-));
+) }
 
-named!(resp_text_code_uid_next<ResponseCode>, do_parse!(
-    tag_no_case!("UIDNEXT ") >>
+fn resp_text_code_uid_next(i: &[u8]) -> IResult<&[u8], ResponseCode> { do_parse(
+    tag_no_case("UIDNEXT ") >>
     num: number >>
     (ResponseCode::UidNext(num))
-));
+) }
 
-named!(resp_text_code_unseen<ResponseCode>, do_parse!(
-    tag_no_case!("UNSEEN ") >>
+fn resp_text_code_unseen(i: &[u8]) -> IResult<&[u8], ResponseCode> { do_parse(
+    tag_no_case("UNSEEN ") >>
     num: number >>
     (ResponseCode::Unseen(num))
-));
+) }
 
-named!(resp_text_code<ResponseCode>, do_parse!(
-    tag!("[") >>
-    coded: alt!(
+fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode> { do_parse(
+    tag("[") >>
+    coded: alt(
         resp_text_code_alert |
         resp_text_code_badcharset |
         resp_text_code_capability |
@@ -155,15 +166,15 @@ named!(resp_text_code<ResponseCode>, do_parse!(
     ) >>
     // Per the spec, the closing tag should be "] ".
     // See `resp_text` for more on why this is done differently.
-    tag!("]") >>
+    tag("]") >>
     (coded)
-));
+) }
 
-named!(capability<Capability>, alt!(
-    map!(tag_no_case!("IMAP4rev1"), |_| Capability::Imap4rev1) |
-    map!(preceded!(tag_no_case!("AUTH="), atom), |a| Capability::Auth(a)) |
-    map!(atom, |a| Capability::Atom(a))
-));
+fn capability(i: &[u8]) -> IResult<&[u8], Capability> { alt(
+    map(tag_no_case("IMAP4rev1"), |_| Capability::Imap4rev1) |
+    map(preceded(tag_no_case("AUTH="), atom), |a| Capability::Auth(a)) |
+    map(atom, |a| Capability::Atom(a))
+) }
 
 fn ensure_capabilities_contains_imap4rev<'a>(
     capabilities: Vec<Capability<'a>>,
@@ -175,125 +186,125 @@ fn ensure_capabilities_contains_imap4rev<'a>(
     }
 }
 
-named!(capability_data<Vec<Capability>>, map_res!(
-    do_parse!(
-        tag_no_case!("CAPABILITY") >>
-        capabilities: many0!(preceded!(char!(' '), capability)) >>
+fn capability_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {map_res(
+    do_parse(
+        tag_no_case("CAPABILITY") >>
+        capabilities: many0(preceded(char(' '), capability)) >>
         (capabilities)
     ),
     ensure_capabilities_contains_imap4rev
-));
+) }
 
-named!(resp_capability<Response>, map!(
+fn resp_capability(i: &[u8]) -> IResult<&[u8], Response> { map(
     capability_data,
     |c| Response::Capabilities(c)
-));
+) }
 
-named!(mailbox_data_search<Response>, do_parse!(
-    tag_no_case!("SEARCH") >>
-    ids: many0!(do_parse!(
-        tag!(" ") >>
+fn mailbox_data_search(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
+    tag_no_case("SEARCH") >>
+    ids: many0(do_parse(
+        tag(" ") >>
         id: number >>
         (id)
     )) >>
     (Response::IDs(ids))
-));
+) }
 
-named!(mailbox_data_flags<Response>, do_parse!(
-    tag_no_case!("FLAGS ") >>
+fn mailbox_data_flags(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
+    tag_no_case("FLAGS ") >>
     flags: flag_list >>
     (Response::MailboxData(MailboxDatum::Flags(flags)))
-));
+) }
 
-named!(mailbox_data_exists<Response>, do_parse!(
+fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
     num: number >>
-    tag_no_case!(" EXISTS") >>
+    tag_no_case(" EXISTS") >>
     (Response::MailboxData(MailboxDatum::Exists(num)))
-));
+) }
 
-named!(mailbox_list<(Vec<&str>, Option<&str>, &str)>, do_parse!(
+fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<&str>, Option<&str>, &str>)> { do_parse(
     flags: flag_list >>
-    tag!(" ") >>
-    delimiter: alt!(
-        map!(quoted_utf8, |v| Some(v)) |
-        map!(nil, |_| None)
+    tag(" ") >>
+    delimiter: alt(
+        map(quoted_utf8, |v| Some(v)) |
+        map(nil, |_| None)
     ) >>
-    tag!(" ") >>
+    tag(" ") >>
     name: mailbox >>
     ((flags, delimiter, name))
-));
+) }
 
-named!(mailbox_data_list<Response>, do_parse!(
-    tag_no_case!("LIST ") >>
+fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
+    tag_no_case("LIST ") >>
     data: mailbox_list >>
     (Response::MailboxData(MailboxDatum::List {
         flags: data.0,
         delimiter: data.1,
         name: data.2,
     }))
-));
+) }
 
-named!(mailbox_data_lsub<Response>, do_parse!(
-    tag_no_case!("LSUB ") >>
+fn mailbox_data_lsub(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
+    tag_no_case("LSUB ") >>
     data: mailbox_list >>
     (Response::MailboxData(MailboxDatum::List {
         flags: data.0,
         delimiter: data.1,
         name: data.2,
     }))
-));
+) }
 
 // Unlike `status_att` in the RFC syntax, this includes the value,
 // so that it can return a valid enum object instead of just a key.
-named!(status_att<StatusAttribute>, alt!(
+fn status_att(i: &[u8]) -> IResult<&[u8], StatusAttribute> { alt(
     rfc4551::status_att_val_highest_mod_seq |
-    do_parse!(
-        tag_no_case!("MESSAGES ") >>
+    do_parse(
+        tag_no_case("MESSAGES ") >>
         val: number >>
         (StatusAttribute::Messages(val))
     ) |
-    do_parse!(
-        tag_no_case!("RECENT ") >>
+    do_parse(
+        tag_no_case("RECENT ") >>
         val: number >>
         (StatusAttribute::Recent(val))
     ) |
-    do_parse!(
-        tag_no_case!("UIDNEXT ") >>
+    do_parse(
+        tag_no_case("UIDNEXT ") >>
         val: number >>
         (StatusAttribute::UidNext(val))
     ) |
-    do_parse!(
-        tag_no_case!("UIDVALIDITY ") >>
+    do_parse(
+        tag_no_case("UIDVALIDITY ") >>
         val: number >>
         (StatusAttribute::UidValidity(val))
     ) |
-    do_parse!(
-        tag_no_case!("UNSEEN ") >>
+    do_parse(
+        tag_no_case("UNSEEN ") >>
         val: number >>
         (StatusAttribute::Unseen(val))
     )
-));
+) }
 
-named!(status_att_list<Vec<StatusAttribute>>, parenthesized_nonempty_list!(status_att));
+fn status_att_list(i: &[u8]) -> IResult<&[u8], Vec<StatusAttribute>> {parenthesized_nonempty_list(status_att) }
 
-named!(mailbox_data_status<Response>, do_parse!(
-    tag_no_case!("STATUS ") >>
+fn mailbox_data_status(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
+    tag_no_case("STATUS ") >>
     mailbox: mailbox >>
-    tag!(" ") >>
+    tag(" ") >>
     status: status_att_list >>
     (Response::MailboxData(MailboxDatum::Status {
         mailbox,
         status,
     }))
-));
+) }
 
-named!(mailbox_data_recent<Response>, do_parse!(
+fn mailbox_data_recent(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
     num: number >>
-    tag_no_case!(" RECENT") >>
+    tag_no_case(" RECENT") >>
     (Response::MailboxData(MailboxDatum::Recent(num)))
-));
+) }
 
-named!(mailbox_data<Response>, alt!(
+fn mailbox_data(i: &[u8]) -> IResult<&[u8], Response> { alt(
     mailbox_data_flags |
     mailbox_data_exists |
     mailbox_data_list |
@@ -301,18 +312,18 @@ named!(mailbox_data<Response>, alt!(
     mailbox_data_status |
     mailbox_data_recent |
     mailbox_data_search
-));
+) }
 
 // An address structure is a parenthesized list that describes an
 // electronic mail address.
-named!(address<Address>, paren_delimited!(
-    do_parse!(
+fn address(i: &[u8]) -> IResult<&[u8], Address> { paren_delimited(
+    do_parse(
         name: nstring >>
-        tag!(" ") >>
+        tag(" ") >>
         adl: nstring >>
-        tag!(" ") >>
+        tag(" ") >>
         mailbox: nstring >>
-        tag!(" ") >>
+        tag(" ") >>
         host: nstring >>
         (Address {
             name,
@@ -321,39 +332,39 @@ named!(address<Address>, paren_delimited!(
             host,
         })
     )
-));
+) }
 
-named!(opt_addresses<Option<Vec<Address>>>, alt!(
-    map!(nil, |_s| None) |
-    map!(paren_delimited!(
-        many1!(do_parse!(
+fn opt_addresses(i: &[u8]) -> IResult<&[u8], Option<Vec<Address>>> {alt(
+    map(nil, |_s| None) |
+    map(paren_delimited(
+        many1(do_parse(
             addr: address >>
-            opt!(char!(' ')) >>
+            opt(char(' ')) >>
             (addr)
         ))
     ), |v| Some(v))
-));
+) }
 
-named!(pub(crate) envelope<Envelope>, paren_delimited!(
-    do_parse!(
+pub(crate) fn envelope(i: &[u8]) -> IResult<&[u8], Envelope> { paren_delimited(
+    do_parse(
         date: nstring >>
-        tag!(" ") >>
+        tag(" ") >>
         subject: nstring >>
-        tag!(" ") >>
+        tag(" ") >>
         from: opt_addresses >>
-        tag!(" ") >>
+        tag(" ") >>
         sender: opt_addresses >>
-        tag!(" ") >>
+        tag(" ") >>
         reply_to: opt_addresses >>
-        tag!(" ") >>
+        tag(" ") >>
         to: opt_addresses >>
-        tag!(" ") >>
+        tag(" ") >>
         cc: opt_addresses >>
-        tag!(" ") >>
+        tag(" ") >>
         bcc: opt_addresses >>
-        tag!(" ") >>
+        tag(" ") >>
         in_reply_to: nstring >>
-        tag!(" ") >>
+        tag(" ") >>
         message_id: nstring >>
         (Envelope {
             date,
@@ -368,58 +379,58 @@ named!(pub(crate) envelope<Envelope>, paren_delimited!(
             message_id,
         })
     )
-));
+) }
 
-named!(msg_att_envelope<AttributeValue>, do_parse!(
-    tag_no_case!("ENVELOPE ") >>
+fn msg_att_envelope(i: &[u8]) -> IResult<&[u8], AttributeValue> { do_parse(
+    tag_no_case("ENVELOPE ") >>
     envelope: envelope >>
     (AttributeValue::Envelope(Box::new(envelope)))
-));
+) }
 
-named!(msg_att_internal_date<AttributeValue>, do_parse!(
-    tag_no_case!("INTERNALDATE ") >>
+fn msg_att_internal_date(i: &[u8]) -> IResult<&[u8], AttributeValue> { do_parse(
+    tag_no_case("INTERNALDATE ") >>
     date: nstring_utf8 >>
     (AttributeValue::InternalDate(date.unwrap()))
-));
+) }
 
-named!(msg_att_flags<AttributeValue>, do_parse!(
-    tag_no_case!("FLAGS ") >>
+fn msg_att_flags(i: &[u8]) -> IResult<&[u8], AttributeValue> { do_parse(
+    tag_no_case("FLAGS ") >>
     flags: flag_list >>
     (AttributeValue::Flags(flags))
-));
+) }
 
-named!(msg_att_rfc822<AttributeValue>, do_parse!(
-    tag_no_case!("RFC822 ") >>
+fn msg_att_rfc822(i: &[u8]) -> IResult<&[u8], AttributeValue> { do_parse(
+    tag_no_case("RFC822 ") >>
     raw: nstring >>
     (AttributeValue::Rfc822(raw))
-));
+) }
 
-named!(msg_att_rfc822_header<AttributeValue>, do_parse!(
-    tag_no_case!("RFC822.HEADER ") >>
-    opt!(tag!(" ")) >> // extra space workaround for DavMail
+fn msg_att_rfc822_header(i: &[u8]) -> IResult<&[u8], AttributeValue> { do_parse(
+    tag_no_case("RFC822.HEADER ") >>
+    opt(tag(" ")) >> // extra space workaround for DavMail
     raw: nstring >>
     (AttributeValue::Rfc822Header(raw))
-));
+) }
 
-named!(msg_att_rfc822_size<AttributeValue>, do_parse!(
-    tag_no_case!("RFC822.SIZE ") >>
+fn msg_att_rfc822_size(i: &[u8]) -> IResult<&[u8], AttributeValue> { do_parse(
+    tag_no_case("RFC822.SIZE ") >>
     num: number >>
     (AttributeValue::Rfc822Size(num))
-));
+) }
 
-named!(msg_att_rfc822_text<AttributeValue>, do_parse!(
-    tag_no_case!("RFC822.TEXT ") >>
+fn msg_att_rfc822_text(i: &[u8]) -> IResult<&[u8], AttributeValue> { do_parse(
+    tag_no_case("RFC822.TEXT ") >>
     raw: nstring >>
     (AttributeValue::Rfc822Text(raw))
-));
+) }
 
-named!(msg_att_uid<AttributeValue>, do_parse!(
-    tag_no_case!("UID ") >>
+fn msg_att_uid(i: &[u8]) -> IResult<&[u8], AttributeValue> { do_parse(
+    tag_no_case("UID ") >>
     num: number >>
     (AttributeValue::Uid(num))
-));
+) }
 
-named!(msg_att<AttributeValue>, alt!(
+fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue> { alt(
     msg_att_body_section |
     msg_att_body_structure |
     msg_att_envelope |
@@ -431,34 +442,34 @@ named!(msg_att<AttributeValue>, alt!(
     msg_att_rfc822_size |
     msg_att_rfc822_text |
     msg_att_uid
-));
+) }
 
-named!(msg_att_list<Vec<AttributeValue>>, parenthesized_nonempty_list!(msg_att));
+fn msg_att_list(i: &[u8]) -> IResult<&[u8], Vec<AttributeValue>> {parenthesized_nonempty_list(msg_att) }
 
-named!(message_data_fetch<Response>, do_parse!(
+fn message_data_fetch(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
     num: number >>
-    tag_no_case!(" FETCH ") >>
+    tag_no_case(" FETCH ") >>
     attrs: msg_att_list >>
     (Response::Fetch(num, attrs))
-));
+) }
 
-named!(message_data_expunge<Response>, do_parse!(
+fn message_data_expunge(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
     num: number >>
-    tag_no_case!(" EXPUNGE") >>
+    tag_no_case(" EXPUNGE") >>
     (Response::Expunge(num))
-));
+) }
 
-named!(tag<RequestId>, map!(
-    map_res!(take_while1!(is_tag_char), str::from_utf8),
+fn tag(i: &[u8]) -> IResult<&[u8], RequestId> { map(
+    map_res(take_while1(is_tag_char), str::from_utf8),
     |s| RequestId(s.to_string())
-));
+) }
 
 // This is not quite according to spec, which mandates the following:
 //     ["[" resp-text-code "]" SP] text
 // However, examples in RFC 4551 (Conditional STORE) counteract this by giving
 // examples of `resp-text` that do not include the trailing space and text.
-named!(resp_text<(Option<ResponseCode>, Option<&str>)>, do_parse!(
-    code: opt!(resp_text_code) >>
+fn resp_text(i: &[u8]) -> IResult<&[u8], (ResponseCode, Option<&str>)> { do_parse(
+    code: opt(resp_text_code) >>
     text: text >>
     ({
         let res = if text.is_empty() {
@@ -470,48 +481,48 @@ named!(resp_text<(Option<ResponseCode>, Option<&str>)>, do_parse!(
         };
         (code, res)
     })
-));
+) }
 
-named!(continue_req<Response>, do_parse!(
-    tag!("+") >>
-    opt!(tag!(" ")) >> // Some servers do not send the space :/
+fn continue_req(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
+    tag("+") >>
+    opt(tag(" ")) >> // Some servers do not send the space :/
     text: resp_text >> // TODO: base64
-    tag!("\r\n") >>
+    tag("\r\n") >>
     (Response::Continue {
         code: text.0,
         information: text.1,
     })
-));
+) }
 
-named!(response_tagged<Response>, do_parse!(
+fn response_tagged(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
     tag: tag >>
-    tag!(" ") >>
+    tag(" ") >>
     status: status >>
-    tag!(" ") >>
+    tag(" ") >>
     text: resp_text >>
-    tag!("\r\n") >>
+    tag("\r\n") >>
     (Response::Done {
         tag,
         status,
         code: text.0,
         information: text.1,
     })
-));
+) }
 
-named!(resp_cond<Response>, do_parse!(
+fn resp_cond(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
     status: status >>
-    tag!(" ") >>
+    tag(" ") >>
     text: resp_text >>
     (Response::Data {
         status,
         code: text.0,
         information: text.1,
     })
-));
+) }
 
-named!(response_data<Response>, do_parse!(
-    tag!("* ") >>
-    contents: alt!(
+fn response_data(i: &[u8]) -> IResult<&[u8], Response> { do_parse(
+    tag("* ") >>
+    contents: alt(
         resp_cond |
         mailbox_data |
         message_data_expunge |
@@ -520,15 +531,15 @@ named!(response_data<Response>, do_parse!(
         resp_metadata |
         rfc5161::resp_enabled
     ) >>
-    tag!("\r\n") >>
+    tag("\r\n") >>
     (contents)
-));
+) }
 
-named!(response<Response>, alt!(
+fn response(i: &[u8]) -> IResult<&[u8], Response> { alt(
     continue_req |
     response_data |
     response_tagged
-));
+) }
 
 pub fn parse_response(msg: &[u8]) -> ParseResult {
     response(msg)
@@ -568,7 +579,7 @@ mod tests {
         match parse_response(b"* 2 FETCH (BODY[TEXT] {3}\r\nfoo)\r\n") {
             Ok((_, Response::Fetch(_, attrs))) => {
                 let body = &attrs[0];
-                assert_eq!(
+                assert_eq(
                     body,
                     &AttributeValue::BodySection {
                         section: Some(SectionPath::Full(MessageSection::Text)),
@@ -589,7 +600,7 @@ mod tests {
         match parse_response(RESPONSE) {
             Ok((_, Response::Fetch(_, attrs))) => {
                 let body = &attrs[0];
-                assert!(
+                assert(
                     if let AttributeValue::BodyStructure(_) = *body {
                         true
                     } else {
@@ -607,8 +618,8 @@ mod tests {
     fn test_status() {
         match parse_response(b"* STATUS blurdybloop (MESSAGES 231 UIDNEXT 44292)\r\n") {
             Ok((_, Response::MailboxData(MailboxDatum::Status { mailbox, status }))) => {
-                assert_eq!(mailbox, "blurdybloop");
-                assert_eq!(
+                assert_eq(mailbox, "blurdybloop");
+                assert_eq(
                     status,
                     [
                         StatusAttribute::Messages(231),
@@ -646,14 +657,14 @@ mod tests {
     fn test_search() {
         match parse_response(b"* SEARCH\r\n") {
             Ok((_, Response::IDs(ids))) => {
-                assert!(ids.is_empty());
+                assert(ids.is_empty());
             }
             rsp => panic!("unexpected response {:?}", rsp),
         }
         match parse_response(b"* SEARCH 12345 67890\r\n") {
             Ok((_, Response::IDs(ids))) => {
-                assert_eq!(ids[0], 12345);
-                assert_eq!(ids[1], 67890);
+                assert_eq(ids[0], 12345);
+                assert_eq(ids[1], 67890);
             }
             rsp => panic!("unexpected response {:?}", rsp),
         }
@@ -671,7 +682,7 @@ mod tests {
     fn test_list() {
         match crate::parser::rfc3501::mailbox(b"iNboX ") {
             Ok((_, mb)) => {
-                assert_eq!(mb, "INBOX");
+                assert_eq(mb, "INBOX");
             }
             rsp => panic!("unexpected response {:?}", rsp),
         }
@@ -780,9 +791,9 @@ mod tests {
                     information: Some("Logged in"),
                 },
             )) => {
-                assert_eq!(c.len(), 2);
-                assert_eq!(c[0], Capability::Imap4rev1);
-                assert_eq!(c[1], Capability::Atom("IDLE"));
+                assert_eq(c.len(), 2);
+                assert_eq(c[0], Capability::Imap4rev1);
+                assert_eq(c[1], Capability::Atom("IDLE"));
             }
             rsp => panic!("unexpected response {:?}", rsp),
         }
@@ -796,10 +807,10 @@ mod tests {
                     information: Some("Logged in"),
                 },
             )) => {
-                assert_eq!(c.len(), 3);
-                assert_eq!(c[0], Capability::Atom("UIDPLUS"));
-                assert_eq!(c[1], Capability::Imap4rev1);
-                assert_eq!(c[2], Capability::Atom("IDLE"));
+                assert_eq(c.len(), 3);
+                assert_eq(c[0], Capability::Atom("UIDPLUS"));
+                assert_eq(c[1], Capability::Imap4rev1);
+                assert_eq(c[2], Capability::Atom("IDLE"));
             }
             rsp => panic!("unexpected response {:?}", rsp),
         }
@@ -838,9 +849,9 @@ mod tests {
                     information: Some("error"),
                 },
             )) => {
-                assert_eq!(v.len(), 2);
-                assert_eq!(v[0], "utf-8");
-                assert_eq!(v[1], "latin1");
+                assert_eq(v.len(), 2);
+                assert_eq(v[0], "utf-8");
+                assert_eq(v[1], "latin1");
             }
             rsp => panic!("unexpected response {:?}", rsp),
         }
@@ -864,21 +875,21 @@ mod tests {
         assert_matches!(
             super::capability_data(b"CAPABILITY IMAP4rev1\r\n"),
             Ok((_, capabilities)) => {
-                assert_eq!(capabilities, vec![Capability::Imap4rev1])
+                assert_eq(capabilities, vec![Capability::Imap4rev1])
             }
         );
 
         assert_matches!(
             super::capability_data(b"CAPABILITY IMAP4REV1\r\n"),
             Ok((_, capabilities)) => {
-                assert_eq!(capabilities, vec![Capability::Imap4rev1])
+                assert_eq(capabilities, vec![Capability::Imap4rev1])
             }
         );
 
         assert_matches!(
             super::capability_data(b"CAPABILITY XPIG-LATIN IMAP4rev1 STARTTLS AUTH=GSSAPI\r\n"),
             Ok((_, capabilities)) => {
-                assert_eq!(capabilities, vec![
+                assert_eq(capabilities, vec![
                     Capability::Atom("XPIG-LATIN"), Capability::Imap4rev1,
                     Capability::Atom("STARTTLS"), Capability::Auth("GSSAPI")
                 ])
@@ -888,7 +899,7 @@ mod tests {
         assert_matches!(
             super::capability_data(b"CAPABILITY IMAP4rev1 AUTH=GSSAPI AUTH=PLAIN\r\n"),
             Ok((_, capabilities)) => {
-                assert_eq!(capabilities, vec![
+                assert_eq(capabilities, vec![
                     Capability::Imap4rev1, Capability::Auth("GSSAPI"),  Capability::Auth("PLAIN")
                 ])
             }
@@ -940,7 +951,7 @@ mod tests {
     fn test_enabled() {
         match parse_response(b"* ENABLED QRESYNC X-GOOD-IDEA\r\n") {
             Ok((_, capabilities)) => {
-                assert_eq!(capabilities,
+                assert_eq(capabilities,
                     Response::Capabilities(vec![
                         Capability::Atom("QRESYNC"),
                         Capability::Atom("X-GOOD-IDEA"),
