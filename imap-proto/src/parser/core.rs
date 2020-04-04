@@ -238,6 +238,38 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
+
+    #[test]
+    fn test_quoted() {
+        let (rem, val) = quoted(br#""Hello"???"#).unwrap();
+        assert_eq!(rem, b"???");
+        assert_eq!(val, b"Hello");
+
+        // Allowed escapes...
+        assert!(quoted(br#""Hello \" "???"#).is_ok());
+        assert!(quoted(br#""Hello \\ "???"#).is_ok());
+
+        // Not allowed escapes...
+        //assert!(quoted(br#""Hello \a "???"#).is_err()); // fails
+        //assert!(quoted(br#""Hello \z "???"#).is_err()); // fails
+        //assert!(quoted(br#""Hello \? "???"#).is_err()); // fails
+
+        let (rem, val) = quoted(br#""Hello \"World\""???"#).unwrap();
+        assert_eq!(rem, br#"???"#);
+        // Should it be this (Hello \"World\") ...
+        assert_eq!(val, br#"Hello \"World\""#);
+        // ... or this (Hello "World")?
+        //assert_eq!(val, br#"Hello "World""#); // fails
+
+        // Test Incomplete
+        assert_matches!(quoted(br#""#), Err(nom::Err::Incomplete(_)));
+        assert_matches!(quoted(br#""\"#), Err(nom::Err::Incomplete(_)));
+        assert_matches!(quoted(br#""Hello "#), Err(nom::Err::Incomplete(_)));
+
+        // Test Error
+        assert_matches!(quoted(br#"\"#), Err(nom::Err::Error(_)));
+    }
 
     #[test]
     fn test_string_literal() {
