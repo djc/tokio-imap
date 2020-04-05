@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
-    bytes::streaming::{tag, tag_no_case, take, take_while, take_while1},
-    character::streaming::{char, digit1},
+    bytes::streaming::{escaped, tag, tag_no_case, take, take_while, take_while1},
+    character::streaming::{char, digit1, one_of},
     combinator::{map, map_res},
     multi::{separated_list, separated_nonempty_list},
     sequence::{delimited, tuple},
@@ -52,32 +52,20 @@ pub fn string_utf8(i: &[u8]) -> IResult<&[u8], &str> {
 
 // quoted = DQUOTE *QUOTED-CHAR DQUOTE
 pub fn quoted(i: &[u8]) -> IResult<&[u8], &[u8]> {
-    delimited(char('"'), quoted_data, char('"'))(i)
+    delimited(
+        char('"'),
+        escaped(
+            take_while1(|byte| is_text_char(byte) && !is_quoted_specials(byte)),
+            '\\',
+            one_of("\\\""),
+        ),
+        char('"'),
+    )(i)
 }
 
 // quoted bytes as utf8
 pub fn quoted_utf8(i: &[u8]) -> IResult<&[u8], &str> {
     map_res(quoted, from_utf8)(i)
-}
-
-// QUOTED-CHAR = <any TEXT-CHAR except quoted-specials> / "\" quoted-specials
-pub fn quoted_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
-    // Ideally this should use nom's `escaped` macro, but it suffers from broken
-    // type inference unless compiled with the verbose-errors feature enabled.
-    let mut escape = false;
-    let mut len = 0;
-    for c in i {
-        if *c == b'"' && !escape {
-            break;
-        }
-        len += 1;
-        if *c == b'\\' && !escape {
-            escape = true
-        } else if escape {
-            escape = false;
-        }
-    }
-    Ok((&i[len..], &i[..len]))
 }
 
 // quoted-specials = DQUOTE / "\"
@@ -251,9 +239,9 @@ mod tests {
         assert!(quoted(br#""Hello \\ "???"#).is_ok());
 
         // Not allowed escapes...
-        //assert!(quoted(br#""Hello \a "???"#).is_err()); // fails
-        //assert!(quoted(br#""Hello \z "???"#).is_err()); // fails
-        //assert!(quoted(br#""Hello \? "???"#).is_err()); // fails
+        assert!(quoted(br#""Hello \a "???"#).is_err());
+        assert!(quoted(br#""Hello \z "???"#).is_err());
+        assert!(quoted(br#""Hello \? "???"#).is_err());
 
         let (rem, val) = quoted(br#""Hello \"World\""???"#).unwrap();
         assert_eq!(rem, br#"???"#);
