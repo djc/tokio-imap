@@ -1,4 +1,4 @@
-use imap_proto::parse_response;
+use imap_proto::Response;
 use std::io::Write;
 
 fn main() -> std::io::Result<()> {
@@ -12,7 +12,7 @@ fn main() -> std::io::Result<()> {
             line
         };
 
-        match parse_response(line.replace("\n", "\r\n").as_bytes()) {
+        match Response::from_bytes(line.replace("\n", "\r\n").as_bytes()) {
             Ok((remaining, command)) => {
                 println!("{:#?}", command);
 

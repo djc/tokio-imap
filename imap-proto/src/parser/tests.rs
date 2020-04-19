@@ -1,4 +1,4 @@
-use super::rfc3501::parse_response;
+use super::parse_response;
 use crate::types::*;
 
 #[test]

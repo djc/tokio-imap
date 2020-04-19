@@ -17,10 +17,7 @@ use nom::{
 };
 
 use crate::{
-    parser::{
-        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5161,
-        rfc5464::resp_metadata, ParseResult,
-    },
+    parser::{core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5161, rfc5464},
     types::*,
 };
 
@@ -513,7 +510,7 @@ fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode>, Option<&str>)> {
     })(i)
 }
 
-fn continue_req(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn continue_req(i: &[u8]) -> IResult<&[u8], Response> {
     // Some servers do not send the space :/
     // TODO: base64
     map(
@@ -525,7 +522,7 @@ fn continue_req(i: &[u8]) -> IResult<&[u8], Response> {
     )(i)
 }
 
-fn response_tagged(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn response_tagged(i: &[u8]) -> IResult<&[u8], Response> {
     map(
         tuple((
             imap_tag,
@@ -555,7 +552,7 @@ fn resp_cond(i: &[u8]) -> IResult<&[u8], Response> {
     )(i)
 }
 
-fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
     delimited(
         tag(b"* "),
         alt((
@@ -564,19 +561,12 @@ fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
             message_data_expunge,
             message_data_fetch,
             resp_capability,
-            resp_metadata,
             rfc5161::resp_enabled,
+            rfc5464::metadata_solicited,
+            rfc5464::metadata_unsolicited,
         )),
         tag(b"\r\n"),
     )(i)
-}
-
-fn response(i: &[u8]) -> IResult<&[u8], Response> {
-    alt((continue_req, response_data, response_tagged))(i)
-}
-
-pub fn parse_response(msg: &[u8]) -> ParseResult {
-    response(msg)
 }
 
 #[cfg(test)]

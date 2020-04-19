@@ -27,7 +27,7 @@ impl<'a> Decoder for ImapCodec {
         if self.decode_need_message_bytes > buf.len() {
             return Ok(None);
         }
-        let (response, rsp_len) = match imap_proto::parse_response(buf) {
+        let (response, rsp_len) = match imap_proto::Response::from_bytes(buf) {
             Ok((remaining, response)) => {
                 // This SHOULD be acceptable/safe: BytesMut storage memory is
                 // allocated on the heap and should not move. It will not be

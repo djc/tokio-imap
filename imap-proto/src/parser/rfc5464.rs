@@ -156,7 +156,7 @@ fn metadata_common(i: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 // [RFC5464 - 4.4.1 METADATA Response with values]
-fn metadata_solicited(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn metadata_solicited(i: &[u8]) -> IResult<&[u8], Response> {
     let (i, (mailbox, values)) = tuple((metadata_common, keyval_list))(i)?;
     Ok((
         i,
@@ -168,7 +168,7 @@ fn metadata_solicited(i: &[u8]) -> IResult<&[u8], Response> {
 }
 
 // [RFC5464 - 4.4.2 Unsolicited METADATA Response without values]
-fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response> {
     let (i, (mailbox, values)) = tuple((metadata_common, entry_list))(i)?;
     Ok((
         i,
@@ -177,11 +177,6 @@ fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response> {
             values,
         }),
     ))
-}
-
-// Parse solicited or unsolicited METADATA response.
-pub fn resp_metadata(i: &[u8]) -> IResult<&[u8], Response> {
-    alt((metadata_solicited, metadata_unsolicited))(i)
 }
 
 #[cfg(test)]
