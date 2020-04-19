@@ -29,7 +29,6 @@ pub enum Response<'a> {
     Expunge(u32),
     Fetch(u32, Vec<AttributeValue<'a>>),
     MailboxData(MailboxDatum<'a>),
-    IDs(Vec<u32>),
 }
 
 impl<'a> Response<'a> {
@@ -88,6 +87,7 @@ pub enum MailboxDatum<'a> {
         delimiter: Option<&'a str>,
         name: &'a str,
     },
+    Search(Vec<u32>),
     Status {
         mailbox: &'a str,
         status: Vec<StatusAttribute>,

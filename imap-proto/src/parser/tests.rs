@@ -114,13 +114,13 @@ fn test_notify() {
 #[test]
 fn test_search() {
     match parse_response(b"* SEARCH\r\n") {
-        Ok((_, Response::IDs(ids))) => {
+        Ok((_, Response::MailboxData(MailboxDatum::Search(ids)))) => {
             assert!(ids.is_empty());
         }
         rsp => panic!("unexpected response {:?}", rsp),
     }
     match parse_response(b"* SEARCH 12345 67890\r\n") {
-        Ok((_, Response::IDs(ids))) => {
+        Ok((_, Response::MailboxData(MailboxDatum::Search(ids)))) => {
             assert_eq!(ids[0], 12345);
             assert_eq!(ids[1], 67890);
         }

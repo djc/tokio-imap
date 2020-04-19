@@ -196,10 +196,10 @@ fn capability_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
     )(i)
 }
 
-fn mailbox_data_search(i: &[u8]) -> IResult<&[u8], Response> {
+fn mailbox_data_search(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(
         preceded(tag_no_case(b"SEARCH"), many0(preceded(tag(" "), number))),
-        Response::IDs,
+        MailboxDatum::Search,
     )(i)
 }
 
@@ -297,14 +297,14 @@ fn mailbox_data_recent(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     )(i)
 }
 
-fn mailbox_data(i: &[u8]) -> IResult<&[u8], Response> {
+fn mailbox_data(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     alt((
-        map(mailbox_data_flags, Response::MailboxData),
-        map(mailbox_data_exists, Response::MailboxData),
-        map(mailbox_data_list, Response::MailboxData),
-        map(mailbox_data_lsub, Response::MailboxData),
-        map(mailbox_data_status, Response::MailboxData),
-        map(mailbox_data_recent, Response::MailboxData),
+        mailbox_data_flags,
+        mailbox_data_exists,
+        mailbox_data_list,
+        mailbox_data_lsub,
+        mailbox_data_status,
+        mailbox_data_recent,
         mailbox_data_search,
     ))(i)
 }
@@ -553,7 +553,7 @@ pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
         tag(b"* "),
         alt((
             resp_cond,
-            mailbox_data,
+            map(mailbox_data, Response::MailboxData),
             map(message_data_expunge, Response::Expunge),
             message_data_fetch,
             map(capability_data, Response::Capabilities),
