@@ -472,6 +472,7 @@ fn msg_att_list(i: &[u8]) -> IResult<&[u8], Vec<AttributeValue>> {
     parenthesized_nonempty_list(msg_att)(i)
 }
 
+// message-data    = nz-number SP ("EXPUNGE" / ("FETCH" SP msg-att))
 fn message_data_fetch(i: &[u8]) -> IResult<&[u8], Response> {
     map(
         tuple((number, tag_no_case(" FETCH "), msg_att_list)),
@@ -479,10 +480,12 @@ fn message_data_fetch(i: &[u8]) -> IResult<&[u8], Response> {
     )(i)
 }
 
+// message-data    = nz-number SP ("EXPUNGE" / ("FETCH" SP msg-att))
 fn message_data_expunge(i: &[u8]) -> IResult<&[u8], u32> {
     terminated(number, tag_no_case(" EXPUNGE"))(i)
 }
 
+// tag             = 1*<any ASTRING-CHAR except "+">
 fn imap_tag(i: &[u8]) -> IResult<&[u8], RequestId> {
     map(map_res(take_while1(is_tag_char), from_utf8), |s| {
         RequestId(s.to_string())
@@ -506,6 +509,7 @@ fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode>, Option<&str>)> {
     })(i)
 }
 
+// continue-req    = "+" SP (resp-text / base64) CRLF
 pub(crate) fn continue_req(i: &[u8]) -> IResult<&[u8], Response> {
     // Some servers do not send the space :/
     // TODO: base64
@@ -518,6 +522,10 @@ pub(crate) fn continue_req(i: &[u8]) -> IResult<&[u8], Response> {
     )(i)
 }
 
+// response-tagged = tag SP resp-cond-state CRLF
+//
+// resp-cond-state = ("OK" / "NO" / "BAD") SP resp-text
+//                     ; Status condition
 pub(crate) fn response_tagged(i: &[u8]) -> IResult<&[u8], Response> {
     map(
         tuple((
@@ -537,6 +545,13 @@ pub(crate) fn response_tagged(i: &[u8]) -> IResult<&[u8], Response> {
     )(i)
 }
 
+// resp-cond-auth  = ("OK" / "PREAUTH") SP resp-text
+//                     ; Authentication condition
+//
+// resp-cond-bye   = "BYE" SP resp-text
+//
+// resp-cond-state = ("OK" / "NO" / "BAD") SP resp-text
+//                     ; Status condition
 fn resp_cond(i: &[u8]) -> IResult<&[u8], Response> {
     map(
         tuple((status, tag(b" "), resp_text)),
@@ -548,6 +563,8 @@ fn resp_cond(i: &[u8]) -> IResult<&[u8], Response> {
     )(i)
 }
 
+// response-data   = "*" SP (resp-cond-state / resp-cond-bye /
+//                   mailbox-data / message-data / capability-data) CRLF
 pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
     delimited(
         tag(b"* "),
