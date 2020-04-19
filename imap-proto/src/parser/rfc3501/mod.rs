@@ -196,10 +196,6 @@ fn capability_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
     )(i)
 }
 
-fn resp_capability(i: &[u8]) -> IResult<&[u8], Response> {
-    map(capability_data, Response::Capabilities)(i)
-}
-
 fn mailbox_data_search(i: &[u8]) -> IResult<&[u8], Response> {
     map(
         preceded(tag_no_case(b"SEARCH"), many0(preceded(tag(" "), number))),
@@ -207,16 +203,18 @@ fn mailbox_data_search(i: &[u8]) -> IResult<&[u8], Response> {
     )(i)
 }
 
-fn mailbox_data_flags(i: &[u8]) -> IResult<&[u8], Response> {
-    map(preceded(tag_no_case("FLAGS "), flag_list), |flags| {
-        Response::MailboxData(MailboxDatum::Flags(flags))
-    })(i)
+fn mailbox_data_flags(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+    map(
+        preceded(tag_no_case("FLAGS "), flag_list),
+        MailboxDatum::Flags,
+    )(i)
 }
 
-fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], Response> {
-    map(terminated(number, tag_no_case(" EXISTS")), |num| {
-        Response::MailboxData(MailboxDatum::Exists(num))
-    })(i)
+fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+    map(
+        terminated(number, tag_no_case(" EXISTS")),
+        MailboxDatum::Exists,
+    )(i)
 }
 
 #[allow(clippy::type_complexity)]
@@ -233,23 +231,23 @@ fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<&str>, Option<&str>, &str)> {
     )(i)
 }
 
-fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], Response> {
+fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(preceded(tag_no_case("LIST "), mailbox_list), |data| {
-        Response::MailboxData(MailboxDatum::List {
+        MailboxDatum::List {
             flags: data.0,
             delimiter: data.1,
             name: data.2,
-        })
+        }
     })(i)
 }
 
-fn mailbox_data_lsub(i: &[u8]) -> IResult<&[u8], Response> {
+fn mailbox_data_lsub(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(preceded(tag_no_case("LSUB "), mailbox_list), |data| {
-        Response::MailboxData(MailboxDatum::List {
+        MailboxDatum::List {
             flags: data.0,
             delimiter: data.1,
             name: data.2,
-        })
+        }
     })(i)
 }
 
@@ -285,27 +283,28 @@ fn status_att_list(i: &[u8]) -> IResult<&[u8], Vec<StatusAttribute>> {
     parenthesized_nonempty_list(status_att)(i)
 }
 
-fn mailbox_data_status(i: &[u8]) -> IResult<&[u8], Response> {
+fn mailbox_data_status(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(
         tuple((tag_no_case("STATUS "), mailbox, tag(" "), status_att_list)),
-        |(_, mailbox, _, status)| Response::MailboxData(MailboxDatum::Status { mailbox, status }),
+        |(_, mailbox, _, status)| MailboxDatum::Status { mailbox, status },
     )(i)
 }
 
-fn mailbox_data_recent(i: &[u8]) -> IResult<&[u8], Response> {
-    map(terminated(number, tag_no_case(" RECENT")), |num| {
-        Response::MailboxData(MailboxDatum::Recent(num))
-    })(i)
+fn mailbox_data_recent(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+    map(
+        terminated(number, tag_no_case(" RECENT")),
+        MailboxDatum::Recent,
+    )(i)
 }
 
 fn mailbox_data(i: &[u8]) -> IResult<&[u8], Response> {
     alt((
-        mailbox_data_flags,
-        mailbox_data_exists,
-        mailbox_data_list,
-        mailbox_data_lsub,
-        mailbox_data_status,
-        mailbox_data_recent,
+        map(mailbox_data_flags, Response::MailboxData),
+        map(mailbox_data_exists, Response::MailboxData),
+        map(mailbox_data_list, Response::MailboxData),
+        map(mailbox_data_lsub, Response::MailboxData),
+        map(mailbox_data_status, Response::MailboxData),
+        map(mailbox_data_recent, Response::MailboxData),
         mailbox_data_search,
     ))(i)
 }
@@ -480,11 +479,8 @@ fn message_data_fetch(i: &[u8]) -> IResult<&[u8], Response> {
     )(i)
 }
 
-fn message_data_expunge(i: &[u8]) -> IResult<&[u8], Response> {
-    map(
-        terminated(number, tag_no_case(" EXPUNGE")),
-        Response::Expunge,
-    )(i)
+fn message_data_expunge(i: &[u8]) -> IResult<&[u8], u32> {
+    terminated(number, tag_no_case(" EXPUNGE"))(i)
 }
 
 fn imap_tag(i: &[u8]) -> IResult<&[u8], RequestId> {
@@ -558,9 +554,9 @@ pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
         alt((
             resp_cond,
             mailbox_data,
-            message_data_expunge,
+            map(message_data_expunge, Response::Expunge),
             message_data_fetch,
-            resp_capability,
+            map(capability_data, Response::Capabilities),
             rfc5161::resp_enabled,
             rfc5464::metadata_solicited,
             rfc5464::metadata_unsolicited,
