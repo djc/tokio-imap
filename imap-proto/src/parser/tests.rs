@@ -2,6 +2,14 @@ use super::rfc3501::parse_response;
 use crate::types::*;
 
 #[test]
+fn test_mailbox_data_response() {
+    match parse_response(b"* LIST (\\HasNoChildren) \".\" INBOX.Tests\r\n") {
+        Ok((_, Response::MailboxData(_))) => {}
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+}
+
+#[test]
 fn test_number_overflow() {
     match parse_response(b"* 2222222222222222222222222222222222222222222C\r\n") {
         Err(_) => {}

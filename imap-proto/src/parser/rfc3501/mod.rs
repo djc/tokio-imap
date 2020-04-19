@@ -581,7 +581,6 @@ pub fn parse_response(msg: &[u8]) -> ParseResult {
 
 #[cfg(test)]
 mod tests {
-    use super::parse_response;
     use crate::types::*;
     use assert_matches::assert_matches;
 
@@ -591,11 +590,6 @@ mod tests {
             Ok((_, mb)) => {
                 assert_eq!(mb, "INBOX");
             }
-            rsp => panic!("unexpected response {:?}", rsp),
-        }
-
-        match parse_response(b"* LIST (\\HasNoChildren) \".\" INBOX.Tests\r\n") {
-            Ok((_, Response::MailboxData(_))) => {}
             rsp => panic!("unexpected response {:?}", rsp),
         }
     }
