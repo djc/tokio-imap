@@ -7,7 +7,10 @@
 
 use nom::{bytes::streaming::tag_no_case, sequence::tuple, IResult};
 
-use crate::{parser::core::{number_64, paren_delimited}, types::*};
+use crate::{
+    parser::core::{number_64, paren_delimited},
+    types::*,
+};
 
 // The highest mod-sequence value of all messages in the mailbox.
 // Extends resp-test-code defined in rfc3501.
