@@ -7,7 +7,7 @@
 
 use nom::{bytes::streaming::tag_no_case, sequence::tuple, IResult};
 
-use crate::{parser::core::number_64, types::*};
+use crate::{parser::core::{number_64, paren_delimited}, types::*};
 
 // The highest mod-sequence value of all messages in the mailbox.
 // Extends resp-test-code defined in rfc3501.
@@ -28,6 +28,6 @@ pub(crate) fn status_att_val_highest_mod_seq(i: &[u8]) -> IResult<&[u8], StatusA
 
 // [RFC4551 - 4. Formal Syntax - fetch-mod-resp](https://tools.ietf.org/html/rfc4551#section-4)
 pub(crate) fn msg_att_mod_seq(i: &[u8]) -> IResult<&[u8], AttributeValue> {
-    let (i, (_, num)) = tuple((tag_no_case("MODSEQ "), number_64))(i)?;
+    let (i, (_, num)) = tuple((tag_no_case("MODSEQ "), paren_delimited(number_64)))(i)?;
     Ok((i, AttributeValue::ModSeq(num)))
 }
