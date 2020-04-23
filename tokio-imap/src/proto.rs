@@ -5,7 +5,6 @@ use bytes::{BufMut, Bytes, BytesMut};
 use nom::{self, Needed};
 use tokio_util::codec::{Decoder, Encoder, Framed};
 
-use imap_proto;
 use imap_proto::types::{Request, RequestId, Response};
 
 pub struct ImapCodec {
