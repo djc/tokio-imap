@@ -341,10 +341,7 @@ mod tests {
             .attr(Attribute::Uid)
             .attr(Attribute::ModSeq)
             .into();
-        assert_eq!(
-            cmd.as_str().unwrap(),
-            "FETCH 1,2 (UID MODSEQ)"
-        );
+        assert_eq!(cmd.as_str().unwrap(), "FETCH 1,2 (UID MODSEQ)");
     }
 
     #[test]
