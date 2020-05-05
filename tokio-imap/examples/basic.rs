@@ -2,9 +2,7 @@ use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
-use tokio_imap::client::builder::{
-    CommandBuilder, FetchBuilderAttributes, FetchBuilderMessages, FetchBuilderModifiers,
-};
+use tokio_imap::client::builder::CommandBuilder;
 use tokio_imap::proto::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
 use tokio_imap::TlsClient;
@@ -60,11 +58,11 @@ async fn imap_fetch(
         .map_err(|e| ImapError::Select { cause: e })?;
 
     let cmd = CommandBuilder::uid_fetch()
-        .all_after(1_u32)
+        .range_from(1_u32..)
         .attr(Attribute::Uid)
         .attr(Attribute::Rfc822);
     tls_client
-        .call(cmd.build())
+        .call(cmd)
         .try_for_each(process_email)
         .await
         .map_err(|e| ImapError::UidFetch { cause: e })?;

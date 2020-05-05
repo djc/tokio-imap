@@ -16,10 +16,7 @@ use imap_proto::builders::command::Command;
 use imap_proto::{Request, RequestId, State};
 
 pub mod builder {
-    pub use imap_proto::builders::command::{
-        CommandBuilder, FetchBuilderAttributes, FetchBuilderMessages, FetchBuilderModifiers,
-        FetchCommand, FetchCommandAttributes, FetchCommandMessages,
-    };
+    pub use imap_proto::builders::command::{fetch, CommandBuilder, FetchCommand};
 }
 
 pub type TlsClient = Client<TlsStream<TcpStream>>;
@@ -62,8 +59,8 @@ impl TlsClient {
         greeting.map(|greeting| (greeting, client))
     }
 
-    pub fn call(&mut self, cmd: Command) -> ResponseStream<TlsStream<TcpStream>> {
-        ResponseStream::new(self, cmd)
+    pub fn call<C: Into<Command>>(&mut self, cmd: C) -> ResponseStream<TlsStream<TcpStream>> {
+        ResponseStream::new(self, cmd.into())
     }
 }
 

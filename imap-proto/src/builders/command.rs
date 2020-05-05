@@ -1,4 +1,7 @@
 use std::borrow::Cow;
+use std::marker::PhantomData;
+use std::ops::{RangeFrom, RangeInclusive};
+use std::str;
 
 use crate::types::{AttrMacro, Attribute, State};
 
@@ -29,9 +32,11 @@ impl CommandBuilder {
         }
     }
 
-    pub fn fetch() -> FetchCommandEmpty {
-        let args = b"FETCH ".to_vec();
-        FetchCommandEmpty { args }
+    pub fn fetch() -> FetchCommand<fetch::Empty> {
+        FetchCommand {
+            args: b"FETCH ".to_vec(),
+            state: PhantomData::default(),
+        }
     }
 
     pub fn list(reference: &str, glob: &str) -> Command {
@@ -68,9 +73,11 @@ impl CommandBuilder {
         }
     }
 
-    pub fn uid_fetch() -> FetchCommandEmpty {
-        let args = b"UID FETCH ".to_vec();
-        FetchCommandEmpty { args }
+    pub fn uid_fetch() -> FetchCommand<fetch::Empty> {
+        FetchCommand {
+            args: b"UID FETCH ".to_vec(),
+            state: PhantomData::default(),
+        }
     }
 }
 
@@ -84,35 +91,72 @@ impl Command {
         let Command { args, next_state } = self;
         (args, next_state)
     }
-}
 
-pub struct FetchCommandEmpty {
-    args: Vec<u8>,
-}
-
-impl FetchBuilderMessages for FetchCommandEmpty {
-    fn prepare(self) -> FetchCommandMessages {
-        FetchCommandMessages { args: self.args }
+    pub fn as_str(&self) -> Result<&str, str::Utf8Error> {
+        str::from_utf8(&self.args)
     }
 }
 
-pub struct FetchCommandMessages {
-    args: Vec<u8>,
+pub mod fetch {
+    pub struct Empty;
+    pub struct Messages;
+    pub struct Attributes;
+    pub struct Modifiers;
 }
 
-impl FetchBuilderMessages for FetchCommandMessages {
-    fn prepare(self) -> FetchCommandMessages {
-        let FetchCommandMessages { mut args } = self;
-        args.push(b',');
-        FetchCommandMessages { args }
+pub struct FetchCommand<T> {
+    args: Vec<u8>,
+    state: PhantomData<T>,
+}
+
+impl FetchCommand<fetch::Empty> {
+    pub fn num(mut self, num: u32) -> FetchCommand<fetch::Messages> {
+        sequence_num(&mut self.args, num);
+        FetchCommand {
+            args: self.args,
+            state: PhantomData::default(),
+        }
+    }
+
+    pub fn range(mut self, range: RangeInclusive<u32>) -> FetchCommand<fetch::Messages> {
+        sequence_range(&mut self.args, range);
+        FetchCommand {
+            args: self.args,
+            state: PhantomData::default(),
+        }
+    }
+
+    pub fn range_from(mut self, range: RangeFrom<u32>) -> FetchCommand<fetch::Messages> {
+        range_from(&mut self.args, range);
+        FetchCommand {
+            args: self.args,
+            state: PhantomData::default(),
+        }
     }
 }
 
-impl FetchCommandMessages {
-    pub fn attr_macro(self, named: AttrMacro) -> FetchCommand {
-        let FetchCommandMessages { mut args } = self;
-        args.push(b' ');
-        args.extend(
+impl FetchCommand<fetch::Messages> {
+    pub fn num(mut self, num: u32) -> FetchCommand<fetch::Messages> {
+        self.args.extend(b",");
+        sequence_num(&mut self.args, num);
+        self
+    }
+
+    pub fn range(mut self, range: RangeInclusive<u32>) -> FetchCommand<fetch::Messages> {
+        self.args.extend(b",");
+        sequence_range(&mut self.args, range);
+        self
+    }
+
+    pub fn range_from(mut self, range: RangeFrom<u32>) -> FetchCommand<fetch::Messages> {
+        self.args.extend(b",");
+        range_from(&mut self.args, range);
+        self
+    }
+
+    pub fn attr_macro(mut self, named: AttrMacro) -> FetchCommand<fetch::Modifiers> {
+        self.args.push(b' ');
+        self.args.extend(
             match named {
                 AttrMacro::All => "ALL",
                 AttrMacro::Fast => "FAST",
@@ -120,120 +164,101 @@ impl FetchCommandMessages {
             }
             .as_bytes(),
         );
-        FetchCommand { args }
+        FetchCommand {
+            args: self.args,
+            state: PhantomData::default(),
+        }
+    }
+
+    pub fn attr(mut self, attr: Attribute) -> FetchCommand<fetch::Attributes> {
+        self.args.extend(b" (");
+        push_attr(&mut self.args, attr);
+        FetchCommand {
+            args: self.args,
+            state: PhantomData::default(),
+        }
     }
 }
 
-pub trait FetchBuilderMessages
-where
-    Self: Sized,
-{
-    fn prepare(self) -> FetchCommandMessages;
-
-    fn num(self, num: u32) -> FetchCommandMessages {
-        let FetchCommandMessages { mut args } = self.prepare();
-        args.extend(num.to_string().as_bytes());
-        FetchCommandMessages { args }
-    }
-
-    fn range(self, start: u32, stop: u32) -> FetchCommandMessages {
-        let FetchCommandMessages { mut args } = self.prepare();
-        args.extend(start.to_string().as_bytes());
-        args.push(b':');
-        args.extend(stop.to_string().as_bytes());
-        FetchCommandMessages { args }
-    }
-
-    fn all_after(self, start: u32) -> FetchCommandMessages {
-        let FetchCommandMessages { mut args } = self.prepare();
-        args.extend(start.to_string().as_bytes());
-        args.extend(b":*");
-        FetchCommandMessages { args }
-    }
+fn sequence_num(cmd: &mut Vec<u8>, num: u32) {
+    cmd.extend(num.to_string().as_bytes());
 }
 
-pub struct FetchCommandAttributes {
-    args: Vec<u8>,
+fn sequence_range(cmd: &mut Vec<u8>, range: RangeInclusive<u32>) {
+    cmd.extend(range.start().to_string().as_bytes());
+    cmd.push(b':');
+    cmd.extend(range.end().to_string().as_bytes());
 }
 
-impl FetchBuilderAttributes for FetchCommandMessages {
-    fn prepare(self) -> FetchCommandAttributes {
-        let FetchCommandMessages { mut args } = self;
-        args.extend(b" (");
-        FetchCommandAttributes { args }
+fn range_from(cmd: &mut Vec<u8>, range: RangeFrom<u32>) {
+    cmd.extend(range.start.to_string().as_bytes());
+    cmd.extend(b":*");
+}
+
+impl FetchCommand<fetch::Attributes> {
+    pub fn attr(mut self, attr: Attribute) -> FetchCommand<fetch::Attributes> {
+        self.args.push(b' ');
+        push_attr(&mut self.args, attr);
+        self
+    }
+
+    pub fn changed_since(mut self, seq: u64) -> FetchCommand<fetch::Modifiers> {
+        self.args.push(b')');
+        changed_since(&mut self.args, seq);
+        FetchCommand {
+            args: self.args,
+            state: PhantomData::default(),
+        }
     }
 }
 
-impl FetchBuilderAttributes for FetchCommandAttributes {
-    fn prepare(self) -> FetchCommandAttributes {
-        let FetchCommandAttributes { mut args } = self;
-        args.push(b' ');
-        FetchCommandAttributes { args }
-    }
+fn push_attr(cmd: &mut Vec<u8>, attr: Attribute) {
+    cmd.extend(
+        match attr {
+            Attribute::Body => "BODY",
+            Attribute::Envelope => "ENVELOPE",
+            Attribute::Flags => "FLAGS",
+            Attribute::InternalDate => "INTERNALDATE",
+            Attribute::ModSeq => "MODSEQ",
+            Attribute::Rfc822 => "RFC822",
+            Attribute::Rfc822Size => "RFC822.SIZE",
+            Attribute::Rfc822Text => "RFC822.TEXT",
+            Attribute::Uid => "UID",
+        }
+        .as_bytes(),
+    );
 }
 
-pub trait FetchBuilderAttributes
-where
-    Self: Sized,
-{
-    fn prepare(self) -> FetchCommandAttributes;
-    fn attr(self, attr: Attribute) -> FetchCommandAttributes {
-        let FetchCommandAttributes { mut args } = self.prepare();
-        args.extend(
-            match attr {
-                Attribute::Body => "BODY",
-                Attribute::Envelope => "ENVELOPE",
-                Attribute::Flags => "FLAGS",
-                Attribute::InternalDate => "INTERNALDATE",
-                Attribute::ModSeq => "MODSEQ",
-                Attribute::Rfc822 => "RFC822",
-                Attribute::Rfc822Size => "RFC822.SIZE",
-                Attribute::Rfc822Text => "RFC822.TEXT",
-                Attribute::Uid => "UID",
-            }
-            .as_bytes(),
-        );
-        FetchCommandAttributes { args }
-    }
-}
-
-pub struct FetchCommand {
-    args: Vec<u8>,
-}
-
-pub trait FetchBuilderModifiers
-where
-    Self: Sized,
-{
-    fn prepare(self) -> FetchCommand;
-    fn build(self) -> Command {
-        let FetchCommand { args } = self.prepare();
+impl From<FetchCommand<fetch::Attributes>> for Command {
+    fn from(mut cmd: FetchCommand<fetch::Attributes>) -> Command {
+        cmd.args.push(b')');
         Command {
-            args,
+            args: cmd.args,
             next_state: None,
         }
     }
-    fn changed_since(self, seq: u64) -> FetchCommand {
-        let FetchCommand { mut args } = self.prepare();
-        args.extend(b" (CHANGEDSINCE ");
-        args.extend(seq.to_string().as_bytes());
-        args.push(b')');
-        FetchCommand { args }
+}
+
+impl From<FetchCommand<fetch::Modifiers>> for Command {
+    fn from(cmd: FetchCommand<fetch::Modifiers>) -> Command {
+        Command {
+            args: cmd.args,
+            next_state: None,
+        }
     }
 }
 
-impl FetchBuilderModifiers for FetchCommandAttributes {
-    fn prepare(self) -> FetchCommand {
-        let FetchCommandAttributes { mut args, .. } = self;
-        args.push(b')');
-        FetchCommand { args }
-    }
-}
-
-impl FetchBuilderModifiers for FetchCommand {
-    fn prepare(self) -> FetchCommand {
+impl FetchCommand<fetch::Modifiers> {
+    pub fn changed_since(mut self, seq: u64) -> FetchCommand<fetch::Modifiers> {
+        changed_since(&mut self.args, seq);
         self
     }
+}
+
+fn changed_since(cmd: &mut Vec<u8>, seq: u64) {
+    cmd.extend(b" (CHANGEDSINCE ");
+    cmd.extend(seq.to_string().as_bytes());
+    cmd.push(b')');
 }
 
 /// Returns an escaped string if necessary for use as a "quoted" string per
@@ -281,8 +306,7 @@ fn quoted_string(s: &str) -> Result<Cow<str>, &'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::quoted_string;
-    use super::CommandBuilder;
+    use super::{quoted_string, Attribute, Command, CommandBuilder};
 
     #[test]
     fn login() {
@@ -295,6 +319,31 @@ mod tests {
                 .into_parts()
                 .0,
             b"LOGIN \"djc\" \"domain\\\\password\""
+        );
+    }
+
+    #[test]
+    fn fetch() {
+        let cmd: Command = CommandBuilder::fetch()
+            .range_from(1..)
+            .attr(Attribute::Uid)
+            .attr(Attribute::ModSeq)
+            .changed_since(13)
+            .into();
+        assert_eq!(
+            cmd.as_str().unwrap(),
+            "FETCH 1:* (UID MODSEQ) (CHANGEDSINCE 13)"
+        );
+
+        let cmd: Command = CommandBuilder::fetch()
+            .num(1)
+            .num(2)
+            .attr(Attribute::Uid)
+            .attr(Attribute::ModSeq)
+            .into();
+        assert_eq!(
+            cmd.as_str().unwrap(),
+            "FETCH 1,2 (UID MODSEQ)"
         );
     }
 
