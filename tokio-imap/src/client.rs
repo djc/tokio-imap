@@ -66,10 +66,8 @@ impl TlsClient {
 
 pub struct ResponseStream<'a, T> {
     client: &'a mut Client<T>,
-    request: Request,
     next_state: Option<State>,
-    sending: bool,
-    done: bool,
+    state: ResponseStreamState,
 }
 
 impl<'a, T> ResponseStream<'a, T>
@@ -79,51 +77,50 @@ where
     pub fn new(client: &mut Client<T>, cmd: Command) -> ResponseStream<'_, T> {
         let request_id = client.state.request_ids.next().unwrap(); // safe: never returns Err
         let (cmd_bytes, next_state) = cmd.into_parts();
-        let request = Request(request_id, cmd_bytes);
-
         ResponseStream {
             client,
-            request,
             next_state,
-            sending: true,
-            done: false,
+            state: ResponseStreamState::Sending(Request(request_id, cmd_bytes)),
         }
     }
 
     #[allow(clippy::should_implement_trait)]
     pub async fn next(&mut self) -> Option<Result<ResponseData, io::Error>> {
-        if self.done {
-            return None;
-        }
-
-        if self.sending {
-            match self.client.transport.send(&self.request).await {
-                Ok(()) => {
-                    self.sending = false;
-                }
-                Err(e) => return Some(Err(e)),
-            }
-        }
-
-        match self.client.transport.next().await {
-            Some(Ok(rsp)) => {
-                if let Some(req_id) = rsp.request_id() {
-                    self.done = *req_id == self.request.0;
-                }
-
-                if self.done {
-                    if let Some(next_state) = self.next_state.take() {
-                        self.client.state.state = next_state;
+        loop {
+            match &mut self.state {
+                ResponseStreamState::Sending(request) => {
+                    match self.client.transport.send(request).await {
+                        Ok(()) => {
+                            self.state = ResponseStreamState::Receiving(request.0.clone());
+                        }
+                        Err(e) => return Some(Err(e)),
                     }
                 }
+                ResponseStreamState::Receiving(id) => match self.client.transport.next().await {
+                    Some(Ok(rsp)) => {
+                        match rsp.request_id() {
+                            Some(req_id) if req_id == id => {}
+                            Some(_) | None => return Some(Ok(rsp)),
+                        }
 
-                Some(Ok(rsp))
+                        if let Some(next_state) = self.next_state.take() {
+                            self.client.state.state = next_state;
+                        }
+                        self.state = ResponseStreamState::Done;
+                        return Some(Ok(rsp));
+                    }
+                    Some(Err(e)) => return Some(Err(e)),
+                    None => {
+                        return Some(Err(io::Error::new(
+                            io::ErrorKind::Other,
+                            "stream ended before command completion",
+                        )))
+                    }
+                },
+                ResponseStreamState::Done => {
+                    return None;
+                }
             }
-            Some(Err(e)) => Some(Err(e)),
-            None => Some(Err(io::Error::new(
-                io::ErrorKind::Other,
-                "stream ended before command completion",
-            ))),
         }
     }
 
@@ -172,6 +169,12 @@ where
             }
         }
     }
+}
+
+enum ResponseStreamState {
+    Sending(Request),
+    Receiving(RequestId),
+    Done,
 }
 
 pub struct ClientState {
