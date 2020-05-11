@@ -1,9 +1,12 @@
 use std::future::Future;
 use std::io;
 use std::net::ToSocketAddrs;
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 
-use futures::{SinkExt, StreamExt};
+use futures::{ready, Sink, Stream, StreamExt};
+use pin_project::{pin_project, project};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio_rustls::rustls::ClientConfig;
@@ -67,7 +70,9 @@ impl TlsClient {
     }
 }
 
+#[pin_project]
 pub struct ResponseStream<'a, C, T> {
+    #[pin]
     client: &'a mut Client<T>,
     request_id: RequestId,
     cmd: &'a C,
@@ -85,48 +90,7 @@ where
             client,
             request_id,
             cmd,
-            state: ResponseStreamState::Sending,
-        }
-    }
-
-    #[allow(clippy::should_implement_trait)]
-    pub async fn next(&mut self) -> Option<Result<ResponseData, io::Error>> {
-        loop {
-            match &mut self.state {
-                ResponseStreamState::Sending => {
-                    let request = Request(self.request_id.as_ref(), self.cmd.command_bytes());
-                    match self.client.transport.send(&request).await {
-                        Ok(()) => {
-                            self.state = ResponseStreamState::Receiving;
-                        }
-                        Err(e) => return Some(Err(e)),
-                    }
-                }
-                ResponseStreamState::Receiving => match self.client.transport.next().await {
-                    Some(Ok(rsp)) => {
-                        match rsp.request_id() {
-                            Some(req_id) if req_id == &self.request_id => {}
-                            Some(_) | None => return Some(Ok(rsp)),
-                        }
-
-                        if let Some(next_state) = self.cmd.next_state() {
-                            self.client.state.state = next_state;
-                        }
-                        self.state = ResponseStreamState::Done;
-                        return Some(Ok(rsp));
-                    }
-                    Some(Err(e)) => return Some(Err(e)),
-                    None => {
-                        return Some(Err(io::Error::new(
-                            io::ErrorKind::Other,
-                            "stream ended before command completion",
-                        )))
-                    }
-                },
-                ResponseStreamState::Done => {
-                    return None;
-                }
-            }
+            state: ResponseStreamState::Start,
         }
     }
 
@@ -177,7 +141,62 @@ where
     }
 }
 
+impl<'a, C, T> Stream for ResponseStream<'a, C, T>
+where
+    C: CommandBytes,
+    T: AsyncRead + AsyncWrite + Unpin,
+{
+    type Item = Result<ResponseData, io::Error>;
+
+    #[project]
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        let mut me = self.project();
+        loop {
+            match me.state {
+                ResponseStreamState::Start => {
+                    ready!(Pin::new(&mut me.client.transport).poll_ready(cx))?;
+                    let pinned = Pin::new(&mut me.client.transport);
+                    pinned.start_send(&Request(me.request_id.as_ref(), me.cmd.command_bytes()))?;
+                    *me.state = ResponseStreamState::Sending;
+                }
+                ResponseStreamState::Sending => {
+                    let pinned = Pin::new(&mut me.client.transport);
+                    ready!(pinned.poll_flush(cx))?;
+                    *me.state = ResponseStreamState::Receiving;
+                }
+                ResponseStreamState::Receiving => {
+                    match ready!(Pin::new(&mut me.client.transport).poll_next(cx)) {
+                        Some(Ok(rsp)) => {
+                            match rsp.request_id() {
+                                Some(req_id) if req_id == me.request_id => {}
+                                Some(_) | None => return Poll::Ready(Some(Ok(rsp))),
+                            }
+
+                            if let Some(next_state) = me.cmd.next_state() {
+                                me.client.state.state = next_state;
+                            }
+                            *me.state = ResponseStreamState::Done;
+                            return Poll::Ready(Some(Ok(rsp)));
+                        }
+                        Some(Err(e)) => return Poll::Ready(Some(Err(e))),
+                        None => {
+                            return Poll::Ready(Some(Err(io::Error::new(
+                                io::ErrorKind::Other,
+                                "stream ended before command completion",
+                            ))))
+                        }
+                    }
+                }
+                ResponseStreamState::Done => {
+                    return Poll::Ready(None);
+                }
+            }
+        }
+    }
+}
+
 enum ResponseStreamState {
+    Start,
     Sending,
     Receiving,
     Done,
