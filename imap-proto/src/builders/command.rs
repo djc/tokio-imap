@@ -24,11 +24,11 @@ impl CommandBuilder {
         }
     }
 
-    pub fn examine(mailbox: &str) -> Command {
+    pub fn examine(mailbox: &str) -> SelectCommand<select::NoParams> {
         let args = format!("EXAMINE \"{}\"", quoted_string(mailbox).unwrap()).into_bytes();
-        Command {
+        SelectCommand {
             args,
-            next_state: Some(State::Selected),
+            state: PhantomData::default(),
         }
     }
 
@@ -65,11 +65,11 @@ impl CommandBuilder {
         }
     }
 
-    pub fn select(mailbox: &str) -> Command {
+    pub fn select(mailbox: &str) -> SelectCommand<select::NoParams> {
         let args = format!("SELECT \"{}\"", quoted_string(mailbox).unwrap()).into_bytes();
-        Command {
+        SelectCommand {
             args,
-            next_state: Some(State::Selected),
+            state: PhantomData::default(),
         }
     }
 
@@ -95,6 +95,46 @@ impl Command {
     pub fn as_str(&self) -> Result<&str, str::Utf8Error> {
         str::from_utf8(&self.args)
     }
+}
+
+pub struct SelectCommand<T> {
+    args: Vec<u8>,
+    state: PhantomData<T>,
+}
+
+impl SelectCommand<select::NoParams> {
+    // RFC 4551 CONDSTORE parameter (based on RFC 4466 `select-param`)
+    pub fn cond_store(mut self) -> SelectCommand<select::Params> {
+        self.args.extend(b" (CONDSTORE");
+        SelectCommand {
+            args: self.args,
+            state: PhantomData::default(),
+        }
+    }
+}
+
+impl From<SelectCommand<select::NoParams>> for Command {
+    fn from(cmd: SelectCommand<select::NoParams>) -> Command {
+        Command {
+            args: cmd.args,
+            next_state: Some(State::Selected),
+        }
+    }
+}
+
+impl From<SelectCommand<select::Params>> for Command {
+    fn from(mut cmd: SelectCommand<select::Params>) -> Command {
+        cmd.args.push(b')');
+        Command {
+            args: cmd.args,
+            next_state: Some(State::Selected),
+        }
+    }
+}
+
+pub mod select {
+    pub struct NoParams;
+    pub struct Params;
 }
 
 pub mod fetch {
@@ -320,6 +360,14 @@ mod tests {
                 .0,
             b"LOGIN \"djc\" \"domain\\\\password\""
         );
+    }
+
+    #[test]
+    fn select() {
+        let cmd = Command::from(CommandBuilder::select("INBOX"));
+        assert_eq!(cmd.as_str().unwrap(), r#"SELECT "INBOX""#);
+        let cmd = Command::from(CommandBuilder::examine("INBOX").cond_store());
+        assert_eq!(cmd.as_str().unwrap(), r#"EXAMINE "INBOX" (CONDSTORE)"#);
     }
 
     #[test]
