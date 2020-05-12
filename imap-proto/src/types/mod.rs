@@ -1,5 +1,5 @@
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Request<I: AsRef<[u8]>, C: AsRef<[u8]>>(pub I, pub C);
+pub struct Request<'a>(pub &'a [u8], pub &'a [u8]);
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum AttrMacro {

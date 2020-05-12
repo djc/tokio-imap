@@ -56,17 +56,13 @@ impl<'a> Decoder for ImapCodec {
     }
 }
 
-impl<I, C> Encoder<&Request<I, C>> for ImapCodec
-where
-    I: AsRef<[u8]>,
-    C: AsRef<[u8]>,
-{
+impl<'a> Encoder<&'a Request<'a>> for ImapCodec {
     type Error = io::Error;
-    fn encode(&mut self, msg: &Request<I, C>, dst: &mut BytesMut) -> Result<(), io::Error> {
-        dst.put(msg.0.as_ref());
+    fn encode(&mut self, msg: &Request, dst: &mut BytesMut) -> Result<(), io::Error> {
+        dst.put(msg.0);
         dst.put_u8(b' ');
-        dst.put_slice(msg.1.as_ref());
-        dst.put(b"\r\n".as_ref());
+        dst.put_slice(msg.1);
+        dst.put_slice(b"\r\n");
         Ok(())
     }
 }
