@@ -1,5 +1,5 @@
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Request(pub RequestId, pub Vec<u8>);
+pub struct Request<I: AsRef<[u8]>, C: AsRef<[u8]>>(pub I, pub C);
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum AttrMacro {
@@ -259,13 +259,13 @@ pub struct Address<'a> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RequestId(pub String);
 
-impl RequestId {
-    pub fn as_bytes(&self) -> &[u8] {
+impl AsRef<[u8]> for RequestId {
+    fn as_ref(&self) -> &[u8] {
         self.0.as_bytes()
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum State {
     NotAuthenticated,
     Authenticated,

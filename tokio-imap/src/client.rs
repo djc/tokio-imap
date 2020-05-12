@@ -12,11 +12,11 @@ use tokio_rustls::{client::TlsStream, TlsConnector};
 use tokio_util::codec::Decoder;
 
 use crate::proto::{ImapCodec, ImapTransport, ResponseData};
-use imap_proto::builders::command::Command;
+use imap_proto::builders::command::CommandBytes;
 use imap_proto::{Request, RequestId, State};
 
 pub mod builder {
-    pub use imap_proto::builders::command::{fetch, CommandBuilder, FetchCommand};
+    pub use imap_proto::builders::command::{fetch, CommandBuilder, CommandBytes};
 }
 
 pub type TlsClient = Client<TlsStream<TcpStream>>;
@@ -59,28 +59,33 @@ impl TlsClient {
         greeting.map(|greeting| (greeting, client))
     }
 
-    pub fn call<C: Into<Command>>(&mut self, cmd: C) -> ResponseStream<TlsStream<TcpStream>> {
-        ResponseStream::new(self, cmd.into())
+    pub fn call<'a, C: CommandBytes>(
+        &'a mut self,
+        cmd: &'a C,
+    ) -> ResponseStream<'a, C, TlsStream<TcpStream>> {
+        ResponseStream::new(self, cmd)
     }
 }
 
-pub struct ResponseStream<'a, T> {
+pub struct ResponseStream<'a, C, T> {
     client: &'a mut Client<T>,
-    next_state: Option<State>,
+    request_id: RequestId,
+    cmd: &'a C,
     state: ResponseStreamState,
 }
 
-impl<'a, T> ResponseStream<'a, T>
+impl<'a, C, T> ResponseStream<'a, C, T>
 where
+    C: CommandBytes,
     T: AsyncRead + AsyncWrite + Unpin,
 {
-    pub fn new(client: &mut Client<T>, cmd: Command) -> ResponseStream<'_, T> {
+    pub fn new<'n>(client: &'n mut Client<T>, cmd: &'n C) -> ResponseStream<'n, C, T> {
         let request_id = client.state.request_ids.next().unwrap(); // safe: never returns Err
-        let (cmd_bytes, next_state) = cmd.into_parts();
         ResponseStream {
             client,
-            next_state,
-            state: ResponseStreamState::Sending(Request(request_id, cmd_bytes)),
+            request_id,
+            cmd,
+            state: ResponseStreamState::Sending,
         }
     }
 
@@ -88,22 +93,23 @@ where
     pub async fn next(&mut self) -> Option<Result<ResponseData, io::Error>> {
         loop {
             match &mut self.state {
-                ResponseStreamState::Sending(request) => {
-                    match self.client.transport.send(request).await {
+                ResponseStreamState::Sending => {
+                    let request = Request(self.request_id.as_ref(), self.cmd.command_bytes());
+                    match self.client.transport.send(&request).await {
                         Ok(()) => {
-                            self.state = ResponseStreamState::Receiving(request.0.clone());
+                            self.state = ResponseStreamState::Receiving;
                         }
                         Err(e) => return Some(Err(e)),
                     }
                 }
-                ResponseStreamState::Receiving(id) => match self.client.transport.next().await {
+                ResponseStreamState::Receiving => match self.client.transport.next().await {
                     Some(Ok(rsp)) => {
                         match rsp.request_id() {
-                            Some(req_id) if req_id == id => {}
+                            Some(req_id) if req_id == &self.request_id => {}
                             Some(_) | None => return Some(Ok(rsp)),
                         }
 
-                        if let Some(next_state) = self.next_state.take() {
+                        if let Some(next_state) = self.cmd.next_state() {
                             self.client.state.state = next_state;
                         }
                         self.state = ResponseStreamState::Done;
@@ -172,8 +178,8 @@ where
 }
 
 enum ResponseStreamState {
-    Sending(Request),
-    Receiving(RequestId),
+    Sending,
+    Receiving,
     Done,
 }
 

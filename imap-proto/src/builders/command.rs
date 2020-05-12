@@ -86,14 +86,13 @@ pub struct Command {
     next_state: Option<State>,
 }
 
-impl Command {
-    pub fn into_parts(self) -> (Vec<u8>, Option<State>) {
-        let Command { args, next_state } = self;
-        (args, next_state)
+impl CommandBytes for Command {
+    fn command_bytes(&self) -> &[u8] {
+        &self.args
     }
 
-    pub fn as_str(&self) -> Result<&str, str::Utf8Error> {
-        str::from_utf8(&self.args)
+    fn next_state(&self) -> Option<State> {
+        self.next_state
     }
 }
 
@@ -105,7 +104,7 @@ pub struct SelectCommand<T> {
 impl SelectCommand<select::NoParams> {
     // RFC 4551 CONDSTORE parameter (based on RFC 4466 `select-param`)
     pub fn cond_store(mut self) -> SelectCommand<select::Params> {
-        self.args.extend(b" (CONDSTORE");
+        self.args.extend(b" (CONDSTORE)");
         SelectCommand {
             args: self.args,
             state: PhantomData::default(),
@@ -113,22 +112,23 @@ impl SelectCommand<select::NoParams> {
     }
 }
 
-impl From<SelectCommand<select::NoParams>> for Command {
-    fn from(cmd: SelectCommand<select::NoParams>) -> Command {
-        Command {
-            args: cmd.args,
-            next_state: Some(State::Selected),
-        }
+impl CommandBytes for SelectCommand<select::NoParams> {
+    fn command_bytes(&self) -> &[u8] {
+        &self.args
+    }
+
+    fn next_state(&self) -> Option<State> {
+        Some(State::Selected)
     }
 }
 
-impl From<SelectCommand<select::Params>> for Command {
-    fn from(mut cmd: SelectCommand<select::Params>) -> Command {
-        cmd.args.push(b')');
-        Command {
-            args: cmd.args,
-            next_state: Some(State::Selected),
-        }
+impl CommandBytes for SelectCommand<select::Params> {
+    fn command_bytes(&self) -> &[u8] {
+        &self.args
+    }
+
+    fn next_state(&self) -> Option<State> {
+        Some(State::Selected)
     }
 }
 
@@ -237,13 +237,13 @@ fn range_from(cmd: &mut Vec<u8>, range: RangeFrom<u32>) {
 
 impl FetchCommand<fetch::Attributes> {
     pub fn attr(mut self, attr: Attribute) -> FetchCommand<fetch::Attributes> {
+        self.args.pop();
         self.args.push(b' ');
         push_attr(&mut self.args, attr);
         self
     }
 
     pub fn changed_since(mut self, seq: u64) -> FetchCommand<fetch::Modifiers> {
-        self.args.push(b')');
         changed_since(&mut self.args, seq);
         FetchCommand {
             args: self.args,
@@ -267,24 +267,18 @@ fn push_attr(cmd: &mut Vec<u8>, attr: Attribute) {
         }
         .as_bytes(),
     );
+    cmd.push(b')');
 }
 
-impl From<FetchCommand<fetch::Attributes>> for Command {
-    fn from(mut cmd: FetchCommand<fetch::Attributes>) -> Command {
-        cmd.args.push(b')');
-        Command {
-            args: cmd.args,
-            next_state: None,
-        }
+impl CommandBytes for FetchCommand<fetch::Attributes> {
+    fn command_bytes(&self) -> &[u8] {
+        &self.args
     }
 }
 
-impl From<FetchCommand<fetch::Modifiers>> for Command {
-    fn from(cmd: FetchCommand<fetch::Modifiers>) -> Command {
-        Command {
-            args: cmd.args,
-            next_state: None,
-        }
+impl CommandBytes for FetchCommand<fetch::Modifiers> {
+    fn command_bytes(&self) -> &[u8] {
+        &self.args
     }
 }
 
@@ -299,6 +293,13 @@ fn changed_since(cmd: &mut Vec<u8>, seq: u64) {
     cmd.extend(b" (CHANGEDSINCE ");
     cmd.extend(seq.to_string().as_bytes());
     cmd.push(b')');
+}
+
+pub trait CommandBytes {
+    fn command_bytes(&self) -> &[u8];
+    fn next_state(&self) -> Option<State> {
+        None
+    }
 }
 
 /// Returns an escaped string if necessary for use as a "quoted" string per
@@ -346,50 +347,46 @@ fn quoted_string(s: &str) -> Result<Cow<str>, &'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{quoted_string, Attribute, Command, CommandBuilder};
+    use super::{quoted_string, Attribute, CommandBuilder, CommandBytes};
 
     #[test]
     fn login() {
         assert_eq!(
-            CommandBuilder::login("djc", "s3cr3t").into_parts().0,
+            CommandBuilder::login("djc", "s3cr3t").command_bytes(),
             b"LOGIN \"djc\" \"s3cr3t\""
         );
         assert_eq!(
-            CommandBuilder::login("djc", "domain\\password")
-                .into_parts()
-                .0,
+            CommandBuilder::login("djc", "domain\\password").command_bytes(),
             b"LOGIN \"djc\" \"domain\\\\password\""
         );
     }
 
     #[test]
     fn select() {
-        let cmd = Command::from(CommandBuilder::select("INBOX"));
-        assert_eq!(cmd.as_str().unwrap(), r#"SELECT "INBOX""#);
-        let cmd = Command::from(CommandBuilder::examine("INBOX").cond_store());
-        assert_eq!(cmd.as_str().unwrap(), r#"EXAMINE "INBOX" (CONDSTORE)"#);
+        let cmd = CommandBuilder::select("INBOX");
+        assert_eq!(cmd.command_bytes(), br#"SELECT "INBOX""#);
+        let cmd = CommandBuilder::examine("INBOX").cond_store();
+        assert_eq!(cmd.command_bytes(), br#"EXAMINE "INBOX" (CONDSTORE)"#);
     }
 
     #[test]
     fn fetch() {
-        let cmd: Command = CommandBuilder::fetch()
+        let cmd = CommandBuilder::fetch()
             .range_from(1..)
             .attr(Attribute::Uid)
             .attr(Attribute::ModSeq)
-            .changed_since(13)
-            .into();
+            .changed_since(13);
         assert_eq!(
-            cmd.as_str().unwrap(),
-            "FETCH 1:* (UID MODSEQ) (CHANGEDSINCE 13)"
+            cmd.command_bytes(),
+            &b"FETCH 1:* (UID MODSEQ) (CHANGEDSINCE 13)"[..]
         );
 
-        let cmd: Command = CommandBuilder::fetch()
+        let cmd = CommandBuilder::fetch()
             .num(1)
             .num(2)
             .attr(Attribute::Uid)
-            .attr(Attribute::ModSeq)
-            .into();
-        assert_eq!(cmd.as_str().unwrap(), "FETCH 1,2 (UID MODSEQ)");
+            .attr(Attribute::ModSeq);
+        assert_eq!(cmd.command_bytes(), b"FETCH 1,2 (UID MODSEQ)");
     }
 
     #[test]
