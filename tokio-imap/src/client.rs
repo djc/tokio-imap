@@ -26,7 +26,8 @@ pub type TlsClient = Client<TlsStream<TcpStream>>;
 
 pub struct Client<T> {
     transport: ImapTransport<T>,
-    state: ClientState,
+    state: State,
+    request_ids: IdGenerator,
 }
 
 impl TlsClient {
@@ -56,7 +57,8 @@ impl TlsClient {
         }?;
         let client = Client {
             transport,
-            state: ClientState::new(),
+            state: State::NotAuthenticated,
+            request_ids: IdGenerator::new(),
         };
 
         greeting.map(|greeting| (greeting, client))
@@ -81,7 +83,7 @@ where
     T: AsyncRead + AsyncWrite + Unpin,
 {
     pub fn new(client: &mut Client<T>, cmd: Command) -> ResponseStream<'_, T> {
-        let request_id = client.state.request_ids.next().unwrap(); // safe: never returns Err,
+        let request_id = client.request_ids.next().unwrap(); // safe: never returns Err,
         ResponseStream {
             client,
             request_id,
@@ -168,7 +170,7 @@ where
                             }
 
                             if let Some(next_state) = me.cmd.next_state.as_ref() {
-                                me.client.state.state = *next_state;
+                                me.client.state = *next_state;
                             }
                             *me.state = ResponseStreamState::Done;
                             return Poll::Ready(Some(Ok(rsp)));
@@ -195,26 +197,6 @@ enum ResponseStreamState {
     Sending,
     Receiving,
     Done,
-}
-
-pub struct ClientState {
-    state: State,
-    request_ids: IdGenerator,
-}
-
-impl ClientState {
-    pub fn new() -> Self {
-        Self {
-            state: State::NotAuthenticated,
-            request_ids: IdGenerator::new(),
-        }
-    }
-}
-
-impl Default for ClientState {
-    fn default() -> Self {
-        Self::new()
-    }
 }
 
 pub struct IdGenerator {
