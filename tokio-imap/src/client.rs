@@ -14,7 +14,7 @@ use tokio_rustls::webpki::DNSNameRef;
 use tokio_rustls::{client::TlsStream, TlsConnector};
 use tokio_util::codec::{Decoder, Framed};
 
-use crate::proto::{ImapCodec, ResponseData};
+use crate::codec::{ImapCodec, ResponseData};
 use imap_proto::builders::command::Command;
 use imap_proto::{Request, RequestId, State};
 

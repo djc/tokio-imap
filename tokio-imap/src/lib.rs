@@ -1,5 +1,5 @@
 pub mod client;
-pub mod proto;
+pub mod codec;
 
 pub use crate::client::{Client, TlsClient};
 

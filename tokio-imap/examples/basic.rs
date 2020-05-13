@@ -3,7 +3,7 @@ use std::fmt::{self, Display, Formatter};
 use std::io;
 
 use tokio_imap::client::builder::CommandBuilder;
-use tokio_imap::proto::ResponseData;
+use tokio_imap::codec::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
 use tokio_imap::TlsClient;
 
