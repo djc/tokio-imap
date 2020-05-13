@@ -3,7 +3,7 @@ use std::mem;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use nom::{self, Needed};
-use tokio_util::codec::{Decoder, Encoder, Framed};
+use tokio_util::codec::{Decoder, Encoder};
 
 use imap_proto::types::{Request, RequestId, Response};
 
@@ -92,5 +92,3 @@ impl ResponseData {
         &self.response
     }
 }
-
-pub type ImapTransport<T> = Framed<T, ImapCodec>;

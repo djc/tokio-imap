@@ -12,9 +12,9 @@ use tokio::net::TcpStream;
 use tokio_rustls::rustls::ClientConfig;
 use tokio_rustls::webpki::DNSNameRef;
 use tokio_rustls::{client::TlsStream, TlsConnector};
-use tokio_util::codec::Decoder;
+use tokio_util::codec::{Decoder, Framed};
 
-use crate::proto::{ImapCodec, ImapTransport, ResponseData};
+use crate::proto::{ImapCodec, ResponseData};
 use imap_proto::builders::command::Command;
 use imap_proto::{Request, RequestId, State};
 
@@ -25,7 +25,7 @@ pub mod builder {
 pub type TlsClient = Client<TlsStream<TcpStream>>;
 
 pub struct Client<T> {
-    transport: ImapTransport<T>,
+    transport: Framed<T, ImapCodec>,
     state: State,
     request_ids: IdGenerator,
 }
