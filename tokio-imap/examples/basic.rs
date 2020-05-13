@@ -33,7 +33,7 @@ async fn imap_fetch(
         .map_err(|e| ImapError::Connect { cause: e })?;
 
     let responses = tls_client
-        .call(&CommandBuilder::login(&login, &password))
+        .call(CommandBuilder::login(&login, &password))
         .try_collect()
         .await
         .map_err(|e| ImapError::Login { cause: e })?;
@@ -52,7 +52,7 @@ async fn imap_fetch(
     }
 
     let _ = tls_client
-        .call(&CommandBuilder::select(&mailbox))
+        .call(CommandBuilder::select(&mailbox))
         .try_collect()
         .await
         .map_err(|e| ImapError::Select { cause: e })?;
@@ -62,13 +62,13 @@ async fn imap_fetch(
         .attr(Attribute::Uid)
         .attr(Attribute::Rfc822);
     tls_client
-        .call(&cmd)
+        .call(cmd)
         .try_for_each(process_email)
         .await
         .map_err(|e| ImapError::UidFetch { cause: e })?;
 
     let _ = tls_client
-        .call(&CommandBuilder::close())
+        .call(CommandBuilder::close())
         .try_collect()
         .await
         .map_err(|e| ImapError::Close { cause: e })?;

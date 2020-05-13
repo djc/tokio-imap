@@ -15,11 +15,11 @@ use tokio_rustls::{client::TlsStream, TlsConnector};
 use tokio_util::codec::Decoder;
 
 use crate::proto::{ImapCodec, ImapTransport, ResponseData};
-use imap_proto::builders::command::CommandBytes;
+use imap_proto::builders::command::Command;
 use imap_proto::{Request, RequestId, State};
 
 pub mod builder {
-    pub use imap_proto::builders::command::{fetch, CommandBuilder, CommandBytes};
+    pub use imap_proto::builders::command::{fetch, CommandBuilder, FetchCommand};
 }
 
 pub type TlsClient = Client<TlsStream<TcpStream>>;
@@ -62,30 +62,26 @@ impl TlsClient {
         greeting.map(|greeting| (greeting, client))
     }
 
-    pub fn call<'a, C: CommandBytes>(
-        &'a mut self,
-        cmd: &'a C,
-    ) -> ResponseStream<'a, C, TlsStream<TcpStream>> {
-        ResponseStream::new(self, cmd)
+    pub fn call<C: Into<Command>>(&mut self, cmd: C) -> ResponseStream<TlsStream<TcpStream>> {
+        ResponseStream::new(self, cmd.into())
     }
 }
 
 #[pin_project]
-pub struct ResponseStream<'a, C, T> {
+pub struct ResponseStream<'a, T> {
     #[pin]
     client: &'a mut Client<T>,
     request_id: RequestId,
-    cmd: &'a C,
+    cmd: Command,
     state: ResponseStreamState,
 }
 
-impl<'a, C, T> ResponseStream<'a, C, T>
+impl<'a, T> ResponseStream<'a, T>
 where
-    C: CommandBytes,
     T: AsyncRead + AsyncWrite + Unpin,
 {
-    pub fn new<'n>(client: &'n mut Client<T>, cmd: &'n C) -> ResponseStream<'n, C, T> {
-        let request_id = client.state.request_ids.next().unwrap(); // safe: never returns Err
+    pub fn new(client: &mut Client<T>, cmd: Command) -> ResponseStream<'_, T> {
+        let request_id = client.state.request_ids.next().unwrap(); // safe: never returns Err,
         ResponseStream {
             client,
             request_id,
@@ -141,9 +137,8 @@ where
     }
 }
 
-impl<'a, C, T> Stream for ResponseStream<'a, C, T>
+impl<'a, T> Stream for ResponseStream<'a, T>
 where
-    C: CommandBytes,
     T: AsyncRead + AsyncWrite + Unpin,
 {
     type Item = Result<ResponseData, io::Error>;
@@ -156,7 +151,7 @@ where
                 ResponseStreamState::Start => {
                     ready!(Pin::new(&mut me.client.transport).poll_ready(cx))?;
                     let pinned = Pin::new(&mut me.client.transport);
-                    pinned.start_send(&Request(me.request_id.as_ref(), me.cmd.command_bytes()))?;
+                    pinned.start_send(&Request(me.request_id.as_bytes(), &me.cmd.args))?;
                     *me.state = ResponseStreamState::Sending;
                 }
                 ResponseStreamState::Sending => {
@@ -172,8 +167,8 @@ where
                                 Some(_) | None => return Poll::Ready(Some(Ok(rsp))),
                             }
 
-                            if let Some(next_state) = me.cmd.next_state() {
-                                me.client.state.state = next_state;
+                            if let Some(next_state) = me.cmd.next_state.as_ref() {
+                                me.client.state.state = *next_state;
                             }
                             *me.state = ResponseStreamState::Done;
                             return Poll::Ready(Some(Ok(rsp)));

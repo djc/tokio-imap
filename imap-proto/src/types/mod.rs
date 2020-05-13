@@ -259,8 +259,8 @@ pub struct Address<'a> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RequestId(pub String);
 
-impl AsRef<[u8]> for RequestId {
-    fn as_ref(&self) -> &[u8] {
+impl RequestId {
+    pub fn as_bytes(&self) -> &[u8] {
         self.0.as_bytes()
     }
 }
