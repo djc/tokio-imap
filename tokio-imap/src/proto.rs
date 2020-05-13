@@ -7,16 +7,9 @@ use tokio_util::codec::{Decoder, Encoder};
 
 use imap_proto::types::{Request, RequestId, Response};
 
+#[derive(Default)]
 pub struct ImapCodec {
     decode_need_message_bytes: usize,
-}
-
-impl Default for ImapCodec {
-    fn default() -> Self {
-        Self {
-            decode_need_message_bytes: 0,
-        }
-    }
 }
 
 impl<'a> Decoder for ImapCodec {
