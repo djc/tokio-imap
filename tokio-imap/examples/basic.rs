@@ -4,8 +4,8 @@ use std::io;
 
 use futures::stream::TryStreamExt;
 use tokio_imap::builders::CommandBuilder;
-use tokio_imap::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
+use tokio_imap::ResponseData;
 use tokio_imap::TlsClient;
 
 #[tokio::main]
