@@ -17,10 +17,6 @@ use crate::codec::{ImapCodec, ResponseData};
 use imap_proto::builders::command::Command;
 use imap_proto::{Request, RequestId, State};
 
-pub mod builder {
-    pub use imap_proto::builders::command::{fetch, CommandBuilder, FetchCommand};
-}
-
 pub type TlsClient = Client<TlsStream<TcpStream>>;
 
 pub struct Client<T> {
