@@ -88,7 +88,7 @@ impl ResponseData {
             _ => None,
         }
     }
-    pub fn parsed<'a>(&'a self) -> &'a Response {
+    pub fn parsed<'a>(&'a self) -> &'a Response<'a> {
         &self.response
     }
 }
