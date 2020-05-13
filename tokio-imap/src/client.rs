@@ -1,4 +1,3 @@
-use std::future::Future;
 use std::io;
 use std::net::ToSocketAddrs;
 use std::pin::Pin;
@@ -65,7 +64,13 @@ impl TlsClient {
     }
 
     pub fn call<C: Into<Command>>(&mut self, cmd: C) -> ResponseStream<TlsStream<TcpStream>> {
-        ResponseStream::new(self, cmd.into())
+        let request_id = self.request_ids.next().unwrap(); // safe: never returns Err,
+        ResponseStream {
+            client: self,
+            request_id,
+            cmd: cmd.into(),
+            state: ResponseStreamState::Start,
+        }
     }
 }
 
@@ -76,67 +81,6 @@ pub struct ResponseStream<'a, T> {
     request_id: RequestId,
     cmd: Command,
     state: ResponseStreamState,
-}
-
-impl<'a, T> ResponseStream<'a, T>
-where
-    T: AsyncRead + AsyncWrite + Unpin,
-{
-    pub fn new(client: &mut Client<T>, cmd: Command) -> ResponseStream<'_, T> {
-        let request_id = client.request_ids.next().unwrap(); // safe: never returns Err,
-        ResponseStream {
-            client,
-            request_id,
-            cmd,
-            state: ResponseStreamState::Start,
-        }
-    }
-
-    pub async fn try_collect(&mut self) -> Result<Vec<ResponseData>, io::Error> {
-        let mut data = vec![];
-        loop {
-            match self.next().await {
-                Some(Ok(rsp)) => {
-                    data.push(rsp);
-                }
-                Some(Err(e)) => return Err(e),
-                None => return Ok(data),
-            }
-        }
-    }
-
-    pub async fn try_for_each<F, Fut>(&mut self, mut f: F) -> Result<(), io::Error>
-    where
-        F: FnMut(ResponseData) -> Fut,
-        Fut: Future<Output = Result<(), io::Error>>,
-    {
-        loop {
-            match self.next().await {
-                Some(Ok(rsp)) => f(rsp).await?,
-                Some(Err(e)) => return Err(e),
-                None => return Ok(()),
-            }
-        }
-    }
-
-    pub async fn try_fold<S, Fut, F>(&mut self, mut state: S, mut f: F) -> Result<S, io::Error>
-    where
-        F: FnMut(S, ResponseData) -> Fut,
-        Fut: Future<Output = Result<S, io::Error>>,
-    {
-        loop {
-            match self.next().await {
-                Some(Ok(rsp)) => match f(state, rsp).await {
-                    Ok(new) => {
-                        state = new;
-                    }
-                    Err(e) => return Err(e),
-                },
-                Some(Err(e)) => return Err(e),
-                None => return Ok(state),
-            }
-        }
-    }
 }
 
 impl<'a, T> Stream for ResponseStream<'a, T>

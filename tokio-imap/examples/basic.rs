@@ -2,6 +2,7 @@ use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
+use futures::stream::TryStreamExt;
 use tokio_imap::client::builder::CommandBuilder;
 use tokio_imap::codec::ResponseData;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
@@ -34,7 +35,7 @@ async fn imap_fetch(
 
     let responses = tls_client
         .call(CommandBuilder::login(&login, &password))
-        .try_collect()
+        .try_collect::<Vec<_>>()
         .await
         .map_err(|e| ImapError::Login { cause: e })?;
 
@@ -53,7 +54,7 @@ async fn imap_fetch(
 
     let _ = tls_client
         .call(CommandBuilder::select(&mailbox))
-        .try_collect()
+        .try_collect::<Vec<_>>()
         .await
         .map_err(|e| ImapError::Select { cause: e })?;
 
@@ -69,7 +70,7 @@ async fn imap_fetch(
 
     let _ = tls_client
         .call(CommandBuilder::close())
-        .try_collect()
+        .try_collect::<Vec<_>>()
         .await
         .map_err(|e| ImapError::Close { cause: e })?;
 
