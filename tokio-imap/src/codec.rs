@@ -81,6 +81,8 @@ impl ResponseData {
             _ => None,
         }
     }
+
+    #[allow(clippy::needless_lifetimes)]
     pub fn parsed<'a>(&'a self) -> &'a Response<'a> {
         &self.response
     }
