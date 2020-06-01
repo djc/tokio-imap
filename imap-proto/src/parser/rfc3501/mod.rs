@@ -341,6 +341,29 @@ fn opt_addresses(i: &[u8]) -> IResult<&[u8], Option<Vec<Address>>> {
     ))(i)
 }
 
+// envelope        = "(" env-date SP env-subject SP env-from SP
+//                   env-sender SP env-reply-to SP env-to SP env-cc SP
+//                   env-bcc SP env-in-reply-to SP env-message-id ")"
+//
+// env-bcc         = "(" 1*address ")" / nil
+//
+// env-cc          = "(" 1*address ")" / nil
+//
+// env-date        = nstring
+//
+// env-from        = "(" 1*address ")" / nil
+//
+// env-in-reply-to = nstring
+//
+// env-message-id  = nstring
+//
+// env-reply-to    = "(" 1*address ")" / nil
+//
+// env-sender      = "(" 1*address ")" / nil
+//
+// env-subject     = nstring
+//
+// env-to          = "(" 1*address ")" / nil
 pub(crate) fn envelope(i: &[u8]) -> IResult<&[u8], Envelope> {
     paren_delimited(map(
         tuple((
@@ -452,6 +475,19 @@ fn msg_att_uid(i: &[u8]) -> IResult<&[u8], AttributeValue> {
     map(preceded(tag_no_case("UID "), number), AttributeValue::Uid)(i)
 }
 
+// msg-att         = "(" (msg-att-dynamic / msg-att-static)
+//                    *(SP (msg-att-dynamic / msg-att-static)) ")"
+//
+// msg-att-dynamic = "FLAGS" SP "(" [flag-fetch *(SP flag-fetch)] ")"
+//                     ; MAY change for a message
+//
+// msg-att-static  = "ENVELOPE" SP envelope / "INTERNALDATE" SP date-time /
+//                   "RFC822" [".HEADER" / ".TEXT"] SP nstring /
+//                   "RFC822.SIZE" SP number /
+//                   "BODY" ["STRUCTURE"] SP body /
+//                   "BODY" section ["<" number ">"] SP nstring /
+//                   "UID" SP uniqueid
+//                     ; MUST NOT change for a message
 fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue> {
     alt((
         msg_att_body_section,
