@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 
 use futures::{ready, Sink, Stream, StreamExt};
-use pin_project::{pin_project, project};
+use pin_project::pin_project;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
 use tokio_rustls::rustls::ClientConfig;
@@ -85,7 +85,6 @@ where
 {
     type Item = Result<ResponseData, io::Error>;
 
-    #[project]
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         let mut me = self.project();
         loop {
