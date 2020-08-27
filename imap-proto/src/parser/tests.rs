@@ -316,3 +316,24 @@ fn test_enabled() {
         rsp => panic!("Unexpected response: {:?}", rsp),
     }
 }
+
+#[test]
+fn test_flags() {
+    // Invalid response (FLAGS can't include \*) from Zoho Mail server.
+    //
+    // As a workaround, such response is parsed without error.
+    match parse_response(b"* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft \\*)\r\n") {
+        Ok((_, capabilities)) => assert_eq!(
+            capabilities,
+            Response::MailboxData(MailboxDatum::Flags(vec![
+                "\\Answered",
+                "\\Flagged",
+                "\\Deleted",
+                "\\Seen",
+                "\\Draft",
+                "\\*"
+            ]))
+        ),
+        rsp => panic!("Unexpected response: {:?}", rsp),
+    }
+}
