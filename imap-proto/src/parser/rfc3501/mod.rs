@@ -70,7 +70,14 @@ fn flag(i: &[u8]) -> IResult<&[u8], &str> {
 }
 
 fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<&str>> {
-    parenthesized_list(flag)(i)
+    // Correct code is
+    //   parenthesized_list(flag)(i)
+    //
+    // Unfortunately, Zoho Mail Server (imap.zoho.com) sends the following response:
+    // * FLAGS (\Answered \Flagged \Deleted \Seen \Draft \*)
+    //
+    // As a workaround, "\*" is allowed here.
+    parenthesized_list(flag_perm)(i)
 }
 
 fn flag_perm(i: &[u8]) -> IResult<&[u8], &str> {
