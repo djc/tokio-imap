@@ -13,7 +13,6 @@ readme = "../README.md"
 edition = "2018"
 
 [badges]
-azure-devops = { project = "dochtman/Projects", pipeline = "tokio-imap", build = "4" }
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
