@@ -49,7 +49,7 @@ impl<'a> BodyStructParser<'a> {
                 }
             })
             .collect();
-        elem.first().and_then(|a| Some(a.to_vec()))
+        elem.first().map(|a| a.to_vec())
     }
 
     /// Reetr
