@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
-use futures::stream::TryStreamExt;
+use futures_util::stream::TryStreamExt;
 use tokio_imap::builders::CommandBuilder;
 use tokio_imap::types::{Attribute, AttributeValue, Response};
 use tokio_imap::ResponseData;

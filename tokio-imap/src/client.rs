@@ -4,7 +4,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
-use futures::{ready, Sink, Stream, StreamExt};
+use futures_sink::Sink;
+use futures_util::{ready, stream::Stream, StreamExt};
 use pin_project::pin_project;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
