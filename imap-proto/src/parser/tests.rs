@@ -59,11 +59,7 @@ fn test_body_structure() {
         Ok((_, Response::Fetch(_, attrs))) => {
             let body = &attrs[0];
             assert!(
-                if let AttributeValue::BodyStructure(_) = *body {
-                    true
-                } else {
-                    false
-                },
+                matches!(*body, AttributeValue::BodyStructure(_)),
                 "body = {:?}",
                 body
             );

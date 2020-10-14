@@ -173,10 +173,7 @@ pub fn is_text_char(c: u8) -> bool {
 //          ;  excluding NUL
 // From RFC5234
 pub fn is_char(c: u8) -> bool {
-    match c {
-        0x01..=0x7F => true,
-        _ => false,
-    }
+    matches!(c, 0x01..=0x7F)
 }
 
 // ----- others -----
