@@ -22,10 +22,10 @@ futures-sink = "0.3.1"
 imap-proto = { version = "0.11", path = "../imap-proto" }
 nom = "5"
 pin-project = "1"
-tokio = { version = "0.2.2", features = ["tcp"] }
-tokio-rustls = "0.14.0"
-tokio-util = { version = "0.3.0", features = ["codec"] }
+tokio = { version = "0.3.0", features = ["net"] }
+tokio-rustls = "0.20.0"
+tokio-util = { version = "0.4.0", features = ["codec"] }
 webpki-roots = "0.20.0"
 
 [dev-dependencies]
-tokio = { version = "0.2.2", features = ["macros", "tcp"] }
+tokio = { version = "0.3.0", features = ["macros", "net", "rt-multi-thread"] }
