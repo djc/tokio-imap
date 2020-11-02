@@ -17,7 +17,9 @@ use nom::{
 };
 
 use crate::{
-    parser::{core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5161, rfc5464},
+    parser::{
+        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5161, rfc5464, rfc7162,
+    },
     types::*,
 };
 
@@ -620,6 +622,7 @@ pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
             rfc5161::resp_enabled,
             rfc5464::metadata_solicited,
             rfc5464::metadata_unsolicited,
+            rfc7162::resp_vanished,
         )),
         tag(b"\r\n"),
     )(i)

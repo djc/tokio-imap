@@ -339,3 +339,51 @@ fn test_flags() {
         rsp => panic!("Unexpected response: {:?}", rsp),
     }
 }
+
+#[test]
+fn test_vanished() {
+    match parse_response(b"* VANISHED (EARLIER) 1,2,3:8\r\n") {
+        Ok((_, Response::Vanished { earlier, uids })) => {
+            assert_eq!(earlier, true);
+            assert_eq!(uids.len(), 3);
+            let v = &uids[0];
+            assert_eq!(*v.start(), 1);
+            assert_eq!(*v.end(), 1);
+            let v = &uids[1];
+            assert_eq!(*v.start(), 2);
+            assert_eq!(*v.end(), 2);
+            let v = &uids[2];
+            assert_eq!(*v.start(), 3);
+            assert_eq!(*v.end(), 8);
+        }
+        rsp => panic!("Unexpected response: {:?}", rsp),
+    }
+
+    match parse_response(b"* VANISHED 1,2,3:8,10\r\n") {
+        Ok((_, Response::Vanished { earlier, uids })) => {
+            assert_eq!(earlier, false);
+            assert_eq!(uids.len(), 4);
+        }
+        rsp => panic!("Unexpected response: {:?}", rsp),
+    }
+
+    match parse_response(b"* VANISHED (EARLIER) 1\r\n") {
+        Ok((_, Response::Vanished { earlier, uids })) => {
+            assert_eq!(earlier, true);
+            assert_eq!(uids.len(), 1);
+            assert_eq!(uids[0].clone().collect::<Vec<u32>>(), vec![1]);
+        }
+        rsp => panic!("Unexpected response: {:?}", rsp),
+    }
+
+    match parse_response(b"* VANISHED 1\r\n") {
+        Ok((_, Response::Vanished { earlier, uids })) => {
+            assert_eq!(earlier, false);
+            assert_eq!(uids.len(), 1);
+        }
+        rsp => panic!("Unexpected response: {:?}", rsp),
+    }
+
+    assert!(parse_response(b"* VANISHED \r\n").is_err());
+    assert!(parse_response(b"* VANISHED (EARLIER) \r\n").is_err());
+}

@@ -7,6 +7,7 @@ pub mod rfc3501;
 pub mod rfc4551;
 pub mod rfc5161;
 pub mod rfc5464;
+pub mod rfc7162;
 
 #[cfg(test)]
 mod tests;
