@@ -3,7 +3,7 @@ use nom::{
     bytes::streaming::{escaped, tag, tag_no_case, take, take_while, take_while1},
     character::streaming::{char, digit1, one_of},
     combinator::{map, map_res},
-    multi::{separated_list, separated_nonempty_list},
+    multi::{separated_list0, separated_list1},
     sequence::{delimited, tuple},
     IResult,
 };
@@ -76,7 +76,7 @@ pub fn is_quoted_specials(c: u8) -> bool {
 /// literal = "{" number "}" CRLF *CHAR8
 ///            ; Number represents the number of CHAR8s
 pub fn literal(input: &[u8]) -> IResult<&[u8], &[u8]> {
-    let parser = tuple((tag(b"{"), number, tag(b"}"), tag("\r\n")));
+    let mut parser = tuple((tag(b"{"), number, tag(b"}"), tag("\r\n")));
 
     let (remaining, (_, count, _, _)) = parser(input)?;
 
@@ -84,7 +84,10 @@ pub fn literal(input: &[u8]) -> IResult<&[u8], &[u8]> {
 
     if !data.iter().all(|byte| is_char8(*byte)) {
         // FIXME: what ErrorKind should this have?
-        return Err(nom::Err::Error((remaining, nom::error::ErrorKind::Verify)));
+        return Err(nom::Err::Error(nom::error::Error::new(
+            remaining,
+            nom::error::ErrorKind::Verify,
+        )));
     }
 
     Ok((remaining, data))
@@ -183,9 +186,9 @@ pub fn is_list_wildcards(c: u8) -> bool {
     c == b'%' || c == b'*'
 }
 
-pub fn paren_delimited<'a, F, O, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], O, E>
+pub fn paren_delimited<'a, F, O, E>(f: F) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>
 where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]>,
 {
     delimited(char('('), f, char(')'))
@@ -193,25 +196,25 @@ where
 
 pub fn parenthesized_nonempty_list<'a, F, O, E>(
     f: F,
-) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Vec<O>, E>
+) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Vec<O>, E>
 where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]>,
 {
-    delimited(char('('), separated_nonempty_list(char(' '), f), char(')'))
+    delimited(char('('), separated_list1(char(' '), f), char(')'))
 }
 
-pub fn parenthesized_list<'a, F, O, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Vec<O>, E>
+pub fn parenthesized_list<'a, F, O, E>(f: F) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Vec<O>, E>
 where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], O, E>,
+    F: FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]>,
 {
-    delimited(char('('), separated_list(char(' '), f), char(')'))
+    delimited(char('('), separated_list0(char(' '), f), char(')'))
 }
 
-pub fn opt_opt<'a, F, O, E>(f: F) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Option<O>, E>
+pub fn opt_opt<'a, F, O, E>(mut f: F) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Option<O>, E>
 where
-    F: Fn(&'a [u8]) -> IResult<&'a [u8], Option<O>, E>,
+    F: FnMut(&'a [u8]) -> IResult<&'a [u8], Option<O>, E>,
 {
     move |i: &[u8]| match f(i) {
         Ok((i, o)) => Ok((i, o)),

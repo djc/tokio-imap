@@ -29,17 +29,17 @@ impl<'a> Decoder for ImapCodec {
                 (response, buf.len() - remaining.len())
             }
             Err(nom::Err::Incomplete(Needed::Size(min))) => {
-                self.decode_need_message_bytes = min;
+                self.decode_need_message_bytes = min.get();
                 return Ok(None);
             }
             Err(nom::Err::Incomplete(_)) => {
                 return Ok(None);
             }
-            Err(nom::Err::Error((_input, err_kind)))
-            | Err(nom::Err::Failure((_input, err_kind))) => {
+            Err(nom::Err::Error(nom::error::Error { code, .. }))
+            | Err(nom::Err::Failure(nom::error::Error { code, .. })) => {
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
-                    format!("{:?} during parsing of {:?}", err_kind, buf),
+                    format!("{:?} during parsing of {:?}", code, buf),
                 ));
             }
         };

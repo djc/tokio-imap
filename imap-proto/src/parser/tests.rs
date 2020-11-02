@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use super::parse_response;
 use crate::types::*;
 
@@ -127,7 +129,9 @@ fn test_search() {
 #[test]
 fn test_uid_fetch() {
     match parse_response(b"* 4 FETCH (UID 71372 RFC822.HEADER {10275}\r\n") {
-        Err(nom::Err::Incomplete(nom::Needed::Size(10275))) => {}
+        Err(nom::Err::Incomplete(nom::Needed::Size(size))) => {
+            assert_eq!(size, NonZeroUsize::new(10275).unwrap());
+        }
         rsp => panic!("unexpected response {:?}", rsp),
     }
 }
@@ -136,7 +140,9 @@ fn test_uid_fetch() {
 fn test_uid_fetch_extra_space() {
     // DavMail inserts an extra space after RFC822.HEADER
     match parse_response(b"* 4 FETCH (UID 71372 RFC822.HEADER  {10275}\r\n") {
-        Err(nom::Err::Incomplete(nom::Needed::Size(10275))) => {}
+        Err(nom::Err::Incomplete(nom::Needed::Size(size))) => {
+            assert_eq!(size, NonZeroUsize::new(10275).unwrap());
+        }
         rsp => panic!("unexpected response {:?}", rsp),
     }
 }

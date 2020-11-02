@@ -8,7 +8,7 @@ use nom::{
     branch::alt,
     bytes::streaming::{tag, tag_no_case},
     combinator::{map, map_opt},
-    multi::separated_list,
+    multi::separated_list0,
     sequence::tuple,
     IResult,
 };
@@ -99,7 +99,7 @@ fn check_entry_name(i: &[u8]) -> IResult<&[u8], &[u8]> {
                 return Ok((&i[l..], &i[..l]));
             }
             EntryParseStage::Fail(nom::Err::Error(err_msg)) => {
-                return std::result::Result::Err(nom::Err::Error((
+                return std::result::Result::Err(nom::Err::Error(nom::error::Error::new(
                     err_msg,
                     nom::error::ErrorKind::Verify,
                 )));
@@ -147,7 +147,7 @@ fn keyval_list(i: &[u8]) -> IResult<&[u8], Vec<Metadata>> {
 }
 
 fn entry_list(i: &[u8]) -> IResult<&[u8], Vec<&str>> {
-    separated_list(tag(" "), map(entry_name, slice_to_str))(i)
+    separated_list0(tag(" "), map(entry_name, slice_to_str))(i)
 }
 
 fn metadata_common(i: &[u8]) -> IResult<&[u8], &[u8]> {
