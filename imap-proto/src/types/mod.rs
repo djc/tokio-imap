@@ -27,6 +27,10 @@ pub enum Response<'a> {
         information: Option<&'a str>,
     },
     Expunge(u32),
+    Vanished {
+        earlier: bool,
+        uids: Vec<std::ops::RangeInclusive<u32>>,
+    },
     Fetch(u32, Vec<AttributeValue<'a>>),
     MailboxData(MailboxDatum<'a>),
 }

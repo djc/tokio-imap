@@ -38,6 +38,22 @@ pub fn number_64(i: &[u8]) -> IResult<&[u8], u64> {
     }
 }
 
+// seq-range       = seq-number ":" seq-number
+//                    ; two seq-number values and all values between
+//                    ; these two regardless of order.
+//                    ; seq-number is a nz-number
+pub fn sequence_range(i: &[u8]) -> IResult<&[u8], std::ops::RangeInclusive<u32>> {
+    map(tuple((number, tag(":"), number)), |(s, _, e)| s..=e)(i)
+}
+
+// sequence-set    = (seq-number / seq-range) *("," sequence-set)
+//                     ; set of seq-number values, regardless of order.
+//                     ; Servers MAY coalesce overlaps and/or execute the
+//                     ; sequence in any order.
+pub fn sequence_set(i: &[u8]) -> IResult<&[u8], Vec<std::ops::RangeInclusive<u32>>> {
+    separated_list1(tag(","), alt((sequence_range, map(number, |n| n..=n))))(i)
+}
+
 // ----- string -----
 
 // string = quoted / literal
@@ -276,6 +292,40 @@ mod tests {
                 assert_eq!(value, b"text");
             }
             rsp => panic!("unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_sequence_range() {
+        match sequence_range(b"23:28 ") {
+            Ok((_, value)) => {
+                assert_eq!(*value.start(), 23);
+                assert_eq!(*value.end(), 28);
+                assert_eq!(value.collect::<Vec<u32>>(), vec![23, 24, 25, 26, 27, 28]);
+            }
+            rsp => panic!("Unexpected response {:?}", rsp),
+        }
+    }
+
+    #[test]
+    fn test_sequence_set() {
+        match sequence_set(b"1,2:8,10,15:30 ") {
+            Ok((_, value)) => {
+                assert_eq!(value.len(), 4);
+                let v = &value[0];
+                assert_eq!(*v.start(), 1);
+                assert_eq!(*v.end(), 1);
+                let v = &value[1];
+                assert_eq!(*v.start(), 2);
+                assert_eq!(*v.end(), 8);
+                let v = &value[2];
+                assert_eq!(*v.start(), 10);
+                assert_eq!(*v.end(), 10);
+                let v = &value[3];
+                assert_eq!(*v.start(), 15);
+                assert_eq!(*v.end(), 30);
+            }
+            rsp => panic!("Unexpected response {:?}", rsp),
         }
     }
 }
