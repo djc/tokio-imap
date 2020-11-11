@@ -9,6 +9,7 @@ pub enum AttrMacro {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum Response<'a> {
     Capabilities(Vec<Capability<'a>>),
     Continue {
@@ -51,6 +52,7 @@ pub enum Status {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum ResponseCode<'a> {
     Alert,
     BadCharset(Option<Vec<&'a str>>),
@@ -67,6 +69,7 @@ pub enum ResponseCode<'a> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum StatusAttribute {
     HighestModSeq(u64), // RFC 4551
     Messages(u32),
@@ -115,6 +118,7 @@ pub enum Capability<'a> {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum Attribute {
     Body,
     Envelope,
@@ -142,6 +146,7 @@ pub enum SectionPath {
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum AttributeValue<'a> {
     BodySection {
         section: Option<SectionPath>,
