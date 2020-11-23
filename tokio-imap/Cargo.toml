@@ -25,7 +25,7 @@ pin-project = "1"
 tokio = { version = "0.3.0", features = ["net"] }
 tokio-rustls = "0.20.0"
 tokio-util = { version = "0.5.0", features = ["codec"] }
-webpki-roots = "0.20.0"
+webpki-roots = "0.21.0"
 
 [dev-dependencies]
 tokio = { version = "0.3.0", features = ["macros", "net", "rt-multi-thread"] }
