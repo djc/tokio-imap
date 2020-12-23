@@ -16,7 +16,7 @@ edition = "2018"
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-bytes = "0.6"
+bytes = "1.0"
 futures-util = "0.3.8"
 futures-sink = "0.3.8"
 imap-proto = { version = "0.12", path = "../imap-proto" }
