@@ -207,7 +207,10 @@ fn capability_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
 
 fn mailbox_data_search(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(
-        preceded(tag_no_case(b"SEARCH"), many0(preceded(tag(" "), number))),
+        terminated(
+            preceded(tag_no_case(b"SEARCH"), many0(preceded(tag(" "), number))),
+            opt(tag(" ")),
+        ),
         MailboxDatum::Search,
     )(i)
 }

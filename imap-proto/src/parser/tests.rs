@@ -111,18 +111,23 @@ fn test_notify() {
 
 #[test]
 fn test_search() {
-    match parse_response(b"* SEARCH\r\n") {
-        Ok((_, Response::MailboxData(MailboxDatum::Search(ids)))) => {
-            assert!(ids.is_empty());
+    // also allow trailing whitespace in SEARCH responses
+    for empty_response in &["* SEARCH\r\n", "* SEARCH \r\n"] {
+        match parse_response(empty_response.as_bytes()) {
+            Ok((_, Response::MailboxData(MailboxDatum::Search(ids)))) => {
+                assert!(ids.is_empty());
+            }
+            rsp => panic!("unexpected response {:?}", rsp),
         }
-        rsp => panic!("unexpected response {:?}", rsp),
     }
-    match parse_response(b"* SEARCH 12345 67890\r\n") {
-        Ok((_, Response::MailboxData(MailboxDatum::Search(ids)))) => {
-            assert_eq!(ids[0], 12345);
-            assert_eq!(ids[1], 67890);
+    for response in &["* SEARCH 12345 67890\r\n", "* SEARCH 12345 67890 \r\n"] {
+        match parse_response(response.as_bytes()) {
+            Ok((_, Response::MailboxData(MailboxDatum::Search(ids)))) => {
+                assert_eq!(ids[0], 12345);
+                assert_eq!(ids[1], 67890);
+            }
+            rsp => panic!("unexpected response {:?}", rsp),
         }
-        rsp => panic!("unexpected response {:?}", rsp),
     }
 }
 
