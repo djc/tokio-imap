@@ -207,6 +207,8 @@ fn capability_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
 
 fn mailbox_data_search(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(
+        // Technically, trailing whitespace is not allowed here, but multiple
+        // email servers in the wild seem to have it anyway (see #34, #108).
         terminated(
             preceded(tag_no_case(b"SEARCH"), many0(preceded(tag(" "), number))),
             opt(tag(" ")),
