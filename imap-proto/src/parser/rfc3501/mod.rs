@@ -185,9 +185,9 @@ fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
     ))(i)
 }
 
-fn ensure_capabilities_contains_imap4rev<'a>(
-    capabilities: Vec<Capability<'a>>,
-) -> Result<Vec<Capability<'a>>, ()> {
+fn ensure_capabilities_contains_imap4rev(
+    capabilities: Vec<Capability<'_>>,
+) -> Result<Vec<Capability<'_>>, ()> {
     if capabilities.contains(&Capability::Imap4rev1) {
         Ok(capabilities)
     } else {
