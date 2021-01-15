@@ -488,9 +488,8 @@ fn test_imap_body_structure() {
 
             let parser = BodyStructParser::new(bodystructure);
 
-            let element = parser.search(|b: &BodyStructure| match *b {
-                BodyStructure::Basic { ref common, .. } if common.ty.ty == "APPLICATION" => true,
-                _ => false,
+            let element = parser.search(|b: &BodyStructure| {
+                matches!(b, BodyStructure::Basic { ref common, .. } if common.ty.ty == "APPLICATION")
             });
 
             assert_eq!(element, Some(vec![2]));
