@@ -83,10 +83,3 @@ fn uid_range(i: &[u8]) -> IResult<&[u8], UidSetMember> {
         |(fst, snd)| if fst <= snd { fst..=snd } else { snd..=fst }.into(),
     )(i)
 }
-
-
-
-
-
-
-
