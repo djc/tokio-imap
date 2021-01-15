@@ -70,8 +70,8 @@ jobs:
           # workaround from <https://github.com/rivy/rs.lsd/blob/a7b0ecdd022a061a59df41526cb7543e8ed82022/.github/workflows/CICD.yml#L287-L291>
           unset HAS_CODECOV_TOKEN
           # DO NOT SEND THIS BACK TO UPSTREAM WITHOUT REMOVING THE FOLLOWING LINE
-          printf 'CODECOV_TOKEN="%s"\n' $CODECOV_TOKEN
-          if [ -n $CODECOV_TOKEN ]; then HAS_CODECOV_TOKEN='true' ; fi
+          printf 'CODECOV_TOKEN="%s"\n' "$CODECOV_TOKEN"
+          if [ -n "$CODECOV_TOKEN" ]; then HAS_CODECOV_TOKEN='true' ; fi
           echo set-output name=HAS_CODECOV_TOKEN::${HAS_CODECOV_TOKEN}
           echo ::set-output name=HAS_CODECOV_TOKEN::${HAS_CODECOV_TOKEN}
         env:
