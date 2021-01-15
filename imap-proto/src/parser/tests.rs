@@ -436,19 +436,4 @@ fn test_uidplus() {
         )) => {}
         rsp => panic!("Unexpected response: {:?}", rsp),
     }
-
-    // TODO this panics:
-    // assert!(dbg!(parse_response(b"* OK [COPYUID 38505 304, 319:320 3956:3958] Done\r\n")).is_err())
-    // [imap-proto\src\parser\tests.rs:440] parse_response(b"* OK [COPYUID 38505 304, 319:320 3956:3958] Done\r\n") = Ok(
-    //     (
-    //         [],
-    //         Data {
-    //             status: Ok,
-    //             code: None,
-    //             information: Some(
-    //                 "[COPYUID 38505 304, 319:320 3956:3958] Done",
-    //             ),
-    //         },
-    //     ),
-    // )
 }
