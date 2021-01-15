@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Request<'a>(pub &'a [u8], pub &'a [u8]);
 
@@ -72,11 +74,11 @@ pub enum ResponseCode<'a> {
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum UidSetMember {
-    UidRange(std::ops::RangeInclusive<u32>),
+    UidRange(RangeInclusive<u32>),
     Uid(u32),
 }
-impl From<std::ops::RangeInclusive<u32>> for UidSetMember {
-    fn from(x: std::ops::RangeInclusive<u32>) -> Self {
+impl From<RangeInclusive<u32>> for UidSetMember {
+    fn from(x: RangeInclusive<u32>) -> Self {
         UidSetMember::UidRange(x)
     }
 }
