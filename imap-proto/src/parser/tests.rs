@@ -437,5 +437,8 @@ fn test_uidplus() {
         rsp => panic!("Unexpected response: {:?}", rsp),
     }
 
-    assert!(parse_response(b"* OK [COPYUID 38505 304, 319:320 3956:3958] Done\r\n").is_err())
+    #[warn(clippy::todo)]
+    if parse_response(b"* OK [COPYUID 38505 304, 319:320 3956:3958] Done\r\n").is_err() {
+        todo!("this branch is supposed to be taken");
+    }
 }
