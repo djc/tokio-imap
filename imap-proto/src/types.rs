@@ -8,22 +8,6 @@ pub enum AttrMacro {
     Full,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum UidSetMember {
-    UidRange(std::ops::RangeInclusive<u32>),
-    Uid(u32),
-}
-impl From<std::ops::RangeInclusive<u32>> for UidSetMember {
-    fn from(x: std::ops::RangeInclusive<u32>) -> Self {
-        UidSetMember::UidRange(x)
-    }
-}
-impl From<u32> for UidSetMember {
-    fn from(x: u32) -> Self {
-        UidSetMember::Uid(x)
-    }
-}
-
 #[derive(Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Response<'a> {
@@ -85,6 +69,21 @@ pub enum ResponseCode<'a> {
     AppendUid(u32, Vec<UidSetMember>),
     CopyUid(u32, Vec<UidSetMember>, Vec<UidSetMember>),
     UidNotSticky,
+}
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum UidSetMember {
+    UidRange(std::ops::RangeInclusive<u32>),
+    Uid(u32),
+}
+impl From<std::ops::RangeInclusive<u32>> for UidSetMember {
+    fn from(x: std::ops::RangeInclusive<u32>) -> Self {
+        UidSetMember::UidRange(x)
+    }
+}
+impl From<u32> for UidSetMember {
+    fn from(x: u32) -> Self {
+        UidSetMember::Uid(x)
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
