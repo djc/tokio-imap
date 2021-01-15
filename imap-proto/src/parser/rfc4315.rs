@@ -6,7 +6,7 @@
 
 use nom::{
     branch::alt,
-    bytes::streaming::{tag_no_case, tag},
+    bytes::streaming::{tag, tag_no_case},
     combinator::map,
     multi::separated_list1,
     sequence::{preceded, tuple},
@@ -47,7 +47,8 @@ fn uid_set(i: &[u8]) -> IResult<&[u8], Vec<Either<std::ops::RangeInclusive<u32>,
 }
 
 fn uid_range(i: &[u8]) -> IResult<&[u8], Either<std::ops::RangeInclusive<u32>, u32>> {
-    map(nom::sequence::separated_pair(number, tag(":"), number),
-        |(fst, snd)| Either::Left(if fst <= snd { fst..=snd } else { snd..=fst })
+    map(
+        nom::sequence::separated_pair(number, tag(":"), number),
+        |(fst, snd)| Either::Left(if fst <= snd { fst..=snd } else { snd..=fst }),
     )(i)
 }

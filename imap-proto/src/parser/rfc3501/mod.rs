@@ -18,7 +18,8 @@ use nom::{
 
 use crate::{
     parser::{
-        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5161, rfc5464, rfc7162, rfc4315,
+        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161, rfc5464,
+        rfc7162,
     },
     types::*,
 };

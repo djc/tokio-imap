@@ -67,9 +67,10 @@ pub enum ResponseCode<'a> {
     UidValidity(u32),
     Unseen(u32),
     AppendUid(u32, Vec<either::Either<std::ops::RangeInclusive<u32>, u32>>),
-    CopyUid(u32,
+    CopyUid(
+        u32,
         Vec<either::Either<std::ops::RangeInclusive<u32>, u32>>,
-        Vec<either::Either<std::ops::RangeInclusive<u32>, u32>>
+        Vec<either::Either<std::ops::RangeInclusive<u32>, u32>>,
     ),
     UidNotSticky,
 }
