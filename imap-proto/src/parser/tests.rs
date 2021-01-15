@@ -406,7 +406,7 @@ fn test_uidplus() {
                 code: Some(ResponseCode::AppendUid(38505, uid_set)),
                 information: Some("APPEND completed"),
             },
-        )) if uid_set == [either::Right(3955)] => {}
+        )) if uid_set == [3955.into()] => {}
         rsp => panic!("Unexpected response: {:?}", rsp),
     }
     match dbg!(parse_response(
@@ -419,8 +419,8 @@ fn test_uidplus() {
                 code: Some(ResponseCode::CopyUid(38505, uid_set_src, uid_set_dst)),
                 information: Some("Done"),
             },
-        )) if uid_set_src == [either::Right(304), either::Left(319..=320)]
-            && uid_set_dst == [either::Left(3956..=3958)] => {}
+        )) if uid_set_src == [304.into(), (319..=320).into()]
+            && uid_set_dst == [(3956..=3958).into()] => {}
         rsp => panic!("Unexpected response: {:?}", rsp),
     }
     match dbg!(parse_response(

@@ -13,8 +13,6 @@ use nom::{
     IResult,
 };
 
-use either::Either;
-
 use crate::parser::core::number;
 use crate::types::*;
 
@@ -42,13 +40,13 @@ pub(crate) fn resp_text_code_uid_not_sticky(i: &[u8]) -> IResult<&[u8], Response
     map(tag_no_case(b"UIDNOTSTICKY"), |_| ResponseCode::UidNotSticky)(i)
 }
 
-fn uid_set(i: &[u8]) -> IResult<&[u8], Vec<Either<std::ops::RangeInclusive<u32>, u32>>> {
-    separated_list1(tag(","), alt((uid_range, map(number, Either::Right))))(i)
+fn uid_set(i: &[u8]) -> IResult<&[u8], Vec<UidSetMember>> {
+    separated_list1(tag(","), alt((uid_range, map(number, From::from))))(i)
 }
 
-fn uid_range(i: &[u8]) -> IResult<&[u8], Either<std::ops::RangeInclusive<u32>, u32>> {
+fn uid_range(i: &[u8]) -> IResult<&[u8], UidSetMember> {
     map(
         nom::sequence::separated_pair(number, tag(":"), number),
-        |(fst, snd)| Either::Left(if fst <= snd { fst..=snd } else { snd..=fst }),
+        |(fst, snd)| if fst <= snd { fst..=snd } else { snd..=fst }.into(),
     )(i)
 }
