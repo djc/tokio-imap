@@ -18,7 +18,8 @@ use nom::{
 
 use crate::{
     parser::{
-        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4551, rfc5161, rfc5464, rfc7162,
+        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161, rfc5464,
+        rfc7162,
     },
     types::*,
 };
@@ -172,6 +173,9 @@ fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode> {
             resp_text_code_read_write,
             resp_text_code_try_create,
             rfc4551::resp_text_code_highest_mod_seq,
+            rfc4315::resp_text_code_append_uid,
+            rfc4315::resp_text_code_copy_uid,
+            rfc4315::resp_text_code_uid_not_sticky,
         )),
         tag(b"]"),
     )(i)

@@ -1,3 +1,4 @@
+//use core::num::dec2flt::parse;
 use std::num::NonZeroUsize;
 
 use super::parse_response;
@@ -391,4 +392,48 @@ fn test_vanished() {
 
     assert!(parse_response(b"* VANISHED \r\n").is_err());
     assert!(parse_response(b"* VANISHED (EARLIER) \r\n").is_err());
+}
+
+#[test]
+fn test_uidplus() {
+    match dbg!(parse_response(
+        b"* OK [APPENDUID 38505 3955] APPEND completed\r\n"
+    )) {
+        Ok((
+            _,
+            Response::Data {
+                status: Status::Ok,
+                code: Some(ResponseCode::AppendUid(38505, uid_set)),
+                information: Some("APPEND completed"),
+            },
+        )) if uid_set == [3955.into()] => {}
+        rsp => panic!("Unexpected response: {:?}", rsp),
+    }
+    match dbg!(parse_response(
+        b"* OK [COPYUID 38505 304,319:320 3956:3958] Done\r\n"
+    )) {
+        Ok((
+            _,
+            Response::Data {
+                status: Status::Ok,
+                code: Some(ResponseCode::CopyUid(38505, uid_set_src, uid_set_dst)),
+                information: Some("Done"),
+            },
+        )) if uid_set_src == [304.into(), (319..=320).into()]
+            && uid_set_dst == [(3956..=3958).into()] => {}
+        rsp => panic!("Unexpected response: {:?}", rsp),
+    }
+    match dbg!(parse_response(
+        b"* NO [UIDNOTSTICKY] Non-persistent UIDs\r\n"
+    )) {
+        Ok((
+            _,
+            Response::Data {
+                status: Status::No,
+                code: Some(ResponseCode::UidNotSticky),
+                information: Some("Non-persistent UIDs"),
+            },
+        )) => {}
+        rsp => panic!("Unexpected response: {:?}", rsp),
+    }
 }
