@@ -15,6 +15,7 @@ edition = "2018"
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
+either = "1.6.1"
 nom = { version = "6", default-features = false, features = ["std"] }
 
 [dev-dependencies]

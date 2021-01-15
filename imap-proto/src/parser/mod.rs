@@ -4,6 +4,7 @@ use nom::{branch::alt, IResult};
 pub mod core;
 
 pub mod rfc3501;
+pub mod rfc4315;
 pub mod rfc4551;
 pub mod rfc5161;
 pub mod rfc5464;
