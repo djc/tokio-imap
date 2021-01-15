@@ -75,7 +75,7 @@ jobs:
           echo set-output name=HAS_CODECOV_TOKEN::${HAS_CODECOV_TOKEN}
           echo ::set-output name=HAS_CODECOV_TOKEN::${HAS_CODECOV_TOKEN}
         env:
-          CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
+          CODECOV_TOKEN: "let's force a success here to see where the problem is"  # "${{ secrets.CODECOV_TOKEN }}"
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
