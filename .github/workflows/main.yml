@@ -60,6 +60,20 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     steps:
+      - name: Initialize workflow variables
+        id: vars
+        shell: bash
+        run: |
+          # check for CODECOV_TOKEN availability
+          # necessary to work around inaccessible 'secrets' object for 'if'
+          # see <https://github.community/t5/GitHub-Actions/jobs-lt-job-id-gt-if-does-not-work-with-env-secrets/m-p/38549>
+          # workaround from <https://github.com/rivy/rs.lsd/blob/a7b0ecdd022a061a59df41526cb7543e8ed82022/.github/workflows/CICD.yml#L287-L291>
+          unset HAS_CODECOV_TOKEN
+          if [ -n "$CODECOV_TOKEN" ]; then HAS_CODECOV_TOKEN='true' ; fi
+          echo set-output name=HAS_CODECOV_TOKEN::${HAS_CODECOV_TOKEN}
+          echo ::set-output name=HAS_CODECOV_TOKEN::${HAS_CODECOV_TOKEN}
+        env:
+          CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -68,6 +82,8 @@ jobs:
           override: true
       - uses: actions-rs/tarpaulin@v0.1
       - uses: codecov/codecov-action@v1.0.2
+        # if: secrets.CODECOV_TOKEN (not supported {yet?}; see <https://github.community/t5/GitHub-Actions/jobs-lt-job-id-gt-if-does-not-work-with-env-secrets/m-p/38549>)
+        if: steps.vars.outputs.HAS_CODECOV_TOKEN
         with:
           token: ${{secrets.CODECOV_TOKEN}}
       - uses: actions/upload-artifact@v1
