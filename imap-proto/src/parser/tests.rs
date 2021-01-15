@@ -1,8 +1,6 @@
-//use core::num::dec2flt::parse;
-use std::num::NonZeroUsize;
-
 use super::{bodystructure::BodyStructParser, parse_response};
 use crate::types::*;
+use std::num::NonZeroUsize;
 
 #[test]
 fn test_mailbox_data_response() {
@@ -440,10 +438,43 @@ fn test_uidplus() {
 
 #[test]
 fn test_imap_body_structure() {
-    let mut test = br#"* 1569 FETCH (BODYSTRUCTURE (((("TEXT" "PLAIN" ("CHARSET" "ISO-8859-1") NIL NIL "QUOTED-PRINTABLE" 833 30 NIL NIL NIL)("TEXT" "HTML" ("CHARSET" "ISO-8859-1") NIL NIL "QUOTED-PRINTABLE" 3412 62 NIL ("INLINE" NIL) NIL) "ALTERNATIVE" ("BOUNDARY" "2__=fgrths") NIL NIL)("IMAGE" "GIF" ("NAME" "485039.gif") "<2__=lgkfjr>" NIL "BASE64" 64 NIL ("INLINE" ("FILENAME" "485039.gif")) NIL) "RELATED" ("BOUNDARY" "1__=fgrths") NIL NIL)("APPLICATION" "PDF" ("NAME" "title.pdf") "<1__=lgkfjr>" NIL "BASE64" 333980 NIL ("ATTACHMENT" ("FILENAME" "title.pdf")) NIL) "MIXED" ("BOUNDARY" "0__=fgrths") NIL NIL))"#.to_vec();
-    test.extend_from_slice(b"\r\n");
+    let test = b"\
+    * 1569 FETCH (\
+        BODYSTRUCTURE (\
+            (\
+                (\
+                    (\
+                        \"TEXT\" \"PLAIN\" \
+                        (\"CHARSET\" \"ISO-8859-1\") NIL NIL \
+                        \"QUOTED-PRINTABLE\" 833 30 NIL NIL NIL\
+                    )\
+                    (\
+                        \"TEXT\" \"HTML\" \
+                        (\"CHARSET\" \"ISO-8859-1\") NIL NIL \
+                        \"QUOTED-PRINTABLE\" 3412 62 NIL \
+                        (\"INLINE\" NIL) NIL\
+                    ) \
+                    \"ALTERNATIVE\" (\"BOUNDARY\" \"2__=fgrths\") NIL NIL\
+                )\
+                (\
+                    \"IMAGE\" \"GIF\" \
+                    (\"NAME\" \"485039.gif\") \"<2__=lgkfjr>\" NIL \
+                    \"BASE64\" 64 NIL (\"INLINE\" (\"FILENAME\" \"485039.gif\")) \
+                    NIL\
+                ) \
+                \"RELATED\" (\"BOUNDARY\" \"1__=fgrths\") NIL NIL\
+            )\
+            (\
+                \"APPLICATION\" \"PDF\" \
+                (\"NAME\" \"title.pdf\") \
+                \"<1__=lgkfjr>\" NIL \"BASE64\" 333980 NIL \
+                (\"ATTACHMENT\" (\"FILENAME\" \"title.pdf\")) NIL\
+            ) \
+            \"MIXED\" (\"BOUNDARY\" \"0__=fgrths\") NIL NIL\
+        )\
+    )\r\n";
 
-    let (_, resp) = parse_response(&test).unwrap();
+    let (_, resp) = parse_response(test).unwrap();
     match resp {
         Response::Fetch(_, f) => {
             let bodystructure = f
