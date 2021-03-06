@@ -4,6 +4,7 @@
 //! INTERNET MESSAGE ACCESS PROTOCOL
 //!
 
+use std::borrow::Cow;
 use std::str::from_utf8;
 
 use nom::{
@@ -72,7 +73,7 @@ fn flag(i: &[u8]) -> IResult<&[u8], &str> {
     alt((flag_extension, atom))(i)
 }
 
-fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<&str>> {
+fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<Cow<str>>> {
     // Correct code is
     //   parenthesized_list(flag)(i)
     //
@@ -80,7 +81,7 @@ fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<&str>> {
     // * FLAGS (\Answered \Flagged \Deleted \Seen \Draft \*)
     //
     // As a workaround, "\*" is allowed here.
-    parenthesized_list(flag_perm)(i)
+    parenthesized_list(map(flag_perm, Cow::Borrowed))(i)
 }
 
 fn flag_perm(i: &[u8]) -> IResult<&[u8], &str> {
@@ -97,7 +98,7 @@ fn resp_text_code_badcharset(i: &[u8]) -> IResult<&[u8], ResponseCode> {
             tag_no_case(b"BADCHARSET"),
             opt(preceded(
                 tag(b" "),
-                parenthesized_nonempty_list(astring_utf8),
+                parenthesized_nonempty_list(map(astring_utf8, Cow::Borrowed)),
             )),
         ),
         ResponseCode::BadCharset,
@@ -116,7 +117,7 @@ fn resp_text_code_permanent_flags(i: &[u8]) -> IResult<&[u8], ResponseCode> {
     map(
         preceded(
             tag_no_case(b"PERMANENTFLAGS "),
-            parenthesized_list(flag_perm),
+            parenthesized_list(map(flag_perm, Cow::Borrowed)),
         ),
         ResponseCode::PermanentFlags,
     )(i)
@@ -184,8 +185,11 @@ fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode> {
 fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
     alt((
         map(tag_no_case(b"IMAP4rev1"), |_| Capability::Imap4rev1),
-        map(preceded(tag_no_case(b"AUTH="), atom), Capability::Auth),
-        map(atom, Capability::Atom),
+        map(
+            map(preceded(tag_no_case(b"AUTH="), atom), Cow::Borrowed),
+            Capability::Auth,
+        ),
+        map(map(atom, Cow::Borrowed), Capability::Atom),
     ))(i)
 }
 
@@ -236,7 +240,7 @@ fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
 }
 
 #[allow(clippy::type_complexity)]
-fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<&str>, Option<&str>, &str)> {
+fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<Cow<str>>, Option<&str>, &str)> {
     map(
         tuple((
             flag_list,
@@ -253,8 +257,8 @@ fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(preceded(tag_no_case("LIST "), mailbox_list), |data| {
         MailboxDatum::List {
             flags: data.0,
-            delimiter: data.1,
-            name: data.2,
+            delimiter: data.1.map(Cow::Borrowed),
+            name: Cow::Borrowed(data.2),
         }
     })(i)
 }
@@ -263,8 +267,8 @@ fn mailbox_data_lsub(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(preceded(tag_no_case("LSUB "), mailbox_list), |data| {
         MailboxDatum::List {
             flags: data.0,
-            delimiter: data.1,
-            name: data.2,
+            delimiter: data.1.map(Cow::Borrowed),
+            name: Cow::Borrowed(data.2),
         }
     })(i)
 }
@@ -304,7 +308,10 @@ fn status_att_list(i: &[u8]) -> IResult<&[u8], Vec<StatusAttribute>> {
 fn mailbox_data_status(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(
         tuple((tag_no_case("STATUS "), mailbox, tag(" "), status_att_list)),
-        |(_, mailbox, _, status)| MailboxDatum::Status { mailbox, status },
+        |(_, mailbox, _, status)| MailboxDatum::Status {
+            mailbox: Cow::Borrowed(mailbox),
+            status,
+        },
     )(i)
 }
 
@@ -341,10 +348,10 @@ fn address(i: &[u8]) -> IResult<&[u8], Address> {
             nstring,
         )),
         |(name, _, adl, _, mailbox, _, host)| Address {
-            name,
-            adl,
-            mailbox,
-            host,
+            name: name.map(Cow::Borrowed),
+            adl: adl.map(Cow::Borrowed),
+            mailbox: mailbox.map(Cow::Borrowed),
+            host: host.map(Cow::Borrowed),
         },
     ))(i)
 }
@@ -426,16 +433,16 @@ pub(crate) fn envelope(i: &[u8]) -> IResult<&[u8], Envelope> {
             _,
             message_id,
         )| Envelope {
-            date,
-            subject,
+            date: date.map(Cow::Borrowed),
+            subject: subject.map(Cow::Borrowed),
             from,
             sender,
             reply_to,
             to,
             cc,
             bcc,
-            in_reply_to,
-            message_id,
+            in_reply_to: in_reply_to.map(Cow::Borrowed),
+            message_id: message_id.map(Cow::Borrowed),
         },
     ))(i)
 }
@@ -449,7 +456,7 @@ fn msg_att_envelope(i: &[u8]) -> IResult<&[u8], AttributeValue> {
 fn msg_att_internal_date(i: &[u8]) -> IResult<&[u8], AttributeValue> {
     map(
         preceded(tag_no_case("INTERNALDATE "), nstring_utf8),
-        |date| AttributeValue::InternalDate(date.unwrap()),
+        |date| AttributeValue::InternalDate(Cow::Borrowed(date.unwrap())),
     )(i)
 }
 
@@ -461,17 +468,16 @@ fn msg_att_flags(i: &[u8]) -> IResult<&[u8], AttributeValue> {
 }
 
 fn msg_att_rfc822(i: &[u8]) -> IResult<&[u8], AttributeValue> {
-    map(
-        preceded(tag_no_case("RFC822 "), nstring),
-        AttributeValue::Rfc822,
-    )(i)
+    map(preceded(tag_no_case("RFC822 "), nstring), |v| {
+        AttributeValue::Rfc822(v.map(Cow::Borrowed))
+    })(i)
 }
 
 fn msg_att_rfc822_header(i: &[u8]) -> IResult<&[u8], AttributeValue> {
     // extra space workaround for DavMail
     map(
         tuple((tag_no_case("RFC822.HEADER "), opt(tag(b" ")), nstring)),
-        |(_, _, raw)| AttributeValue::Rfc822Header(raw),
+        |(_, _, raw)| AttributeValue::Rfc822Header(raw.map(Cow::Borrowed)),
     )(i)
 }
 
@@ -483,10 +489,9 @@ fn msg_att_rfc822_size(i: &[u8]) -> IResult<&[u8], AttributeValue> {
 }
 
 fn msg_att_rfc822_text(i: &[u8]) -> IResult<&[u8], AttributeValue> {
-    map(
-        preceded(tag_no_case("RFC822.TEXT "), nstring),
-        AttributeValue::Rfc822Text,
-    )(i)
+    map(preceded(tag_no_case("RFC822.TEXT "), nstring), |v| {
+        AttributeValue::Rfc822Text(v.map(Cow::Borrowed))
+    })(i)
 }
 
 fn msg_att_uid(i: &[u8]) -> IResult<&[u8], AttributeValue> {
@@ -571,7 +576,7 @@ pub(crate) fn continue_req(i: &[u8]) -> IResult<&[u8], Response> {
         tuple((tag("+"), opt(tag(" ")), resp_text, tag("\r\n"))),
         |(_, _, text, _)| Response::Continue {
             code: text.0,
-            information: text.1,
+            information: text.1.map(Cow::Borrowed),
         },
     )(i)
 }
@@ -594,7 +599,7 @@ pub(crate) fn response_tagged(i: &[u8]) -> IResult<&[u8], Response> {
             tag,
             status,
             code: text.0,
-            information: text.1,
+            information: text.1.map(Cow::Borrowed),
         },
     )(i)
 }
@@ -612,7 +617,7 @@ fn resp_cond(i: &[u8]) -> IResult<&[u8], Response> {
         |(status, _, text)| Response::Data {
             status,
             code: text.0,
-            information: text.1,
+            information: text.1.map(Cow::Borrowed),
         },
     )(i)
 }
@@ -641,6 +646,7 @@ pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
 mod tests {
     use crate::types::*;
     use assert_matches::assert_matches;
+    use std::borrow::Cow;
 
     #[test]
     fn test_list() {
@@ -715,8 +721,8 @@ mod tests {
             super::capability_data(b"CAPABILITY XPIG-LATIN IMAP4rev1 STARTTLS AUTH=GSSAPI\r\n"),
             Ok((_, capabilities)) => {
                 assert_eq!(capabilities, vec![
-                    Capability::Atom("XPIG-LATIN"), Capability::Imap4rev1,
-                    Capability::Atom("STARTTLS"), Capability::Auth("GSSAPI")
+                    Capability::Atom(Cow::Borrowed("XPIG-LATIN")), Capability::Imap4rev1,
+                    Capability::Atom(Cow::Borrowed("STARTTLS")), Capability::Auth(Cow::Borrowed("GSSAPI"))
                 ])
             }
         );
@@ -725,7 +731,7 @@ mod tests {
             super::capability_data(b"CAPABILITY IMAP4rev1 AUTH=GSSAPI AUTH=PLAIN\r\n"),
             Ok((_, capabilities)) => {
                 assert_eq!(capabilities, vec![
-                    Capability::Imap4rev1, Capability::Auth("GSSAPI"),  Capability::Auth("PLAIN")
+                    Capability::Imap4rev1, Capability::Auth(Cow::Borrowed("GSSAPI")),  Capability::Auth(Cow::Borrowed("PLAIN"))
                 ])
             }
         );

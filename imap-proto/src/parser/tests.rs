@@ -1,5 +1,6 @@
 use super::{bodystructure::BodyStructParser, parse_response};
 use crate::types::*;
+use std::borrow::Cow;
 use std::num::NonZeroUsize;
 
 #[test]
@@ -26,7 +27,7 @@ fn test_unseen() {
             Response::Data {
                 status: Status::Ok,
                 code: Some(ResponseCode::Unseen(3)),
-                information: Some("Message 3 is first unseen"),
+                information: Some(Cow::Borrowed("Message 3 is first unseen")),
             },
         ) => {}
         rsp => panic!("unexpected response {:?}", rsp),
@@ -43,7 +44,7 @@ fn test_body_text() {
                 &AttributeValue::BodySection {
                     section: Some(SectionPath::Full(MessageSection::Text)),
                     index: None,
-                    data: Some(b"foo"),
+                    data: Some(Cow::Borrowed(b"foo")),
                 },
                 "body = {:?}",
                 body
@@ -101,7 +102,7 @@ fn test_notify() {
             _,
             Response::Continue {
                 code: None,
-                information: Some("idling"),
+                information: Some(Cow::Borrowed("idling")),
             },
         )) => {}
         rsp => panic!("unexpected response {:?}", rsp),
@@ -169,7 +170,7 @@ fn test_response_codes() {
             Response::Data {
                 status: Status::Ok,
                 code: Some(ResponseCode::Alert),
-                information: Some("Alert!"),
+                information: Some(Cow::Borrowed("Alert!")),
             },
         )) => {}
         rsp => panic!("unexpected response {:?}", rsp),
@@ -181,7 +182,7 @@ fn test_response_codes() {
             Response::Data {
                 status: Status::No,
                 code: Some(ResponseCode::Parse),
-                information: Some("Something"),
+                information: Some(Cow::Borrowed("Something")),
             },
         )) => {}
         rsp => panic!("unexpected response {:?}", rsp),
@@ -193,12 +194,12 @@ fn test_response_codes() {
             Response::Data {
                 status: Status::Ok,
                 code: Some(ResponseCode::Capabilities(c)),
-                information: Some("Logged in"),
+                information: Some(Cow::Borrowed("Logged in")),
             },
         )) => {
             assert_eq!(c.len(), 2);
             assert_eq!(c[0], Capability::Imap4rev1);
-            assert_eq!(c[1], Capability::Atom("IDLE"));
+            assert_eq!(c[1], Capability::Atom(Cow::Borrowed("IDLE")));
         }
         rsp => panic!("unexpected response {:?}", rsp),
     }
@@ -209,13 +210,13 @@ fn test_response_codes() {
             Response::Data {
                 status: Status::Ok,
                 code: Some(ResponseCode::Capabilities(c)),
-                information: Some("Logged in"),
+                information: Some(Cow::Borrowed("Logged in")),
             },
         )) => {
             assert_eq!(c.len(), 3);
-            assert_eq!(c[0], Capability::Atom("UIDPLUS"));
+            assert_eq!(c[0], Capability::Atom(Cow::Borrowed("UIDPLUS")));
             assert_eq!(c[1], Capability::Imap4rev1);
-            assert_eq!(c[2], Capability::Atom("IDLE"));
+            assert_eq!(c[2], Capability::Atom(Cow::Borrowed("IDLE")));
         }
         rsp => panic!("unexpected response {:?}", rsp),
     }
@@ -227,7 +228,7 @@ fn test_response_codes() {
             Response::Data {
                 status: Status::Ok,
                 code: None,
-                information: Some("[CAPABILITY UIDPLUS IDLE] Logged in"),
+                information: Some(Cow::Borrowed("[CAPABILITY UIDPLUS IDLE] Logged in")),
             },
         )) => {}
         rsp => panic!("unexpected response {:?}", rsp),
@@ -239,7 +240,7 @@ fn test_response_codes() {
             Response::Data {
                 status: Status::No,
                 code: Some(ResponseCode::BadCharset(None)),
-                information: Some("error"),
+                information: Some(Cow::Borrowed("error")),
             },
         )) => {}
         rsp => panic!("unexpected response {:?}", rsp),
@@ -251,7 +252,7 @@ fn test_response_codes() {
             Response::Data {
                 status: Status::No,
                 code: Some(ResponseCode::BadCharset(Some(v))),
-                information: Some("error"),
+                information: Some(Cow::Borrowed("error")),
             },
         )) => {
             assert_eq!(v.len(), 2);
@@ -267,7 +268,7 @@ fn test_response_codes() {
             Response::Data {
                 status: Status::No,
                 code: None,
-                information: Some("[BADCHARSET ()] error"),
+                information: Some(Cow::Borrowed("[BADCHARSET ()] error")),
             },
         )) => {}
         rsp => panic!("unexpected response {:?}", rsp),
@@ -315,8 +316,8 @@ fn test_enabled() {
         Ok((_, capabilities)) => assert_eq!(
             capabilities,
             Response::Capabilities(vec![
-                Capability::Atom("QRESYNC"),
-                Capability::Atom("X-GOOD-IDEA"),
+                Capability::Atom(Cow::Borrowed("QRESYNC")),
+                Capability::Atom(Cow::Borrowed("X-GOOD-IDEA")),
             ])
         ),
         rsp => panic!("Unexpected response: {:?}", rsp),
@@ -332,12 +333,12 @@ fn test_flags() {
         Ok((_, capabilities)) => assert_eq!(
             capabilities,
             Response::MailboxData(MailboxDatum::Flags(vec![
-                "\\Answered",
-                "\\Flagged",
-                "\\Deleted",
-                "\\Seen",
-                "\\Draft",
-                "\\*"
+                Cow::Borrowed("\\Answered"),
+                Cow::Borrowed("\\Flagged"),
+                Cow::Borrowed("\\Deleted"),
+                Cow::Borrowed("\\Seen"),
+                Cow::Borrowed("\\Draft"),
+                Cow::Borrowed("\\*")
             ]))
         ),
         rsp => panic!("Unexpected response: {:?}", rsp),
@@ -402,7 +403,7 @@ fn test_uidplus() {
             Response::Data {
                 status: Status::Ok,
                 code: Some(ResponseCode::AppendUid(38505, uid_set)),
-                information: Some("APPEND completed"),
+                information: Some(Cow::Borrowed("APPEND completed")),
             },
         )) if uid_set == [3955.into()] => {}
         rsp => panic!("Unexpected response: {:?}", rsp),
@@ -415,7 +416,7 @@ fn test_uidplus() {
             Response::Data {
                 status: Status::Ok,
                 code: Some(ResponseCode::CopyUid(38505, uid_set_src, uid_set_dst)),
-                information: Some("Done"),
+                information: Some(Cow::Borrowed("Done")),
             },
         )) if uid_set_src == [304.into(), (319..=320).into()]
             && uid_set_dst == [(3956..=3958).into()] => {}
@@ -429,7 +430,7 @@ fn test_uidplus() {
             Response::Data {
                 status: Status::No,
                 code: Some(ResponseCode::UidNotSticky),
-                information: Some("Non-persistent UIDs"),
+                information: Some(Cow::Borrowed("Non-persistent UIDs")),
             },
         )) => {}
         rsp => panic!("Unexpected response: {:?}", rsp),
