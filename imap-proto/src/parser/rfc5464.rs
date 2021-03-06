@@ -183,7 +183,7 @@ pub(crate) fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response> {
 // Extends resp-test-code defined in rfc3501.
 // [RFC5464 - 4.2.1 MAXSIZE GETMETADATA Command Option](https://tools.ietf.org/html/rfc5464#section-4.2.1)
 // [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
-pub(crate) fn resp_text_code_metadata_longentries(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_metadata_long_entries(i: &[u8]) -> IResult<&[u8], ResponseCode> {
     let (i, (_, num)) = tuple((tag_no_case("METADATA LONGENTRIES "), number_64))(i)?;
     Ok((i, ResponseCode::MetadataLongEntries(num)))
 }
@@ -192,7 +192,7 @@ pub(crate) fn resp_text_code_metadata_longentries(i: &[u8]) -> IResult<&[u8], Re
 // Extends resp-test-code defined in rfc3501.
 // [RFC5464 - 4.3 SETMETADATA Command](https://tools.ietf.org/html/rfc5464#section-4.3)
 // [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
-pub(crate) fn resp_text_code_metadata_maxsize(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_metadata_max_size(i: &[u8]) -> IResult<&[u8], ResponseCode> {
     let (i, (_, num)) = tuple((tag_no_case("METADATA MAXSIZE "), number_64))(i)?;
     Ok((i, ResponseCode::MetadataMaxSize(num)))
 }
@@ -201,7 +201,7 @@ pub(crate) fn resp_text_code_metadata_maxsize(i: &[u8]) -> IResult<&[u8], Respon
 // Extends resp-test-code defined in rfc3501.
 // [RFC5464 - 4.3 SETMETADATA Command](https://tools.ietf.org/html/rfc5464#section-4.3)
 // [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
-pub(crate) fn resp_text_code_metadata_toomany(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_metadata_too_many(i: &[u8]) -> IResult<&[u8], ResponseCode> {
     let (i, _) = tag_no_case("METADATA TOOMANY")(i)?;
     Ok((i, ResponseCode::MetadataTooMany))
 }
@@ -210,7 +210,7 @@ pub(crate) fn resp_text_code_metadata_toomany(i: &[u8]) -> IResult<&[u8], Respon
 // Extends resp-test-code defined in rfc3501.
 // [RFC5464 - 4.3 SETMETADATA Command](https://tools.ietf.org/html/rfc5464#section-4.3)
 // [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
-pub(crate) fn resp_text_code_metadata_noprivate(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_metadata_no_private(i: &[u8]) -> IResult<&[u8], ResponseCode> {
     let (i, _) = tag_no_case("METADATA NOPRIVATE")(i)?;
     Ok((i, ResponseCode::MetadataNoPrivate))
 }
