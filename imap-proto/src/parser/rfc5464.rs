@@ -179,6 +179,42 @@ pub(crate) fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response> {
     ))
 }
 
+// There are any entries with values larger than the MAXSIZE limit given to GETMETADATA.
+// Extends resp-test-code defined in rfc3501.
+// [RFC5464 - 4.2.1 MAXSIZE GETMETADATA Command Option](https://tools.ietf.org/html/rfc5464#section-4.2.1)
+// [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
+pub(crate) fn resp_text_code_metadata_longentries(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    let (i, (_, num)) = tuple((tag_no_case("METADATA LONGENTRIES "), number_64))(i)?;
+    Ok((i, ResponseCode::MetadataLongEntries(num)))
+}
+
+// Server is unable to set an annotation because the size of its value is too large.
+// Extends resp-test-code defined in rfc3501.
+// [RFC5464 - 4.3 SETMETADATA Command](https://tools.ietf.org/html/rfc5464#section-4.3)
+// [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
+pub(crate) fn resp_text_code_metadata_maxsize(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    let (i, (_, num)) = tuple((tag_no_case("METADATA MAXSIZE "), number_64))(i)?;
+    Ok((i, ResponseCode::MetadataMaxSize(num)))
+}
+
+// Server is unable to set a new annotation because the maximum number of allowed annotations has already been reached.
+// Extends resp-test-code defined in rfc3501.
+// [RFC5464 - 4.3 SETMETADATA Command](https://tools.ietf.org/html/rfc5464#section-4.3)
+// [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
+pub(crate) fn resp_text_code_metadata_toomany(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    let (i, _) = tag_no_case("METADATA TOOMANY")(i)?;
+    Ok((i, ResponseCode::MetadataTooMany))
+}
+
+// Server is unable to set a new annotation because it does not support private annotations on one of the specified mailboxes.
+// Extends resp-test-code defined in rfc3501.
+// [RFC5464 - 4.3 SETMETADATA Command](https://tools.ietf.org/html/rfc5464#section-4.3)
+// [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
+pub(crate) fn resp_text_code_metadata_noprivate(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+    let (i, _) = tag_no_case("METADATA NOPRIVATE")(i)?;
+    Ok((i, ResponseCode::MetadataNoPrivate))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{metadata_solicited, metadata_unsolicited};
@@ -290,6 +326,59 @@ mod tests {
                 assert_eq!(values[1], "/private/comment/a");
             }
             _ => panic!("Correct METADATA response is not parsed properly."),
+        }
+    }
+
+    #[test]
+    fn test_response_codes() {
+        use crate::parser::parse_response;
+
+        match parse_response(b"* OK [METADATA LONGENTRIES 123] Some entries omitted.\r\n") {
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::Ok,
+                    code: Some(ResponseCode::MetadataLongEntries(123)),
+                    information: Some("Some entries omitted."),
+                },
+            )) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
+        }
+
+        match parse_response(b"* NO [METADATA MAXSIZE 123] Annotation too large.\r\n") {
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::No,
+                    code: Some(ResponseCode::MetadataMaxSize(123)),
+                    information: Some("Annotation too large."),
+                },
+            )) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
+        }
+
+        match parse_response(b"* NO [METADATA TOOMANY] Too many annotations.\r\n") {
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::No,
+                    code: Some(ResponseCode::MetadataTooMany),
+                    information: Some("Too many annotations."),
+                },
+            )) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
+        }
+
+        match parse_response(b"* NO [METADATA NOPRIVATE] Private annotations not supported.\r\n") {
+            Ok((
+                _,
+                Response::Data {
+                    status: Status::No,
+                    code: Some(ResponseCode::MetadataNoPrivate),
+                    information: Some("Private annotations not supported."),
+                },
+            )) => {}
+            rsp => panic!("unexpected response {:?}", rsp),
         }
     }
 }
