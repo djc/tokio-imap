@@ -76,6 +76,10 @@ pub enum ResponseCode<'a> {
     AppendUid(u32, Vec<UidSetMember>),
     CopyUid(u32, Vec<UidSetMember>, Vec<UidSetMember>),
     UidNotSticky,
+    MetadataLongEntries(u64), // RFC 5464, section 4.2.1
+    MetadataMaxSize(u64),     // RFC 5464, section 4.3
+    MetadataTooMany,          // RFC 5464, section 4.3
+    MetadataNoPrivate,        // RFC 5464, section 4.3
 }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum UidSetMember {

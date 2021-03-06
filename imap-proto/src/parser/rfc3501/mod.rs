@@ -177,6 +177,10 @@ fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode> {
             rfc4315::resp_text_code_append_uid,
             rfc4315::resp_text_code_copy_uid,
             rfc4315::resp_text_code_uid_not_sticky,
+            rfc5464::resp_text_code_metadata_long_entries,
+            rfc5464::resp_text_code_metadata_max_size,
+            rfc5464::resp_text_code_metadata_too_many,
+            rfc5464::resp_text_code_metadata_no_private,
         )),
         tag(b"]"),
     )(i)
