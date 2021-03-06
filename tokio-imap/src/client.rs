@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::io;
 use std::net::ToSocketAddrs;
 use std::pin::Pin;
@@ -93,7 +94,10 @@ where
                 ResponseStreamState::Start => {
                     ready!(Pin::new(&mut me.client.transport).poll_ready(cx))?;
                     let pinned = Pin::new(&mut me.client.transport);
-                    pinned.start_send(&Request(me.request_id.as_bytes(), &me.cmd.args))?;
+                    pinned.start_send(&Request(
+                        Cow::Borrowed(me.request_id.as_bytes()),
+                        Cow::Borrowed(&me.cmd.args),
+                    ))?;
                     *me.state = ResponseStreamState::Sending;
                 }
                 ResponseStreamState::Sending => {

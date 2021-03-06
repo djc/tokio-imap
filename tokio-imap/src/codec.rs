@@ -52,9 +52,9 @@ impl<'a> Decoder for ImapCodec {
 impl<'a> Encoder<&'a Request<'a>> for ImapCodec {
     type Error = io::Error;
     fn encode(&mut self, msg: &Request, dst: &mut BytesMut) -> Result<(), io::Error> {
-        dst.put(msg.0);
+        dst.put(&*msg.0);
         dst.put_u8(b' ');
-        dst.put_slice(msg.1);
+        dst.put_slice(&*msg.1);
         dst.put_slice(b"\r\n");
         Ok(())
     }
