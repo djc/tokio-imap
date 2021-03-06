@@ -121,6 +121,10 @@ impl<'a> ResponseCode<'a> {
             ResponseCode::AppendUid(a, b) => ResponseCode::AppendUid(a, b),
             ResponseCode::CopyUid(a, b, c) => ResponseCode::CopyUid(a, b, c),
             ResponseCode::UidNotSticky => ResponseCode::UidNotSticky,
+            ResponseCode::MetadataLongEntries(v) => ResponseCode::MetadataLongEntries(v),
+            ResponseCode::MetadataMaxSize(v) => ResponseCode::MetadataMaxSize(v),
+            ResponseCode::MetadataTooMany => ResponseCode::MetadataTooMany,
+            ResponseCode::MetadataNoPrivate => ResponseCode::MetadataNoPrivate,
         }
     }
 }
