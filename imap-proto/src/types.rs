@@ -1,6 +1,10 @@
 use std::borrow::Cow;
 use std::ops::RangeInclusive;
 
+fn to_owned_cow<'a, T: ?Sized + ToOwned>(c: Cow<'a, T>) -> Cow<'static, T> {
+    Cow::Owned(c.into_owned())
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Request<'a>(pub Cow<'a, [u8]>, pub Cow<'a, [u8]>);
 
@@ -93,20 +97,17 @@ impl<'a> ResponseCode<'a> {
     pub fn into_owned(self) -> ResponseCode<'static> {
         match self {
             ResponseCode::Alert => ResponseCode::Alert,
-            ResponseCode::BadCharset(v) => ResponseCode::BadCharset(v.map(|vs| {
-                vs.into_iter()
-                    .map(Cow::into_owned)
-                    .map(Cow::Owned)
-                    .collect()
-            })),
+            ResponseCode::BadCharset(v) => {
+                ResponseCode::BadCharset(v.map(|vs| vs.into_iter().map(to_owned_cow).collect()))
+            }
             ResponseCode::Capabilities(v) => {
                 ResponseCode::Capabilities(v.into_iter().map(Capability::into_owned).collect())
             }
             ResponseCode::HighestModSeq(v) => ResponseCode::HighestModSeq(v),
             ResponseCode::Parse => ResponseCode::Parse,
-            ResponseCode::PermanentFlags(v) => ResponseCode::PermanentFlags(
-                v.into_iter().map(Cow::into_owned).map(Cow::Owned).collect(),
-            ),
+            ResponseCode::PermanentFlags(v) => {
+                ResponseCode::PermanentFlags(v.into_iter().map(to_owned_cow).collect())
+            }
             ResponseCode::ReadOnly => ResponseCode::ReadOnly,
             ResponseCode::ReadWrite => ResponseCode::ReadWrite,
             ResponseCode::TryCreate => ResponseCode::TryCreate,
@@ -173,8 +174,8 @@ impl<'a> Capability<'a> {
     pub fn into_owned(self) -> Capability<'static> {
         match self {
             Capability::Imap4rev1 => Capability::Imap4rev1,
-            Capability::Auth(v) => Capability::Auth(Cow::Owned(v.into_owned())),
-            Capability::Atom(v) => Capability::Atom(Cow::Owned(v.into_owned())),
+            Capability::Auth(v) => Capability::Auth(to_owned_cow(v)),
+            Capability::Atom(v) => Capability::Atom(to_owned_cow(v)),
         }
     }
 }
@@ -237,27 +238,19 @@ impl<'a> AttributeValue<'a> {
             } => AttributeValue::BodySection {
                 section,
                 index,
-                data: data.map(Cow::into_owned).map(Cow::Owned),
+                data: data.map(to_owned_cow),
             },
             AttributeValue::BodyStructure(body) => AttributeValue::BodyStructure(body.into_owned()),
             AttributeValue::Envelope(e) => AttributeValue::Envelope(Box::new(e.into_owned())),
             AttributeValue::Flags(v) => {
-                AttributeValue::Flags(v.into_iter().map(Cow::into_owned).map(Cow::Owned).collect())
+                AttributeValue::Flags(v.into_iter().map(to_owned_cow).collect())
             }
-            AttributeValue::InternalDate(v) => {
-                AttributeValue::InternalDate(Cow::Owned(v.into_owned()))
-            }
+            AttributeValue::InternalDate(v) => AttributeValue::InternalDate(to_owned_cow(v)),
             AttributeValue::ModSeq(v) => AttributeValue::ModSeq(v),
-            AttributeValue::Rfc822(v) => {
-                AttributeValue::Rfc822(v.map(Cow::into_owned).map(Cow::Owned))
-            }
-            AttributeValue::Rfc822Header(v) => {
-                AttributeValue::Rfc822Header(v.map(Cow::into_owned).map(Cow::Owned))
-            }
+            AttributeValue::Rfc822(v) => AttributeValue::Rfc822(v.map(to_owned_cow)),
+            AttributeValue::Rfc822Header(v) => AttributeValue::Rfc822Header(v.map(to_owned_cow)),
             AttributeValue::Rfc822Size(v) => AttributeValue::Rfc822Size(v),
-            AttributeValue::Rfc822Text(v) => {
-                AttributeValue::Rfc822Text(v.map(Cow::into_owned).map(Cow::Owned))
-            }
+            AttributeValue::Rfc822Text(v) => AttributeValue::Rfc822Text(v.map(to_owned_cow)),
             AttributeValue::Uid(v) => AttributeValue::Uid(v),
         }
     }
@@ -358,8 +351,8 @@ impl<'a> BodyContentCommon<'a> {
             disposition: self.disposition.map(|v| v.into_owned()),
             language: self
                 .language
-                .map(|v| v.into_iter().map(Cow::into_owned).map(Cow::Owned).collect()),
-            location: self.location.map(Cow::into_owned).map(Cow::Owned),
+                .map(|v| v.into_iter().map(to_owned_cow).collect()),
+            location: self.location.map(to_owned_cow),
         }
     }
 }
@@ -376,9 +369,9 @@ pub struct BodyContentSinglePart<'a> {
 impl<'a> BodyContentSinglePart<'a> {
     pub fn into_owned(self) -> BodyContentSinglePart<'static> {
         BodyContentSinglePart {
-            id: self.id.map(Cow::into_owned).map(Cow::Owned),
-            md5: self.md5.map(Cow::into_owned).map(Cow::Owned),
-            description: self.description.map(Cow::into_owned).map(Cow::Owned),
+            id: self.id.map(to_owned_cow),
+            md5: self.md5.map(to_owned_cow),
+            description: self.description.map(to_owned_cow),
             transfer_encoding: self.transfer_encoding.into_owned(),
             octets: self.octets,
         }
@@ -395,8 +388,8 @@ pub struct ContentType<'a> {
 impl<'a> ContentType<'a> {
     pub fn into_owned(self) -> ContentType<'static> {
         ContentType {
-            ty: Cow::Owned(self.ty.into_owned()),
-            subtype: Cow::Owned(self.subtype.into_owned()),
+            ty: to_owned_cow(self.ty),
+            subtype: to_owned_cow(self.subtype),
             params: body_param_owned(self.params),
         }
     }
@@ -411,7 +404,7 @@ pub struct ContentDisposition<'a> {
 impl<'a> ContentDisposition<'a> {
     pub fn into_owned(self) -> ContentDisposition<'static> {
         ContentDisposition {
-            ty: Cow::Owned(self.ty.into_owned()),
+            ty: to_owned_cow(self.ty),
             params: body_param_owned(self.params),
         }
     }
@@ -435,7 +428,7 @@ impl<'a> ContentEncoding<'a> {
             ContentEncoding::Binary => ContentEncoding::Binary,
             ContentEncoding::Base64 => ContentEncoding::Base64,
             ContentEncoding::QuotedPrintable => ContentEncoding::QuotedPrintable,
-            ContentEncoding::Other(v) => ContentEncoding::Other(Cow::Owned(v.into_owned())),
+            ContentEncoding::Other(v) => ContentEncoding::Other(to_owned_cow(v)),
         }
     }
 }
@@ -451,7 +444,7 @@ impl<'a> BodyExtension<'a> {
     pub fn into_owned(self) -> BodyExtension<'static> {
         match self {
             BodyExtension::Num(v) => BodyExtension::Num(v),
-            BodyExtension::Str(v) => BodyExtension::Str(v.map(Cow::into_owned).map(Cow::Owned)),
+            BodyExtension::Str(v) => BodyExtension::Str(v.map(to_owned_cow)),
             BodyExtension::List(v) => {
                 BodyExtension::List(v.into_iter().map(|v| v.into_owned()).collect())
             }
@@ -464,7 +457,7 @@ pub type BodyParams<'a> = Option<Vec<(Cow<'a, str>, Cow<'a, str>)>>;
 fn body_param_owned<'a>(v: BodyParams<'a>) -> BodyParams<'static> {
     v.map(|v| {
         v.into_iter()
-            .map(|(k, v)| (Cow::Owned(k.into_owned()), Cow::Owned(v.into_owned())))
+            .map(|(k, v)| (to_owned_cow(k), to_owned_cow(v)))
             .collect()
     })
 }
@@ -486,8 +479,8 @@ pub struct Envelope<'a> {
 impl<'a> Envelope<'a> {
     pub fn into_owned(self) -> Envelope<'static> {
         Envelope {
-            date: self.date.map(Cow::into_owned).map(Cow::Owned),
-            subject: self.subject.map(Cow::into_owned).map(Cow::Owned),
+            date: self.date.map(to_owned_cow),
+            subject: self.subject.map(to_owned_cow),
             from: self
                 .from
                 .map(|v| v.into_iter().map(|v| v.into_owned()).collect()),
@@ -506,8 +499,8 @@ impl<'a> Envelope<'a> {
             bcc: self
                 .bcc
                 .map(|v| v.into_iter().map(|v| v.into_owned()).collect()),
-            in_reply_to: self.in_reply_to.map(Cow::into_owned).map(Cow::Owned),
-            message_id: self.message_id.map(Cow::into_owned).map(Cow::Owned),
+            in_reply_to: self.in_reply_to.map(to_owned_cow),
+            message_id: self.message_id.map(to_owned_cow),
         }
     }
 }
@@ -523,10 +516,10 @@ pub struct Address<'a> {
 impl<'a> Address<'a> {
     pub fn into_owned(self) -> Address<'static> {
         Address {
-            name: self.name.map(Cow::into_owned).map(Cow::Owned),
-            adl: self.adl.map(Cow::into_owned).map(Cow::Owned),
-            mailbox: self.mailbox.map(Cow::into_owned).map(Cow::Owned),
-            host: self.host.map(Cow::into_owned).map(Cow::Owned),
+            name: self.name.map(to_owned_cow),
+            adl: self.adl.map(to_owned_cow),
+            mailbox: self.mailbox.map(to_owned_cow),
+            host: self.host.map(to_owned_cow),
         }
     }
 }
@@ -562,8 +555,8 @@ impl<'a> BodyFields<'a> {
     pub fn into_owned(self) -> BodyFields<'static> {
         BodyFields {
             param: body_param_owned(self.param),
-            id: self.id.map(Cow::into_owned).map(Cow::Owned),
-            description: self.description.map(Cow::into_owned).map(Cow::Owned),
+            id: self.id.map(to_owned_cow),
+            description: self.description.map(to_owned_cow),
             transfer_encoding: self.transfer_encoding.into_owned(),
             octets: self.octets,
         }
@@ -581,12 +574,12 @@ pub struct BodyExt1Part<'a> {
 impl<'a> BodyExt1Part<'a> {
     pub fn into_owned(self) -> BodyExt1Part<'static> {
         BodyExt1Part {
-            md5: self.md5.map(Cow::into_owned).map(Cow::Owned),
+            md5: self.md5.map(to_owned_cow),
             disposition: self.disposition.map(|v| v.into_owned()),
             language: self
                 .language
-                .map(|v| v.into_iter().map(Cow::into_owned).map(Cow::Owned).collect()),
-            location: self.location.map(Cow::into_owned).map(Cow::Owned),
+                .map(|v| v.into_iter().map(to_owned_cow).collect()),
+            location: self.location.map(to_owned_cow),
             extension: self.extension.map(|v| v.into_owned()),
         }
     }
@@ -607,8 +600,8 @@ impl<'a> BodyExtMPart<'a> {
             disposition: self.disposition.map(|v| v.into_owned()),
             language: self
                 .language
-                .map(|v| v.into_iter().map(Cow::into_owned).map(Cow::Owned).collect()),
-            location: self.location.map(Cow::into_owned).map(Cow::Owned),
+                .map(|v| v.into_iter().map(to_owned_cow).collect()),
+            location: self.location.map(to_owned_cow),
             extension: self.extension.map(|v| v.into_owned()),
         }
     }
