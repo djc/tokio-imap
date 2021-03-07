@@ -80,8 +80,8 @@ async fn imap_fetch(
 
 async fn process_email(response_data: ResponseData) -> Result<(), io::Error> {
     if let Response::Fetch(_, ref attr_vals) = *response_data.parsed() {
-        for val in attr_vals.iter() {
-            match *val {
+        for val in attr_vals {
+            match val {
                 AttributeValue::Uid(u) => {
                     eprintln!("Message UID: {}", u);
                 }

@@ -12,6 +12,7 @@ use nom::{
     sequence::{preceded, tuple},
     IResult,
 };
+use std::borrow::Cow;
 
 use crate::parser::core::atom;
 use crate::types::*;
@@ -32,5 +33,5 @@ fn enabled_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
 }
 
 fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
-    map(atom, Capability::Atom)(i)
+    map(map(atom, Cow::Borrowed), Capability::Atom)(i)
 }

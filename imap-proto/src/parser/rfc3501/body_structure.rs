@@ -7,6 +7,7 @@ use nom::{
     sequence::{delimited, preceded, tuple},
     IResult,
 };
+use std::borrow::Cow;
 
 use crate::{
     parser::{core::*, rfc3501::envelope},
@@ -35,8 +36,8 @@ fn body_fields(i: &[u8]) -> IResult<&[u8], BodyFields> {
         i,
         BodyFields {
             param,
-            id,
-            description,
+            id: id.map(Cow::Borrowed),
+            description: description.map(Cow::Borrowed),
             transfer_encoding,
             octets,
         },
@@ -60,10 +61,10 @@ fn body_ext_1part(i: &[u8]) -> IResult<&[u8], BodyExt1Part> {
     Ok((
         i,
         BodyExt1Part {
-            md5,
+            md5: md5.map(Cow::Borrowed),
             disposition,
             language,
-            location,
+            location: location.map(Cow::Borrowed),
             extension,
         },
     ))
@@ -88,7 +89,7 @@ fn body_ext_mpart(i: &[u8]) -> IResult<&[u8], BodyExtMPart> {
             param,
             disposition,
             language,
-            location,
+            location: location.map(Cow::Borrowed),
             extension,
         },
     ))
@@ -109,15 +110,20 @@ fn body_encoding(i: &[u8]) -> IResult<&[u8], ContentEncoding> {
             )),
             char('"'),
         ),
-        map(string_utf8, |enc| ContentEncoding::Other(enc)),
+        map(string_utf8, |enc| {
+            ContentEncoding::Other(Cow::Borrowed(enc))
+        }),
     ))(i)
 }
 
-fn body_lang(i: &[u8]) -> IResult<&[u8], Option<Vec<&str>>> {
+fn body_lang(i: &[u8]) -> IResult<&[u8], Option<Vec<Cow<'_, str>>>> {
     alt((
         // body language seems to refer to RFC 3066 language tags, which should be ASCII-only
-        map(nstring_utf8, |v| v.map(|s| vec![s])),
-        map(parenthesized_nonempty_list(string_utf8), Option::from),
+        map(nstring_utf8, |v| v.map(|s| vec![Cow::Borrowed(s)])),
+        map(
+            parenthesized_nonempty_list(map(string_utf8, Cow::Borrowed)),
+            Option::from,
+        ),
     ))(i)
 }
 
@@ -127,7 +133,7 @@ fn body_param(i: &[u8]) -> IResult<&[u8], BodyParams> {
         map(
             parenthesized_nonempty_list(map(
                 tuple((string_utf8, tag(" "), string_utf8)),
-                |(key, _, val)| (key, val),
+                |(key, _, val)| (Cow::Borrowed(key), Cow::Borrowed(val)),
             )),
             Option::from,
         ),
@@ -139,7 +145,7 @@ fn body_extension(i: &[u8]) -> IResult<&[u8], BodyExtension> {
         map(number, BodyExtension::Num),
         // Cannot find documentation on character encoding for body extension values.
         // So far, assuming UTF-8 seems fine, please report if you run into issues here.
-        map(nstring_utf8, BodyExtension::Str),
+        map(nstring_utf8, |v| BodyExtension::Str(v.map(Cow::Borrowed))),
         map(
             parenthesized_nonempty_list(body_extension),
             BodyExtension::List,
@@ -152,7 +158,12 @@ fn body_disposition(i: &[u8]) -> IResult<&[u8], Option<ContentDisposition>> {
         map(nil, |_| None),
         paren_delimited(map(
             tuple((string_utf8, tag(" "), body_param)),
-            |(ty, _, params)| Some(ContentDisposition { ty, params }),
+            |(ty, _, params)| {
+                Some(ContentDisposition {
+                    ty: Cow::Borrowed(ty),
+                    params,
+                })
+            },
         )),
     ))(i)
 }
@@ -170,8 +181,8 @@ fn body_type_basic(i: &[u8]) -> IResult<&[u8], BodyStructure> {
         |(ty, _, subtype, _, fields, ext)| BodyStructure::Basic {
             common: BodyContentCommon {
                 ty: ContentType {
-                    ty,
-                    subtype,
+                    ty: Cow::Borrowed(ty),
+                    subtype: Cow::Borrowed(subtype),
                     params: fields.param,
                 },
                 disposition: ext.disposition,
@@ -205,8 +216,8 @@ fn body_type_text(i: &[u8]) -> IResult<&[u8], BodyStructure> {
         |(_, _, subtype, _, fields, _, lines, ext)| BodyStructure::Text {
             common: BodyContentCommon {
                 ty: ContentType {
-                    ty: "TEXT",
-                    subtype,
+                    ty: Cow::Borrowed("TEXT"),
+                    subtype: Cow::Borrowed(subtype),
                     params: fields.param,
                 },
                 disposition: ext.disposition,
@@ -243,8 +254,8 @@ fn body_type_message(i: &[u8]) -> IResult<&[u8], BodyStructure> {
         |(_, _, fields, _, envelope, _, body, _, lines, ext)| BodyStructure::Message {
             common: BodyContentCommon {
                 ty: ContentType {
-                    ty: "MESSAGE",
-                    subtype: "RFC822",
+                    ty: Cow::Borrowed("MESSAGE"),
+                    subtype: Cow::Borrowed("RFC822"),
                     params: fields.param,
                 },
                 disposition: ext.disposition,
@@ -272,8 +283,8 @@ fn body_type_multipart(i: &[u8]) -> IResult<&[u8], BodyStructure> {
         |(bodies, _, subtype, ext)| BodyStructure::Multipart {
             common: BodyContentCommon {
                 ty: ContentType {
-                    ty: "MULTIPART",
-                    subtype,
+                    ty: Cow::Borrowed("MULTIPART"),
+                    subtype: Cow::Borrowed(subtype),
                     params: ext.param,
                 },
                 disposition: ext.disposition,
@@ -310,9 +321,10 @@ mod tests {
 
     // body-fld-param SP body-fld-id SP body-fld-desc SP body-fld-enc SP body-fld-octets
     const BODY_FIELDS: &str = r#"("foo" "bar") "id" "desc" "7BIT" 1337"#;
-    const BODY_FIELD_PARAM_PAIR: (&str, &str) = ("foo", "bar");
-    const BODY_FIELD_ID: Option<&str> = Some("id");
-    const BODY_FIELD_DESC: Option<&str> = Some("desc");
+    const BODY_FIELD_PARAM_PAIR: (Cow<'_, str>, Cow<'_, str>) =
+        (Cow::Borrowed("foo"), Cow::Borrowed("bar"));
+    const BODY_FIELD_ID: Option<Cow<'_, str>> = Some(Cow::Borrowed("id"));
+    const BODY_FIELD_DESC: Option<Cow<'_, str>> = Some(Cow::Borrowed("desc"));
     const BODY_FIELD_ENC: ContentEncoding = ContentEncoding::SevenBit;
     const BODY_FIELD_OCTETS: u32 = 1337;
 
@@ -322,8 +334,8 @@ mod tests {
             BodyStructure::Text {
                 common: BodyContentCommon {
                     ty: ContentType {
-                        ty: "TEXT",
-                        subtype: "PLAIN",
+                        ty: Cow::Borrowed("TEXT"),
+                        subtype: Cow::Borrowed("PLAIN"),
                         params: Some(vec![BODY_FIELD_PARAM_PAIR]),
                     },
                     disposition: None,
@@ -350,7 +362,7 @@ mod tests {
         assert_matches!(
             body_param(br#"("foo" "bar")"#),
             Ok((EMPTY, Some(param))) => {
-                assert_eq!(param, vec![("foo", "bar")]);
+                assert_eq!(param, vec![(Cow::Borrowed("foo"), Cow::Borrowed("bar"))]);
             }
         );
     }
@@ -378,7 +390,7 @@ mod tests {
     fn test_body_extension_data() {
         assert_matches!(
             body_extension(br#""blah""#),
-            Ok((EMPTY, BodyExtension::Str(Some("blah"))))
+            Ok((EMPTY, BodyExtension::Str(Some(Cow::Borrowed("blah")))))
         );
 
         assert_matches!(
@@ -389,7 +401,7 @@ mod tests {
         assert_matches!(
             body_extension(br#"("hello")"#),
             Ok((EMPTY, BodyExtension::List(list))) => {
-                assert_eq!(list, vec![BodyExtension::Str(Some("hello"))]);
+                assert_eq!(list, vec![BodyExtension::Str(Some(Cow::Borrowed("hello")))]);
             }
         );
 
@@ -409,9 +421,9 @@ mod tests {
             body_disposition(br#"("attachment" ("FILENAME" "pages.pdf"))"#),
             Ok((EMPTY, Some(disposition))) => {
                 assert_eq!(disposition, ContentDisposition {
-                    ty: "attachment",
+                    ty: Cow::Borrowed("attachment"),
                     params: Some(vec![
-                        ("FILENAME", "pages.pdf")
+                        (Cow::Borrowed("FILENAME"), Cow::Borrowed("pages.pdf"))
                     ])
                 });
             }
@@ -453,13 +465,13 @@ mod tests {
                 assert_eq!(basic, BodyStructure::Basic {
                     common: BodyContentCommon {
                         ty: ContentType {
-                            ty: "APPLICATION",
-                            subtype: "PDF",
-                            params: Some(vec![("NAME", "pages.pdf")])
+                            ty: Cow::Borrowed("APPLICATION"),
+                            subtype: Cow::Borrowed("PDF"),
+                            params: Some(vec![(Cow::Borrowed("NAME"), Cow::Borrowed("pages.pdf"))])
                         },
                         disposition: Some(ContentDisposition {
-                            ty: "attachment",
-                            params: Some(vec![("FILENAME", "pages.pdf")])
+                            ty: Cow::Borrowed("attachment"),
+                            params: Some(vec![(Cow::Borrowed("FILENAME"), Cow::Borrowed("pages.pdf"))])
                         }),
                         language: None,
                         location: None,
@@ -507,8 +519,8 @@ mod tests {
                 assert_eq!(multipart, BodyStructure::Multipart {
                     common: BodyContentCommon {
                         ty: ContentType {
-                            ty: "MULTIPART",
-                            subtype: "ALTERNATIVE",
+                            ty: Cow::Borrowed("MULTIPART"),
+                            subtype: Cow::Borrowed("ALTERNATIVE"),
                             params: None
                         },
                         language: None,

@@ -12,6 +12,7 @@ use nom::{
     sequence::tuple,
     IResult,
 };
+use std::borrow::Cow;
 
 use crate::{parser::core::*, types::*};
 
@@ -146,8 +147,8 @@ fn keyval_list(i: &[u8]) -> IResult<&[u8], Vec<Metadata>> {
     ))(i)
 }
 
-fn entry_list(i: &[u8]) -> IResult<&[u8], Vec<&str>> {
-    separated_list0(tag(" "), map(entry_name, slice_to_str))(i)
+fn entry_list(i: &[u8]) -> IResult<&[u8], Vec<Cow<str>>> {
+    separated_list0(tag(" "), map(map(entry_name, slice_to_str), Cow::Borrowed))(i)
 }
 
 fn metadata_common(i: &[u8]) -> IResult<&[u8], &[u8]> {
@@ -161,7 +162,7 @@ pub(crate) fn metadata_solicited(i: &[u8]) -> IResult<&[u8], Response> {
     Ok((
         i,
         Response::MailboxData(MailboxDatum::MetadataSolicited {
-            mailbox: slice_to_str(mailbox),
+            mailbox: Cow::Borrowed(slice_to_str(mailbox)),
             values,
         }),
     ))
@@ -173,7 +174,7 @@ pub(crate) fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response> {
     Ok((
         i,
         Response::MailboxData(MailboxDatum::MetadataUnsolicited {
-            mailbox: slice_to_str(mailbox),
+            mailbox: Cow::Borrowed(slice_to_str(mailbox)),
             values,
         }),
     ))
@@ -219,6 +220,7 @@ pub(crate) fn resp_text_code_metadata_no_private(i: &[u8]) -> IResult<&[u8], Res
 mod tests {
     use super::{metadata_solicited, metadata_unsolicited};
     use crate::types::*;
+    use std::borrow::Cow;
 
     #[test]
     fn test_solicited_fail_1() {
@@ -339,7 +341,7 @@ mod tests {
                 Response::Data {
                     status: Status::Ok,
                     code: Some(ResponseCode::MetadataLongEntries(123)),
-                    information: Some("Some entries omitted."),
+                    information: Some(Cow::Borrowed("Some entries omitted.")),
                 },
             )) => {}
             rsp => panic!("unexpected response {:?}", rsp),
@@ -351,7 +353,7 @@ mod tests {
                 Response::Data {
                     status: Status::No,
                     code: Some(ResponseCode::MetadataMaxSize(123)),
-                    information: Some("Annotation too large."),
+                    information: Some(Cow::Borrowed("Annotation too large.")),
                 },
             )) => {}
             rsp => panic!("unexpected response {:?}", rsp),
@@ -363,7 +365,7 @@ mod tests {
                 Response::Data {
                     status: Status::No,
                     code: Some(ResponseCode::MetadataTooMany),
-                    information: Some("Too many annotations."),
+                    information: Some(Cow::Borrowed("Too many annotations.")),
                 },
             )) => {}
             rsp => panic!("unexpected response {:?}", rsp),
@@ -375,7 +377,7 @@ mod tests {
                 Response::Data {
                     status: Status::No,
                     code: Some(ResponseCode::MetadataNoPrivate),
-                    information: Some("Private annotations not supported."),
+                    information: Some(Cow::Borrowed("Private annotations not supported.")),
                 },
             )) => {}
             rsp => panic!("unexpected response {:?}", rsp),
