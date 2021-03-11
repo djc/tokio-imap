@@ -132,6 +132,28 @@ fn test_search() {
 }
 
 #[test]
+fn test_sort() {
+    // also allow trailing whitespace in SEARCH responses
+    for empty_response in &["* SORT\r\n", "* SORT \r\n"] {
+        match parse_response(empty_response.as_bytes()) {
+            Ok((_, Response::MailboxData(MailboxDatum::Sort(ids)))) => {
+                assert!(ids.is_empty());
+            }
+            rsp => panic!("unexpected response {:?}", rsp),
+        }
+    }
+    for response in &["* SORT 12345 67890\r\n", "* SORT 12345 67890 \r\n"] {
+        match parse_response(response.as_bytes()) {
+            Ok((_, Response::MailboxData(MailboxDatum::Sort(ids)))) => {
+                assert_eq!(ids[0], 12345);
+                assert_eq!(ids[1], 67890);
+            }
+            rsp => panic!("unexpected response {:?}", rsp),
+        }
+    }
+}
+
+#[test]
 fn test_uid_fetch() {
     match parse_response(b"* 4 FETCH (UID 71372 RFC822.HEADER {10275}\r\n") {
         Err(nom::Err::Incomplete(nom::Needed::Size(size))) => {

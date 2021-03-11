@@ -156,6 +156,7 @@ pub enum MailboxDatum<'a> {
         name: Cow<'a, str>,
     },
     Search(Vec<u32>),
+    Sort(Vec<u32>),
     Status {
         mailbox: Cow<'a, str>,
         status: Vec<StatusAttribute>,
