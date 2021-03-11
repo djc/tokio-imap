@@ -19,8 +19,8 @@ use nom::{
 
 use crate::{
     parser::{
-        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161, rfc5464,
-        rfc7162,
+        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161, rfc5256,
+        rfc5464, rfc7162,
     },
     types::*,
 };
@@ -335,6 +335,7 @@ fn mailbox_data(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
         mailbox_data_status,
         mailbox_data_recent,
         mailbox_data_search,
+        rfc5256::mailbox_data_sort,
     ))(i)
 }
 
