@@ -147,6 +147,7 @@ pub struct Metadata {
 }
 
 #[derive(Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum MailboxDatum<'a> {
     Exists(u32),
     Flags(Vec<Cow<'a, str>>),
