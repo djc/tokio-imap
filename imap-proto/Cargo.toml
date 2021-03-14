@@ -1,6 +1,6 @@
 [package]
 name = "imap-proto"
-version = "0.13.1"
+version = "0.14.0"
 authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>"]
 description = "IMAP protocol parser and data structures"
 documentation = "https://docs.rs/imap-proto"
@@ -10,6 +10,7 @@ homepage = "https://github.com/djc/tokio-imap"
 repository = "https://github.com/djc/tokio-imap"
 license = "MIT/Apache-2.0"
 edition = "2018"
+readme = "../README.md"
 
 [badges]
 maintenance = { status = "passively-maintained" }
