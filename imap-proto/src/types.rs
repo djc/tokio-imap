@@ -47,6 +47,48 @@ impl<'a> Response<'a> {
     pub fn from_bytes(buf: &'a [u8]) -> crate::ParseResult {
         crate::parser::parse_response(buf)
     }
+
+    pub fn into_owned(self) -> Response<'static> {
+        match self {
+            Response::Capabilities(capabilities) => Response::Capabilities(
+                capabilities
+                    .into_iter()
+                    .map(Capability::into_owned)
+                    .collect(),
+            ),
+            Response::Continue { code, information } => Response::Continue {
+                code: code.map(ResponseCode::into_owned),
+                information: information.map(to_owned_cow),
+            },
+            Response::Done {
+                tag,
+                status,
+                code,
+                information,
+            } => Response::Done {
+                tag,
+                status,
+                code: code.map(ResponseCode::into_owned),
+                information: information.map(to_owned_cow),
+            },
+            Response::Data {
+                status,
+                code,
+                information,
+            } => Response::Data {
+                status,
+                code: code.map(ResponseCode::into_owned),
+                information: information.map(to_owned_cow),
+            },
+            Response::Expunge(seq) => Response::Expunge(seq),
+            Response::Vanished { earlier, uids } => Response::Vanished { earlier, uids },
+            Response::Fetch(seq, attrs) => Response::Fetch(
+                seq,
+                attrs.into_iter().map(AttributeValue::into_owned).collect(),
+            ),
+            Response::MailboxData(datum) => Response::MailboxData(datum.into_owned()),
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -171,6 +213,45 @@ pub enum MailboxDatum<'a> {
         mailbox: Cow<'a, str>,
         values: Vec<Cow<'a, str>>,
     },
+}
+
+impl<'a> MailboxDatum<'a> {
+    pub fn into_owned(self) -> MailboxDatum<'static> {
+        match self {
+            MailboxDatum::Exists(seq) => MailboxDatum::Exists(seq),
+            MailboxDatum::Flags(flags) => {
+                MailboxDatum::Flags(flags.into_iter().map(to_owned_cow).collect())
+            }
+            MailboxDatum::List {
+                flags,
+                delimiter,
+                name,
+            } => MailboxDatum::List {
+                flags: flags.into_iter().map(to_owned_cow).collect(),
+                delimiter: delimiter.map(to_owned_cow),
+                name: to_owned_cow(name),
+            },
+            MailboxDatum::Search(seqs) => MailboxDatum::Search(seqs),
+            MailboxDatum::Sort(seqs) => MailboxDatum::Sort(seqs),
+            MailboxDatum::Status { mailbox, status } => MailboxDatum::Status {
+                mailbox: to_owned_cow(mailbox),
+                status,
+            },
+            MailboxDatum::Recent(seq) => MailboxDatum::Recent(seq),
+            MailboxDatum::MetadataSolicited { mailbox, values } => {
+                MailboxDatum::MetadataSolicited {
+                    mailbox: to_owned_cow(mailbox),
+                    values,
+                }
+            }
+            MailboxDatum::MetadataUnsolicited { mailbox, values } => {
+                MailboxDatum::MetadataUnsolicited {
+                    mailbox: to_owned_cow(mailbox),
+                    values: values.into_iter().map(to_owned_cow).collect(),
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Hash)]
