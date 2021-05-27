@@ -520,3 +520,23 @@ fn test_imap_body_structure() {
         _ => panic!("invalid FETCH command test"),
     };
 }
+
+#[test]
+fn test_parsing_of_quota_capability_in_login_response() {
+    match parse_response(b"* OK [CAPABILITY IMAP4rev1 IDLE QUOTA] Logged in\r\n") {
+        Ok((
+            _,
+            Response::Data {
+                status: Status::Ok,
+                code: Some(ResponseCode::Capabilities(c)),
+                information: Some(Cow::Borrowed("Logged in")),
+            },
+        )) => {
+            assert_eq!(c.len(), 3);
+            assert_eq!(c[0], Capability::Imap4rev1);
+            assert_eq!(c[1], Capability::Atom(Cow::Borrowed("IDLE")));
+            assert_eq!(c[2], Capability::Quota);
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+}

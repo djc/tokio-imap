@@ -259,6 +259,7 @@ pub enum Capability<'a> {
     Imap4rev1,
     Auth(Cow<'a, str>),
     Atom(Cow<'a, str>),
+    Quota,
 }
 
 impl<'a> Capability<'a> {
@@ -267,6 +268,7 @@ impl<'a> Capability<'a> {
             Capability::Imap4rev1 => Capability::Imap4rev1,
             Capability::Auth(v) => Capability::Auth(to_owned_cow(v)),
             Capability::Atom(v) => Capability::Atom(to_owned_cow(v)),
+            Capability::Quota => Capability::Quota,
         }
     }
 }
