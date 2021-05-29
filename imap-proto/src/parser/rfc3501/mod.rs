@@ -20,7 +20,7 @@ use nom::{
 use crate::{
     parser::{
         core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161, rfc5256,
-        rfc5464, rfc7162,
+        rfc5464, rfc7162, rfc2087
     },
     types::*,
 };
@@ -629,7 +629,7 @@ fn resp_cond(i: &[u8]) -> IResult<&[u8], Response> {
 }
 
 // response-data   = "*" SP (resp-cond-state / resp-cond-bye /
-//                   mailbox-data / message-data / capability-data) CRLF
+//                   mailbox-data / message-data / capability-data / quota) CRLF
 pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
     delimited(
         tag(b"* "),
@@ -643,6 +643,8 @@ pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
             rfc5464::metadata_solicited,
             rfc5464::metadata_unsolicited,
             rfc7162::resp_vanished,
+            rfc2087::quota,
+            rfc2087::quota_root,
         )),
         tag(b"\r\n"),
     )(i)
