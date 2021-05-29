@@ -166,8 +166,8 @@ mod tests {
     }
 
     #[test]
-    fn test_quota_root() {
-        assert_matches! (super::quota_root("QUOTAROOT INBOX \"\"".as_bytes()) ,
+    fn test_quota_root_response_data() {
+        assert_matches! (crate::parser::rfc3501::response_data("* QUOTAROOT INBOX \"\"\r\n".as_bytes()) ,
             Ok((_, r)) => {
                 assert_eq!(
                     r,
