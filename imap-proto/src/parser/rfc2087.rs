@@ -1,5 +1,5 @@
 //!
-//! https://tools.ietf.org/html/rfc208 mailbox_name: (), quota_root_names: () mailbox_name: (), quota_root_names: () mailbox_name: (), quota_root_names: () mailbox_name: (), quota_root_names: ()7
+//! https://tools.ietf.org/html/rfc2087
 //!
 //! IMAP4 QUOTA extension
 //!
