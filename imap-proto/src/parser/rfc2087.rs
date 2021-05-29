@@ -99,13 +99,13 @@ pub(crate) fn quota_root(i: &[u8]) -> IResult<&[u8], Response> {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::*;
+    use super::*;
     use assert_matches::assert_matches;
     use std::borrow::Cow;
 
     #[test]
     fn test_quota() {
-        assert_matches! (super::quota(b"QUOTA \"\" (STORAGE 10 512)") ,
+        assert_matches! (quota(b"QUOTA \"\" (STORAGE 10 512)") ,
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_quota_list() {
         assert_matches! (
-            super::quota_list(b"(STORAGE 10 512)"),
+            quota_list(b"(STORAGE 10 512)"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -138,7 +138,7 @@ mod tests {
             }
         );
 
-        assert_matches! (super::quota_list(b"(MESSAGE 100 512)"),
+        assert_matches! (quota_list(b"(MESSAGE 100 512)"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -151,7 +151,7 @@ mod tests {
             }
         );
 
-        assert_matches! ( super::quota_list(b"(DAILY 55 200)"),
+        assert_matches! (quota_list(b"(DAILY 55 200)"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -180,9 +180,13 @@ mod tests {
         );
     }
 
+    fn terminated_qouta_root(i: &[u8]) -> IResult<&[u8], Response> {
+        nom::sequence::terminated(quota_root, nom::bytes::streaming::tag("\r\n"))(i)
+    }
+
     #[test]
     fn test_quota_root_without_root_names() {
-        assert_matches! (super::quota_root(b"QUOTAROOT comp.mail.mime") ,
+        assert_matches! (terminated_qouta_root(b"QUOTAROOT comp.mail.mime\r\n") ,
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -198,7 +202,7 @@ mod tests {
     #[test]
     fn test_quota_root2() {
         assert_matches! (
-            super::quota_root(b"QUOTAROOT INBOX HU"),
+            terminated_qouta_root(b"QUOTAROOT INBOX HU\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -211,7 +215,7 @@ mod tests {
         );
 
         assert_matches! (
-            super::quota_root(b"QUOTAROOT INBOX \"\""),
+            terminated_qouta_root(b"QUOTAROOT INBOX \"\"\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -224,12 +228,12 @@ mod tests {
         );
 
         assert_matches! (
-            super::quota_root(b"QUOTAROOT \"Inbox\" \"#Account\""),
+            terminated_qouta_root(b"QUOTAROOT \"Inbox\" \"#Account\"\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
                     Response::QuotaRoot(QuotaRoot{
-                        mailbox_name: Cow::Borrowed("INBOX"),
+                        mailbox_name: Cow::Borrowed("Inbox"),
                         quota_root_names: vec![Cow::Borrowed("#Account")]
                     })
                 );
@@ -237,18 +241,16 @@ mod tests {
         );
 
         assert_matches! (
-            super::quota_root(b"QUOTAROOT \"Inbox\" \"#Account\" \"#Mailbox\""),
+            terminated_qouta_root(b"QUOTAROOT \"Inbox\" \"#Account\" \"#Mailbox\"\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
                     Response::QuotaRoot(QuotaRoot{
-                        mailbox_name: Cow::Borrowed("INBOX"),
+                        mailbox_name: Cow::Borrowed("Inbox"),
                         quota_root_names: vec![Cow::Borrowed("#Account"), Cow::Borrowed("#Mailbox")]
                     })
                 );
             }
         );
     }
-
-    // TODO more tests
 }
