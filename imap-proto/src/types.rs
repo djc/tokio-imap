@@ -779,7 +779,7 @@ impl<'a> QuotaRoot<'a> {
             quota_root_names: self
                 .quota_root_names
                 .into_iter()
-                .map(|r| to_owned_cow(r))
+                .map(to_owned_cow)
                 .collect(),
         }
     }
