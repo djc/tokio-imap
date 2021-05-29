@@ -197,13 +197,13 @@ mod tests {
         );
     }
 
-    fn terminated_qouta_root(i: &[u8]) -> IResult<&[u8], Response> {
+    fn terminated_quota_root(i: &[u8]) -> IResult<&[u8], Response> {
         nom::sequence::terminated(quota_root, nom::bytes::streaming::tag("\r\n"))(i)
     }
 
     #[test]
     fn test_quota_root_without_root_names() {
-        assert_matches! (terminated_qouta_root(b"QUOTAROOT comp.mail.mime\r\n") ,
+        assert_matches! (terminated_quota_root(b"QUOTAROOT comp.mail.mime\r\n") ,
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -219,7 +219,7 @@ mod tests {
     #[test]
     fn test_quota_root2() {
         assert_matches! (
-            terminated_qouta_root(b"QUOTAROOT INBOX HU\r\n"),
+            terminated_quota_root(b"QUOTAROOT INBOX HU\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -232,7 +232,7 @@ mod tests {
         );
 
         assert_matches! (
-            terminated_qouta_root(b"QUOTAROOT INBOX \"\"\r\n"),
+            terminated_quota_root(b"QUOTAROOT INBOX \"\"\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -245,7 +245,7 @@ mod tests {
         );
 
         assert_matches! (
-            terminated_qouta_root(b"QUOTAROOT \"Inbox\" \"#Account\"\r\n"),
+            terminated_quota_root(b"QUOTAROOT \"Inbox\" \"#Account\"\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -258,7 +258,7 @@ mod tests {
         );
 
         assert_matches! (
-            terminated_qouta_root(b"QUOTAROOT \"Inbox\" \"#Account\" \"#Mailbox\"\r\n"),
+            terminated_quota_root(b"QUOTAROOT \"Inbox\" \"#Account\" \"#Mailbox\"\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
