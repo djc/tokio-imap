@@ -121,6 +121,25 @@ mod tests {
     }
 
     #[test]
+    fn test_quota_response_data() {
+        assert_matches! (crate::parser::rfc3501::response_data(b"* QUOTA \"\" (STORAGE 10 512)\r\n") ,
+            Ok((_, r)) => {
+                assert_eq!(
+                    r,
+                    Response::Quota(Quota {
+                        root_name: Cow::Borrowed(""),
+                        resources: vec![QuotaResource {
+                            name: QuotaResourceName::Storage,
+                            usage: 10,
+                            limit: 512
+                        }]
+                    })
+                );
+            }
+        );
+    }
+
+    #[test]
     fn test_quota_list() {
         assert_matches! (
             quota_list(b"(STORAGE 10 512)"),
