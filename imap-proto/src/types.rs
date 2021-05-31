@@ -171,7 +171,7 @@ impl<'a> ResponseCode<'a> {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 #[non_exhaustive]
 pub enum StatusAttribute {
     HighestModSeq(u64), // RFC 4551
@@ -188,7 +188,7 @@ pub struct Metadata {
     pub value: Option<String>,
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 #[non_exhaustive]
 pub enum MailboxDatum<'a> {
     Exists(u32),
