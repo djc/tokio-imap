@@ -103,7 +103,8 @@ mod tests {
 
     #[test]
     fn test_quota() {
-        assert_matches! (quota(b"QUOTA \"\" (STORAGE 10 512)") ,
+        assert_matches!(
+            quota(b"QUOTA \"\" (STORAGE 10 512)"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -122,7 +123,8 @@ mod tests {
 
     #[test]
     fn test_quota_response_data() {
-        assert_matches! (crate::parser::rfc3501::response_data(b"* QUOTA \"\" (STORAGE 10 512)\r\n") ,
+        assert_matches!(
+            crate::parser::rfc3501::response_data(b"* QUOTA \"\" (STORAGE 10 512)\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -141,7 +143,7 @@ mod tests {
 
     #[test]
     fn test_quota_list() {
-        assert_matches! (
+        assert_matches!(
             quota_list(b"(STORAGE 10 512)"),
             Ok((_, r)) => {
                 assert_eq!(
@@ -155,7 +157,8 @@ mod tests {
             }
         );
 
-        assert_matches! (quota_list(b"(MESSAGE 100 512)"),
+        assert_matches!(
+            quota_list(b"(MESSAGE 100 512)"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -168,7 +171,8 @@ mod tests {
             }
         );
 
-        assert_matches! (quota_list(b"(DAILY 55 200)"),
+        assert_matches!(
+            quota_list(b"(DAILY 55 200)"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -184,7 +188,8 @@ mod tests {
 
     #[test]
     fn test_quota_root_response_data() {
-        assert_matches! (crate::parser::rfc3501::response_data("* QUOTAROOT INBOX \"\"\r\n".as_bytes()) ,
+        assert_matches!(
+            crate::parser::rfc3501::response_data("* QUOTAROOT INBOX \"\"\r\n".as_bytes()),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -203,7 +208,8 @@ mod tests {
 
     #[test]
     fn test_quota_root_without_root_names() {
-        assert_matches! (terminated_quota_root(b"QUOTAROOT comp.mail.mime\r\n") ,
+        assert_matches!(
+            terminated_quota_root(b"QUOTAROOT comp.mail.mime\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
                     r,
@@ -218,7 +224,7 @@ mod tests {
 
     #[test]
     fn test_quota_root2() {
-        assert_matches! (
+        assert_matches!(
             terminated_quota_root(b"QUOTAROOT INBOX HU\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
@@ -231,7 +237,7 @@ mod tests {
             }
         );
 
-        assert_matches! (
+        assert_matches!(
             terminated_quota_root(b"QUOTAROOT INBOX \"\"\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
@@ -244,7 +250,7 @@ mod tests {
             }
         );
 
-        assert_matches! (
+        assert_matches!(
             terminated_quota_root(b"QUOTAROOT \"Inbox\" \"#Account\"\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
@@ -257,7 +263,7 @@ mod tests {
             }
         );
 
-        assert_matches! (
+        assert_matches!(
             terminated_quota_root(b"QUOTAROOT \"Inbox\" \"#Account\" \"#Mailbox\"\r\n"),
             Ok((_, r)) => {
                 assert_eq!(
