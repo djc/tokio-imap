@@ -19,8 +19,8 @@ use nom::{
 
 use crate::{
     parser::{
-        core::*, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161, rfc5256,
-        rfc5464, rfc7162,
+        core::*, rfc2087, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161,
+        rfc5256, rfc5464, rfc7162,
     },
     types::*,
 };
@@ -189,6 +189,7 @@ fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode> {
 fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
     alt((
         map(tag_no_case(b"IMAP4rev1"), |_| Capability::Imap4rev1),
+        map(tag_no_case(b"QUOTA"), |_| Capability::Quota),
         map(
             map(preceded(tag_no_case(b"AUTH="), atom), Cow::Borrowed),
             Capability::Auth,
@@ -628,7 +629,7 @@ fn resp_cond(i: &[u8]) -> IResult<&[u8], Response> {
 }
 
 // response-data   = "*" SP (resp-cond-state / resp-cond-bye /
-//                   mailbox-data / message-data / capability-data) CRLF
+//                   mailbox-data / message-data / capability-data / quota) CRLF
 pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
     delimited(
         tag(b"* "),
@@ -642,6 +643,8 @@ pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
             rfc5464::metadata_solicited,
             rfc5464::metadata_unsolicited,
             rfc7162::resp_vanished,
+            rfc2087::quota,
+            rfc2087::quota_root,
         )),
         tag(b"\r\n"),
     )(i)
@@ -737,6 +740,15 @@ mod tests {
             Ok((_, capabilities)) => {
                 assert_eq!(capabilities, vec![
                     Capability::Imap4rev1, Capability::Auth(Cow::Borrowed("GSSAPI")),  Capability::Auth(Cow::Borrowed("PLAIN"))
+                ])
+            }
+        );
+
+        assert_matches!(
+            super::capability_data(b"CAPABILITY IMAP4rev1 AUTH=PLAIN QUOTA\r\n"),
+            Ok((_, capabilities)) => {
+                assert_eq!(capabilities, vec![
+                    Capability::Imap4rev1,  Capability::Auth(Cow::Borrowed("PLAIN")), Capability::Quota
                 ])
             }
         );

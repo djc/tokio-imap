@@ -41,6 +41,8 @@ pub enum Response<'a> {
     },
     Fetch(u32, Vec<AttributeValue<'a>>),
     MailboxData(MailboxDatum<'a>),
+    Quota(Quota<'a>),
+    QuotaRoot(QuotaRoot<'a>),
 }
 
 impl<'a> Response<'a> {
@@ -87,6 +89,8 @@ impl<'a> Response<'a> {
                 attrs.into_iter().map(AttributeValue::into_owned).collect(),
             ),
             Response::MailboxData(datum) => Response::MailboxData(datum.into_owned()),
+            Response::Quota(quota) => Response::Quota(quota.into_owned()),
+            Response::QuotaRoot(quota_root) => Response::QuotaRoot(quota_root.into_owned()),
         }
     }
 }
@@ -259,6 +263,7 @@ pub enum Capability<'a> {
     Imap4rev1,
     Auth(Cow<'a, str>),
     Atom(Cow<'a, str>),
+    Quota,
 }
 
 impl<'a> Capability<'a> {
@@ -267,6 +272,7 @@ impl<'a> Capability<'a> {
             Capability::Imap4rev1 => Capability::Imap4rev1,
             Capability::Auth(v) => Capability::Auth(to_owned_cow(v)),
             Capability::Atom(v) => Capability::Atom(to_owned_cow(v)),
+            Capability::Quota => Capability::Quota,
         }
     }
 }
@@ -694,6 +700,87 @@ impl<'a> BodyExtMPart<'a> {
                 .map(|v| v.into_iter().map(to_owned_cow).collect()),
             location: self.location.map(to_owned_cow),
             extension: self.extension.map(|v| v.into_owned()),
+        }
+    }
+}
+
+// IMAP4 QUOTA extension (rfc2087)
+
+/// https://tools.ietf.org/html/rfc2087#section-3
+#[derive(Debug, Eq, PartialEq, Hash)]
+pub enum QuotaResourceName<'a> {
+    /// Sum of messages' RFC822.SIZE, in units of 1024 octets
+    Storage,
+    /// Number of messages
+    Message,
+    Atom(Cow<'a, str>),
+}
+
+impl<'a> QuotaResourceName<'a> {
+    pub fn into_owned(self) -> QuotaResourceName<'static> {
+        match self {
+            QuotaResourceName::Message => QuotaResourceName::Message,
+            QuotaResourceName::Storage => QuotaResourceName::Storage,
+            QuotaResourceName::Atom(v) => QuotaResourceName::Atom(to_owned_cow(v)),
+        }
+    }
+}
+
+/// 5.1. QUOTA Response (https://tools.ietf.org/html/rfc2087#section-5.1)
+#[derive(Debug, Eq, PartialEq, Hash)]
+pub struct QuotaResource<'a> {
+    pub name: QuotaResourceName<'a>,
+    /// current usage of the resource
+    pub usage: u64,
+    /// resource limit
+    pub limit: u64,
+}
+
+impl<'a> QuotaResource<'a> {
+    pub fn into_owned(self) -> QuotaResource<'static> {
+        QuotaResource {
+            name: self.name.into_owned(),
+            usage: self.usage,
+            limit: self.limit,
+        }
+    }
+}
+
+/// 5.1. QUOTA Response (https://tools.ietf.org/html/rfc2087#section-5.1)
+#[derive(Debug, Eq, PartialEq, Hash)]
+pub struct Quota<'a> {
+    /// quota root name
+    pub root_name: Cow<'a, str>,
+    pub resources: Vec<QuotaResource<'a>>,
+}
+
+impl<'a> Quota<'a> {
+    pub fn into_owned(self) -> Quota<'static> {
+        Quota {
+            root_name: to_owned_cow(self.root_name),
+            resources: self.resources.into_iter().map(|r| r.into_owned()).collect(),
+        }
+    }
+}
+
+/// 5.2. QUOTAROOT Response (https://tools.ietf.org/html/rfc2087#section-5.2)
+#[derive(Debug, Eq, PartialEq, Hash)]
+pub struct QuotaRoot<'a> {
+    /// mailbox name
+    pub mailbox_name: Cow<'a, str>,
+    /// zero or more quota root names
+    pub quota_root_names: Vec<Cow<'a, str>>,
+}
+
+impl<'a> QuotaRoot<'a> {
+    pub fn into_owned(self) -> QuotaRoot<'static> {
+        QuotaRoot {
+            mailbox_name: to_owned_cow(self.mailbox_name),
+            quota_root_names: self
+                .quota_root_names
+                .into_iter()
+                .map(to_owned_cow)
+                .collect(),
         }
     }
 }
