@@ -127,16 +127,19 @@ pub enum ResponseCode<'a> {
     MetadataTooMany,          // RFC 5464, section 4.3
     MetadataNoPrivate,        // RFC 5464, section 4.3
 }
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum UidSetMember {
     UidRange(RangeInclusive<u32>),
     Uid(u32),
 }
+
 impl From<RangeInclusive<u32>> for UidSetMember {
     fn from(x: RangeInclusive<u32>) -> Self {
         UidSetMember::UidRange(x)
     }
 }
+
 impl From<u32> for UidSetMember {
     fn from(x: u32) -> Self {
         UidSetMember::Uid(x)
