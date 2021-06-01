@@ -535,7 +535,7 @@ fn test_parsing_of_quota_capability_in_login_response() {
             assert_eq!(c.len(), 3);
             assert_eq!(c[0], Capability::Imap4rev1);
             assert_eq!(c[1], Capability::Atom(Cow::Borrowed("IDLE")));
-            assert_eq!(c[2], Capability::Quota);
+            assert_eq!(c[2], Capability::Atom(Cow::Borrowed("QUOTA")));
         }
         rsp => panic!("unexpected response {:?}", rsp),
     }

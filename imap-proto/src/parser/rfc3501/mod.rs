@@ -189,7 +189,6 @@ fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode> {
 fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
     alt((
         map(tag_no_case(b"IMAP4rev1"), |_| Capability::Imap4rev1),
-        map(tag_no_case(b"QUOTA"), |_| Capability::Quota),
         map(
             map(preceded(tag_no_case(b"AUTH="), atom), Cow::Borrowed),
             Capability::Auth,
@@ -740,15 +739,6 @@ mod tests {
             Ok((_, capabilities)) => {
                 assert_eq!(capabilities, vec![
                     Capability::Imap4rev1, Capability::Auth(Cow::Borrowed("GSSAPI")),  Capability::Auth(Cow::Borrowed("PLAIN"))
-                ])
-            }
-        );
-
-        assert_matches!(
-            super::capability_data(b"CAPABILITY IMAP4rev1 AUTH=PLAIN QUOTA\r\n"),
-            Ok((_, capabilities)) => {
-                assert_eq!(capabilities, vec![
-                    Capability::Imap4rev1,  Capability::Auth(Cow::Borrowed("PLAIN")), Capability::Quota
                 ])
             }
         );
