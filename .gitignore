@@ -3,3 +3,4 @@ Cargo.lock
 .idea/
 **/*.rs.bk
 *.iml
+.DS_Store
