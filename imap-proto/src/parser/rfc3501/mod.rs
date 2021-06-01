@@ -721,8 +721,10 @@ mod tests {
             super::capability_data(b"CAPABILITY XPIG-LATIN IMAP4rev1 STARTTLS AUTH=GSSAPI\r\n"),
             Ok((_, capabilities)) => {
                 assert_eq!(capabilities, vec![
-                    Capability::Atom(Cow::Borrowed("XPIG-LATIN")), Capability::Imap4rev1,
-                    Capability::Atom(Cow::Borrowed("STARTTLS")), Capability::Auth(Cow::Borrowed("GSSAPI"))
+                    Capability::Atom(Cow::Borrowed("XPIG-LATIN")),
+                    Capability::Imap4rev1,
+                    Capability::Atom(Cow::Borrowed("STARTTLS")),
+                    Capability::Auth(Cow::Borrowed("GSSAPI")),
                 ])
             }
         );
@@ -731,7 +733,9 @@ mod tests {
             super::capability_data(b"CAPABILITY IMAP4rev1 AUTH=GSSAPI AUTH=PLAIN\r\n"),
             Ok((_, capabilities)) => {
                 assert_eq!(capabilities, vec![
-                    Capability::Imap4rev1, Capability::Auth(Cow::Borrowed("GSSAPI")),  Capability::Auth(Cow::Borrowed("PLAIN"))
+                    Capability::Imap4rev1,
+                    Capability::Auth(Cow::Borrowed("GSSAPI")),
+                    Capability::Auth(Cow::Borrowed("PLAIN")),
                 ])
             }
         );
