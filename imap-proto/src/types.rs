@@ -560,12 +560,18 @@ fn body_param_owned<'a>(v: BodyParams<'a>) -> BodyParams<'static> {
     })
 }
 
+/// An RFC 2822 envelope
+///
+/// See https://datatracker.ietf.org/doc/html/rfc2822#section-3.6 for more details.
 #[derive(Debug, Eq, PartialEq)]
 pub struct Envelope<'a> {
     pub date: Option<Cow<'a, [u8]>>,
     pub subject: Option<Cow<'a, [u8]>>,
+    /// Author of the message; mailbox responsible for writing the message
     pub from: Option<Vec<Address<'a>>>,
+    /// Mailbox of the agent responsible for the message's transmission
     pub sender: Option<Vec<Address<'a>>>,
+    /// Mailbox that the author of the message suggests replies be sent to
     pub reply_to: Option<Vec<Address<'a>>>,
     pub to: Option<Vec<Address<'a>>>,
     pub cc: Option<Vec<Address<'a>>>,
