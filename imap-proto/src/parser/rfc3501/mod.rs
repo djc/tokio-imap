@@ -573,6 +573,13 @@ fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode>, Option<&str>)> {
     })(i)
 }
 
+// an response-text if it is at the end of a response. Empty text is then allowed without the normally needed trailing space.
+fn trailing_resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode>, Option<&str>)> {
+    map(opt(tuple((tag(b" "), resp_text))), |resptext| {
+        resptext.map(|(_, tuple)| tuple).unwrap_or((None, None))
+    })(i)
+}
+
 // continue-req    = "+" SP (resp-text / base64) CRLF
 pub(crate) fn continue_req(i: &[u8]) -> IResult<&[u8], Response> {
     // Some servers do not send the space :/
@@ -596,11 +603,10 @@ pub(crate) fn response_tagged(i: &[u8]) -> IResult<&[u8], Response> {
             imap_tag,
             tag(b" "),
             status,
-            tag(b" "),
-            resp_text,
+            trailing_resp_text,
             tag(b"\r\n"),
         )),
-        |(tag, _, status, _, text, _)| Response::Done {
+        |(tag, _, status, text, _)| Response::Done {
             tag,
             status,
             code: text.0,
@@ -617,14 +623,13 @@ pub(crate) fn response_tagged(i: &[u8]) -> IResult<&[u8], Response> {
 // resp-cond-state = ("OK" / "NO" / "BAD") SP resp-text
 //                     ; Status condition
 fn resp_cond(i: &[u8]) -> IResult<&[u8], Response> {
-    map(
-        tuple((status, tag(b" "), resp_text)),
-        |(status, _, text)| Response::Data {
+    map(tuple((status, trailing_resp_text)), |(status, text)| {
+        Response::Data {
             status,
             code: text.0,
             information: text.1.map(Cow::Borrowed),
-        },
-    )(i)
+        }
+    })(i)
 }
 
 // response-data   = "*" SP (resp-cond-state / resp-cond-bye /

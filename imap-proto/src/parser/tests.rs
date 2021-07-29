@@ -540,3 +540,29 @@ fn test_parsing_of_quota_capability_in_login_response() {
         rsp => panic!("unexpected response {:?}", rsp),
     }
 }
+
+#[test]
+fn test_parsing_of_bye_response() {
+    match parse_response(b"* BYE\r\n") {
+        Ok((
+            _,
+            Response::Data {
+                status: Status::Bye,
+                code: None,
+                information: None,
+            },
+        )) => {}
+        rsp => panic!("unexpected response {:?}", rsp),
+    };
+    match parse_response(b"* BYE Autologout; idle for too long\r\n") {
+        Ok((
+            _,
+            Response::Data {
+                status: Status::Bye,
+                code: None,
+                information: Some(Cow::Borrowed("Autologout; idle for too long")),
+            },
+        )) => {}
+        rsp => panic!("unexpected response {:?}", rsp),
+    };
+}
