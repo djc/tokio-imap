@@ -16,7 +16,7 @@ readme = "../README.md"
 maintenance = { status = "passively-maintained" }
 
 [dependencies]
-nom = { version = "6", default-features = false, features = ["std"] }
+nom = { version = "7", default-features = false, features = ["std"] }
 
 [dev-dependencies]
 assert_matches = "1.3"
