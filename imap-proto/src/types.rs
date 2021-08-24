@@ -201,7 +201,7 @@ pub enum MailboxDatum<'a> {
     Exists(u32),
     Flags(Vec<Cow<'a, str>>),
     List {
-        flags: Vec<Cow<'a, str>>,
+        name_attributes: Vec<NameAttribute<'a>>,
         delimiter: Option<Cow<'a, str>>,
         name: Cow<'a, str>,
     },
@@ -230,11 +230,14 @@ impl<'a> MailboxDatum<'a> {
                 MailboxDatum::Flags(flags.into_iter().map(to_owned_cow).collect())
             }
             MailboxDatum::List {
-                flags,
+                name_attributes,
                 delimiter,
                 name,
             } => MailboxDatum::List {
-                flags: flags.into_iter().map(to_owned_cow).collect(),
+                name_attributes: name_attributes
+                    .into_iter()
+                    .map(|named_attribute| named_attribute.into_owned())
+                    .collect(),
                 delimiter: delimiter.map(to_owned_cow),
                 name: to_owned_cow(name),
             },
@@ -707,6 +710,48 @@ impl<'a> BodyExtMPart<'a> {
                 .map(|v| v.into_iter().map(to_owned_cow).collect()),
             location: self.location.map(to_owned_cow),
             extension: self.extension.map(|v| v.into_owned()),
+        }
+    }
+}
+
+/// The name attributes are returned as part of a LIST response described in
+/// [RFC 3501 section 7.2.2](https://tools.ietf.org/html/rfc3501#section-7.2.2).
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum NameAttribute<'a> {
+    /// From [RFC 3501 section 7.2.2](https://tools.ietf.org/html/rfc3501#section-7.2.2):
+    ///
+    /// > It is not possible for any child levels of hierarchy to exist
+    /// > under this name; no child levels exist now and none can be
+    /// > created in the future.
+    NoInferiors,
+    /// From [RFC 3501 section 7.2.2](https://tools.ietf.org/html/rfc3501#section-7.2.2):
+    ///
+    /// > It is not possible to use this name as a selectable mailbox.
+    NoSelect,
+    /// From [RFC 3501 section 7.2.2](https://tools.ietf.org/html/rfc3501#section-7.2.2):
+    ///
+    /// > The mailbox has been marked "interesting" by the server; the
+    /// > mailbox probably contains messages that have been added since
+    /// > the last time the mailbox was selected.
+    Marked,
+    /// From [RFC 3501 section 7.2.2](https://tools.ietf.org/html/rfc3501#section-7.2.2):
+    ///
+    /// > The mailbox does not contain any additional messages since the
+    /// > last time the mailbox was selected.
+    Unmarked,
+    /// A name attribute not defined in [RFC 3501 section 7.2.2](https://tools.ietf.org/html/rfc3501#section-7.2.2)
+    /// or any supported extension.
+    Extension(Cow<'a, str>),
+}
+
+impl<'a> NameAttribute<'a> {
+    pub fn into_owned(self) -> NameAttribute<'static> {
+        match self {
+            NameAttribute::NoInferiors => NameAttribute::NoInferiors,
+            NameAttribute::NoSelect => NameAttribute::NoSelect,
+            NameAttribute::Marked => NameAttribute::Marked,
+            NameAttribute::Unmarked => NameAttribute::Unmarked,
+            NameAttribute::Extension(s) => NameAttribute::Extension(to_owned_cow(s)),
         }
     }
 }

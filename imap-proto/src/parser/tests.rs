@@ -11,6 +11,34 @@ fn test_mailbox_data_response() {
     }
 }
 
+/// Test that the name attributes in [RFC 3501 Section 7.2.2](https://datatracker.ietf.org/doc/html/rfc3501#section-7.2.2)
+/// and extensions can be parsed.
+#[test]
+fn test_name_attributes() {
+    match parse_response(
+        b"* LIST (\\Noinferiors \\Noselect \\Marked \\Unmarked \\Foobar) \".\" INBOX.Tests\r\n",
+    ) {
+        Ok((
+            _,
+            Response::MailboxData(MailboxDatum::List {
+                name_attributes, ..
+            }),
+        )) => {
+            assert_eq!(
+                name_attributes,
+                vec![
+                    NameAttribute::NoInferiors,
+                    NameAttribute::NoSelect,
+                    NameAttribute::Marked,
+                    NameAttribute::Unmarked,
+                    NameAttribute::Extension(Cow::Borrowed("\\Foobar")),
+                ]
+            );
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+}
+
 #[test]
 fn test_number_overflow() {
     match parse_response(b"* 2222222222222222222222222222222222222222222C\r\n") {

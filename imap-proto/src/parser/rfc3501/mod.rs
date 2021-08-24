@@ -19,14 +19,15 @@ use nom::{
 
 use crate::{
     parser::{
-        core::*, rfc2087, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161,
-        rfc5256, rfc5464, rfc7162,
+        core::*, rfc2087, rfc3501::body::*, rfc3501::body_structure::*,
+        rfc3501::name_attributes::*, rfc4315, rfc4551, rfc5161, rfc5256, rfc5464, rfc7162,
     },
     types::*,
 };
 
 pub mod body;
 pub mod body_structure;
+pub mod name_attributes;
 
 fn is_tag_char(c: u8) -> bool {
     c != b'+' && is_astring_char(c)
@@ -244,23 +245,23 @@ fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
 }
 
 #[allow(clippy::type_complexity)]
-fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<Cow<str>>, Option<&str>, &str)> {
+fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<NameAttribute>, Option<&str>, &str)> {
     map(
         tuple((
-            flag_list,
+            name_attributes,
             tag(b" "),
             alt((map(quoted_utf8, Some), map(nil, |_| None))),
             tag(b" "),
             mailbox,
         )),
-        |(flags, _, delimiter, _, name)| (flags, delimiter, name),
+        |(name_attributes, _, delimiter, _, name)| (name_attributes, delimiter, name),
     )(i)
 }
 
 fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(preceded(tag_no_case("LIST "), mailbox_list), |data| {
         MailboxDatum::List {
-            flags: data.0,
+            name_attributes: data.0,
             delimiter: data.1.map(Cow::Borrowed),
             name: Cow::Borrowed(data.2),
         }
@@ -270,7 +271,7 @@ fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
 fn mailbox_data_lsub(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(preceded(tag_no_case("LSUB "), mailbox_list), |data| {
         MailboxDatum::List {
-            flags: data.0,
+            name_attributes: data.0,
             delimiter: data.1.map(Cow::Borrowed),
             name: Cow::Borrowed(data.2),
         }
