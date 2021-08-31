@@ -20,7 +20,7 @@ bytes = "1"
 futures-util = "0.3.8"
 futures-sink = "0.3.8"
 imap-proto = { version = "0.14", path = "../imap-proto" }
-nom = "6"
+nom = "7"
 pin-project = "1"
 tokio = { version = "1", features = ["net"] }
 tokio-rustls = "0.22.0"

@@ -16,7 +16,7 @@ pub mod rfc7162;
 #[cfg(test)]
 mod tests;
 
-pub fn parse_response(msg: &[u8]) -> ParseResult {
+pub fn parse_response(msg: &[u8]) -> ParseResult<'_> {
     alt((
         rfc3501::continue_req,
         rfc3501::response_data,

@@ -21,7 +21,7 @@ pub fn number(i: &[u8]) -> IResult<&[u8], u32> {
         Some(v) => Ok((i, v)),
         None => Err(nom::Err::Error(nom::error::make_error(
             i,
-            nom::error::ErrorKind::ParseTo,
+            nom::error::ErrorKind::MapRes,
         ))),
     }
 }
@@ -33,7 +33,7 @@ pub fn number_64(i: &[u8]) -> IResult<&[u8], u64> {
         Some(v) => Ok((i, v)),
         None => Err(nom::Err::Error(nom::error::make_error(
             i,
-            nom::error::ErrorKind::ParseTo,
+            nom::error::ErrorKind::MapRes,
         ))),
     }
 }
