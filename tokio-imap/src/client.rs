@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::convert::TryInto;
 use std::io;
 use std::net::ToSocketAddrs;
 use std::pin::Pin;
@@ -10,8 +11,7 @@ use futures_util::{ready, stream::Stream, StreamExt};
 use pin_project::pin_project;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
-use tokio_rustls::rustls::ClientConfig;
-use tokio_rustls::webpki::DNSNameRef;
+use tokio_rustls::rustls::{ClientConfig, OwnedTrustAnchor};
 use tokio_rustls::{client::TlsStream, TlsConnector};
 use tokio_util::codec::{Decoder, Framed};
 
@@ -36,15 +36,25 @@ impl TlsClient {
             )
         })?;
 
-        let mut tls_config = ClientConfig::new();
-        tls_config
-            .root_store
-            .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
-        let connector: TlsConnector = Arc::new(tls_config).into();
+        let mut roots = tokio_rustls::rustls::RootCertStore::empty();
+        roots.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
+            OwnedTrustAnchor::from_subject_spki_name_constraints(
+                ta.subject,
+                ta.spki,
+                ta.name_constraints,
+            )
+        }));
+
+        let connector = TlsConnector::from(Arc::new(
+            ClientConfig::builder()
+                .with_safe_defaults()
+                .with_root_certificates(roots)
+                .with_no_client_auth(),
+        ));
 
         let stream = TcpStream::connect(&addr).await?;
         let stream = connector
-            .connect(DNSNameRef::try_from_ascii_str(server).unwrap(), stream)
+            .connect(server.try_into().unwrap(), stream)
             .await?;
         let mut transport = ImapCodec::default().framed(stream);
 
