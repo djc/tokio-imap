@@ -717,6 +717,7 @@ impl<'a> BodyExtMPart<'a> {
 /// The name attributes are returned as part of a LIST response described in
 /// [RFC 3501 section 7.2.2](https://tools.ietf.org/html/rfc3501#section-7.2.2).
 #[derive(Debug, Eq, PartialEq, Clone)]
+#[non_exhaustive]
 pub enum NameAttribute<'a> {
     /// From [RFC 3501 section 7.2.2](https://tools.ietf.org/html/rfc3501#section-7.2.2):
     ///
