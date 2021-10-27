@@ -11,7 +11,7 @@ use nom::{
     branch::alt,
     bytes::streaming::{tag, tag_no_case, take_while, take_while1},
     character::streaming::char,
-    combinator::{map, map_res, opt, recognize},
+    combinator::{map, map_res, opt, recognize, value},
     multi::{many0, many1},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
@@ -243,24 +243,40 @@ fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     )(i)
 }
 
+fn name_attribute(i: &[u8]) -> IResult<&[u8], NameAttribute> {
+    alt((
+        value(NameAttribute::NoInferiors, tag_no_case(b"\\Noinferiors")),
+        value(NameAttribute::NoSelect, tag_no_case(b"\\Noselect")),
+        value(NameAttribute::Marked, tag_no_case(b"\\Marked")),
+        value(NameAttribute::Unmarked, tag_no_case(b"\\Unmarked")),
+        map(
+            map_res(
+                recognize(pair(tag(b"\\"), take_while(is_atom_char))),
+                from_utf8,
+            ),
+            |s| NameAttribute::Extension(Cow::Borrowed(s)),
+        ),
+    ))(i)
+}
+
 #[allow(clippy::type_complexity)]
-fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<Cow<str>>, Option<&str>, &str)> {
+fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<NameAttribute>, Option<&str>, &str)> {
     map(
         tuple((
-            flag_list,
+            parenthesized_list(name_attribute),
             tag(b" "),
             alt((map(quoted_utf8, Some), map(nil, |_| None))),
             tag(b" "),
             mailbox,
         )),
-        |(flags, _, delimiter, _, name)| (flags, delimiter, name),
+        |(name_attributes, _, delimiter, _, name)| (name_attributes, delimiter, name),
     )(i)
 }
 
 fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(preceded(tag_no_case("LIST "), mailbox_list), |data| {
         MailboxDatum::List {
-            flags: data.0,
+            name_attributes: data.0,
             delimiter: data.1.map(Cow::Borrowed),
             name: Cow::Borrowed(data.2),
         }
@@ -270,7 +286,7 @@ fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
 fn mailbox_data_lsub(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     map(preceded(tag_no_case("LSUB "), mailbox_list), |data| {
         MailboxDatum::List {
-            flags: data.0,
+            name_attributes: data.0,
             delimiter: data.1.map(Cow::Borrowed),
             name: Cow::Borrowed(data.2),
         }
