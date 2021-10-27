@@ -11,7 +11,7 @@ use nom::{
     branch::alt,
     bytes::streaming::{tag, tag_no_case, take_while, take_while1},
     character::streaming::char,
-    combinator::{map, map_res, opt, recognize},
+    combinator::{map, map_res, opt, recognize, value},
     multi::{many0, many1},
     sequence::{delimited, pair, preceded, terminated, tuple},
     IResult,
@@ -19,15 +19,14 @@ use nom::{
 
 use crate::{
     parser::{
-        core::*, rfc2087, rfc3501::body::*, rfc3501::body_structure::*,
-        rfc3501::name_attributes::*, rfc4315, rfc4551, rfc5161, rfc5256, rfc5464, rfc7162,
+        core::*, rfc2087, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161,
+        rfc5256, rfc5464, rfc7162,
     },
     types::*,
 };
 
 pub mod body;
 pub mod body_structure;
-pub mod name_attributes;
 
 fn is_tag_char(c: u8) -> bool {
     c != b'+' && is_astring_char(c)
@@ -244,11 +243,27 @@ fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     )(i)
 }
 
+fn name_attribute(i: &[u8]) -> IResult<&[u8], NameAttribute> {
+    alt((
+        value(NameAttribute::NoInferiors, tag_no_case(b"\\Noinferiors")),
+        value(NameAttribute::NoSelect, tag_no_case(b"\\Noselect")),
+        value(NameAttribute::Marked, tag_no_case(b"\\Marked")),
+        value(NameAttribute::Unmarked, tag_no_case(b"\\Unmarked")),
+        map(
+            map_res(
+                recognize(pair(tag(b"\\"), take_while(is_atom_char))),
+                from_utf8,
+            ),
+            |s| NameAttribute::Extension(Cow::Borrowed(s)),
+        ),
+    ))(i)
+}
+
 #[allow(clippy::type_complexity)]
 fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<NameAttribute>, Option<&str>, &str)> {
     map(
         tuple((
-            name_attributes,
+            parenthesized_list(name_attribute),
             tag(b" "),
             alt((map(quoted_utf8, Some), map(nil, |_| None))),
             tag(b" "),
