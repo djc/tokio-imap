@@ -16,7 +16,7 @@ fn test_mailbox_data_response() {
 #[test]
 fn test_name_attributes() {
     match parse_response(
-        b"* LIST (\\Noinferiors \\Noselect \\Marked \\Unmarked \\Foobar) \".\" INBOX.Tests\r\n",
+        b"* LIST (\\Noinferiors \\Noselect \\Marked \\Unmarked \\All \\Archive \\Drafts \\Flagged \\Junk \\Sent \\Trash \\Foobar) \".\" INBOX.Tests\r\n",
     ) {
         Ok((
             _,
@@ -31,6 +31,13 @@ fn test_name_attributes() {
                     NameAttribute::NoSelect,
                     NameAttribute::Marked,
                     NameAttribute::Unmarked,
+                    NameAttribute::All,
+                    NameAttribute::Archive,
+                    NameAttribute::Drafts,
+                    NameAttribute::Flagged,
+                    NameAttribute::Junk,
+                    NameAttribute::Sent,
+                    NameAttribute::Trash,
                     NameAttribute::Extension(Cow::Borrowed("\\Foobar")),
                 ]
             );
