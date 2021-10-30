@@ -716,6 +716,9 @@ impl<'a> BodyExtMPart<'a> {
 
 /// The name attributes are returned as part of a LIST response described in
 /// [RFC 3501 section 7.2.2](https://tools.ietf.org/html/rfc3501#section-7.2.2).
+///
+/// This enumeration additional includes values from the extension Special-Use
+/// Mailboxes [RFC 6154 section 2](https://tools.ietf.org/html/rfc6154#section-2).
 #[derive(Debug, Eq, PartialEq, Clone)]
 #[non_exhaustive]
 pub enum NameAttribute<'a> {
@@ -740,6 +743,62 @@ pub enum NameAttribute<'a> {
     /// > The mailbox does not contain any additional messages since the
     /// > last time the mailbox was selected.
     Unmarked,
+    /// From [RFC 6154 section 2](https://tools.ietf.org/html/rfc6154#section-2):
+    ///
+    /// > This mailbox presents all messages in the user's message store.
+    /// > Implementations MAY omit some messages, such as, perhaps, those
+    /// > in \Trash and \Junk.  When this special use is supported, it is
+    /// > almost certain to represent a virtual mailbox.
+    All,
+    /// From [RFC 6154 section 2](https://tools.ietf.org/html/rfc6154#section-2):
+    ///
+    /// > This mailbox is used to archive messages.  The meaning of an
+    /// > "archival" mailbox is server-dependent; typically, it will be
+    /// > used to get messages out of the inbox, or otherwise keep them
+    /// > out of the user's way, while still making them accessible.
+    Archive,
+    /// From [RFC 6154 section 2](https://tools.ietf.org/html/rfc6154#section-2):
+    ///
+    /// > This mailbox is used to hold draft messages -- typically,
+    /// > messages that are being composed but have not yet been sent.  In
+    /// > some server implementations, this might be a virtual mailbox,
+    /// > containing messages from other mailboxes that are marked with
+    /// > the "\Draft" message flag.  Alternatively, this might just be
+    /// > advice that a client put drafts here.
+    Drafts,
+    /// From [RFC 6154 section 2](https://tools.ietf.org/html/rfc6154#section-2):
+    ///
+    /// > This mailbox presents all messages marked in some way as
+    /// > "important".  When this special use is supported, it is likely
+    /// > to represent a virtual mailbox collecting messages (from other
+    /// > mailboxes) that are marked with the "\Flagged" message flag.
+    Flagged,
+    /// From [RFC 6154 section 2](https://tools.ietf.org/html/rfc6154#section-2):
+    ///
+    /// > This mailbox is where messages deemed to be junk mail are held.
+    /// > Some server implementations might put messages here
+    /// > automatically.  Alternatively, this might just be advice to a
+    /// > client-side spam filter.
+    Junk,
+    /// From [RFC 6154 section 2](https://tools.ietf.org/html/rfc6154#section-2):
+    ///
+    /// > This mailbox is used to hold copies of messages that have been
+    /// > sent.  Some server implementations might put messages here
+    /// > automatically.  Alternatively, this might just be advice that a
+    /// > client save sent messages here.
+    Sent,
+    /// From [RFC 6154 section 2](https://tools.ietf.org/html/rfc6154#section-2)
+    ///
+    /// > This mailbox is used to hold messages that have been deleted or
+    /// > marked for deletion.  In some server implementations, this might
+    /// > be a virtual mailbox, containing messages from other mailboxes
+    /// > that are marked with the "\Deleted" message flag.
+    /// > Alternatively, this might just be advice that a client that
+    /// > chooses not to use the IMAP "\Deleted" model should use this as
+    /// > its trash location.  In server implementations that strictly
+    /// > expect the IMAP "\Deleted" model, this special use is likely not
+    /// > to be supported.
+    Trash,
     /// A name attribute not defined in [RFC 3501 section 7.2.2](https://tools.ietf.org/html/rfc3501#section-7.2.2)
     /// or any supported extension.
     Extension(Cow<'a, str>),
@@ -748,10 +807,20 @@ pub enum NameAttribute<'a> {
 impl<'a> NameAttribute<'a> {
     pub fn into_owned(self) -> NameAttribute<'static> {
         match self {
+            // RFC 3501
             NameAttribute::NoInferiors => NameAttribute::NoInferiors,
             NameAttribute::NoSelect => NameAttribute::NoSelect,
             NameAttribute::Marked => NameAttribute::Marked,
             NameAttribute::Unmarked => NameAttribute::Unmarked,
+            // RFC 6154
+            NameAttribute::All => NameAttribute::All,
+            NameAttribute::Archive => NameAttribute::Archive,
+            NameAttribute::Drafts => NameAttribute::Drafts,
+            NameAttribute::Flagged => NameAttribute::Flagged,
+            NameAttribute::Junk => NameAttribute::Junk,
+            NameAttribute::Sent => NameAttribute::Sent,
+            NameAttribute::Trash => NameAttribute::Trash,
+            // Extensions not supported by this crate
             NameAttribute::Extension(s) => NameAttribute::Extension(to_owned_cow(s)),
         }
     }

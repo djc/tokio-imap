@@ -16,7 +16,7 @@ fn test_mailbox_data_response() {
 #[test]
 fn test_name_attributes() {
     match parse_response(
-        b"* LIST (\\Noinferiors \\Noselect \\Marked \\Unmarked \\Foobar) \".\" INBOX.Tests\r\n",
+        b"* LIST (\\Noinferiors \\Noselect \\Marked \\Unmarked \\All \\Archive \\Drafts \\Flagged \\Junk \\Sent \\Trash \\Foobar) \".\" INBOX.Tests\r\n",
     ) {
         Ok((
             _,
@@ -27,10 +27,20 @@ fn test_name_attributes() {
             assert_eq!(
                 name_attributes,
                 vec![
+                    // RFC 3501
                     NameAttribute::NoInferiors,
                     NameAttribute::NoSelect,
                     NameAttribute::Marked,
                     NameAttribute::Unmarked,
+                    // RFC 6154
+                    NameAttribute::All,
+                    NameAttribute::Archive,
+                    NameAttribute::Drafts,
+                    NameAttribute::Flagged,
+                    NameAttribute::Junk,
+                    NameAttribute::Sent,
+                    NameAttribute::Trash,
+                    // Extensions not supported by this crate
                     NameAttribute::Extension(Cow::Borrowed("\\Foobar")),
                 ]
             );
