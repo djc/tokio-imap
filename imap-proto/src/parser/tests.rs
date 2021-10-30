@@ -27,10 +27,12 @@ fn test_name_attributes() {
             assert_eq!(
                 name_attributes,
                 vec![
+                    // RFC 3501
                     NameAttribute::NoInferiors,
                     NameAttribute::NoSelect,
                     NameAttribute::Marked,
                     NameAttribute::Unmarked,
+                    // RFC 6154
                     NameAttribute::All,
                     NameAttribute::Archive,
                     NameAttribute::Drafts,
@@ -38,6 +40,7 @@ fn test_name_attributes() {
                     NameAttribute::Junk,
                     NameAttribute::Sent,
                     NameAttribute::Trash,
+                    // Extensions not supported by this crate
                     NameAttribute::Extension(Cow::Borrowed("\\Foobar")),
                 ]
             );

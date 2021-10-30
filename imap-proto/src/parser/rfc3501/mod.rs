@@ -245,10 +245,12 @@ fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
 
 fn name_attribute(i: &[u8]) -> IResult<&[u8], NameAttribute> {
     alt((
+        // RFC 3501
         value(NameAttribute::NoInferiors, tag_no_case(b"\\Noinferiors")),
         value(NameAttribute::NoSelect, tag_no_case(b"\\Noselect")),
         value(NameAttribute::Marked, tag_no_case(b"\\Marked")),
         value(NameAttribute::Unmarked, tag_no_case(b"\\Unmarked")),
+        // RFC 6154
         value(NameAttribute::All, tag_no_case(b"\\All")),
         value(NameAttribute::Archive, tag_no_case(b"\\Archive")),
         value(NameAttribute::Drafts, tag_no_case(b"\\Drafts")),
@@ -256,6 +258,7 @@ fn name_attribute(i: &[u8]) -> IResult<&[u8], NameAttribute> {
         value(NameAttribute::Junk, tag_no_case(b"\\Junk")),
         value(NameAttribute::Sent, tag_no_case(b"\\Sent")),
         value(NameAttribute::Trash, tag_no_case(b"\\Trash")),
+        // Extensions not supported by this crate
         map(
             map_res(
                 recognize(pair(tag(b"\\"), take_while(is_atom_char))),

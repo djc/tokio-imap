@@ -807,10 +807,12 @@ pub enum NameAttribute<'a> {
 impl<'a> NameAttribute<'a> {
     pub fn into_owned(self) -> NameAttribute<'static> {
         match self {
+            // RFC 3501
             NameAttribute::NoInferiors => NameAttribute::NoInferiors,
             NameAttribute::NoSelect => NameAttribute::NoSelect,
             NameAttribute::Marked => NameAttribute::Marked,
             NameAttribute::Unmarked => NameAttribute::Unmarked,
+            // RFC 6154
             NameAttribute::All => NameAttribute::All,
             NameAttribute::Archive => NameAttribute::Archive,
             NameAttribute::Drafts => NameAttribute::Drafts,
@@ -818,6 +820,7 @@ impl<'a> NameAttribute<'a> {
             NameAttribute::Junk => NameAttribute::Junk,
             NameAttribute::Sent => NameAttribute::Sent,
             NameAttribute::Trash => NameAttribute::Trash,
+            // Extensions not supported by this crate
             NameAttribute::Extension(s) => NameAttribute::Extension(to_owned_cow(s)),
         }
     }
