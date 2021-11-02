@@ -906,3 +906,36 @@ impl<'a> QuotaRoot<'a> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Tests that the [`NameAttribute::into_owned`] method returns the
+    /// same value (the ownership should only change).
+    #[test]
+    fn test_name_attribute_into_owned() {
+        let name_attributes = [
+            // RFC 3501
+            NameAttribute::NoInferiors,
+            NameAttribute::NoSelect,
+            NameAttribute::Marked,
+            NameAttribute::Unmarked,
+            // RFC 6154
+            NameAttribute::All,
+            NameAttribute::Archive,
+            NameAttribute::Drafts,
+            NameAttribute::Flagged,
+            NameAttribute::Junk,
+            NameAttribute::Sent,
+            NameAttribute::Trash,
+            // Extensions not supported by this crate
+            NameAttribute::Extension(Cow::Borrowed("Foobar")),
+        ];
+
+        for name_attribute in name_attributes {
+            let owned_name_attribute = name_attribute.clone().into_owned();
+            assert_eq!(name_attribute, owned_name_attribute);
+        }
+    }
+}
