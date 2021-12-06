@@ -62,6 +62,7 @@ impl<'a> Encoder<&'a Request<'a>> for ImapCodec {
 
 #[derive(Debug)]
 pub struct ResponseData {
+    #[allow(dead_code)] // Contains data that `response` borrows
     raw: Bytes,
     // This reference is really scoped to the lifetime of the `raw`
     // member, but unfortunately Rust does not allow that yet. It
