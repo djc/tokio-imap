@@ -558,7 +558,7 @@ fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue> {
         msg_att_rfc822_size,
         msg_att_rfc822_text,
         msg_att_uid,
-        gmail::msg_att_x_gm_labels
+        gmail::msg_att_x_gm_labels,
     ))(i)
 }
 

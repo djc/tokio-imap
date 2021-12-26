@@ -253,7 +253,7 @@ fn push_attr(cmd: &mut Vec<u8>, attr: Attribute) {
             Attribute::Rfc822Size => "RFC822.SIZE",
             Attribute::Rfc822Text => "RFC822.TEXT",
             Attribute::Uid => "UID",
-            Attribute::XGmLabels => "X-GM-LABELS"
+            Attribute::XGmLabels => "X-GM-LABELS",
         }
         .as_bytes(),
     );
