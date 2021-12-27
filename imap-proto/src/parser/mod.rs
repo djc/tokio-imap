@@ -4,6 +4,7 @@ use nom::{branch::alt, IResult};
 pub mod core;
 
 pub mod bodystructure;
+pub mod gmail;
 pub mod rfc2087;
 pub mod rfc3501;
 pub mod rfc4315;
