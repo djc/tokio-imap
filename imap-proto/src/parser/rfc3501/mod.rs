@@ -64,7 +64,7 @@ fn mailbox(i: &[u8]) -> IResult<&[u8], &str> {
     })(i)
 }
 
-pub(crate) fn flag_extension(i: &[u8]) -> IResult<&[u8], &str> {
+fn flag_extension(i: &[u8]) -> IResult<&[u8], &str> {
     map_res(
         recognize(pair(tag(b"\\"), take_while(is_atom_char))),
         from_utf8,
@@ -363,7 +363,7 @@ fn mailbox_data(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
         mailbox_data_status,
         mailbox_data_recent,
         mailbox_data_search,
-        gmail::mailbox_data_x_gm_labels,
+        gmail::mailbox_data_gmail_labels,
         rfc5256::mailbox_data_sort,
     ))(i)
 }
@@ -558,7 +558,7 @@ fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue> {
         msg_att_rfc822_size,
         msg_att_rfc822_text,
         msg_att_uid,
-        gmail::msg_att_x_gm_labels,
+        gmail::msg_att_gmail_labels,
     ))(i)
 }
 

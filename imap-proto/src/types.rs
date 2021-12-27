@@ -220,7 +220,7 @@ pub enum MailboxDatum<'a> {
         mailbox: Cow<'a, str>,
         values: Vec<Cow<'a, str>>,
     },
-    XGmLabels(Vec<Cow<'a, str>>),
+    GmailLabels(Vec<Cow<'a, str>>),
 }
 
 impl<'a> MailboxDatum<'a> {
@@ -261,8 +261,8 @@ impl<'a> MailboxDatum<'a> {
                     values: values.into_iter().map(to_owned_cow).collect(),
                 }
             }
-            MailboxDatum::XGmLabels(labels) => {
-                MailboxDatum::XGmLabels(labels.into_iter().map(to_owned_cow).collect())
+            MailboxDatum::GmailLabels(labels) => {
+                MailboxDatum::GmailLabels(labels.into_iter().map(to_owned_cow).collect())
             }
         }
     }
@@ -297,7 +297,8 @@ pub enum Attribute {
     Rfc822Size,
     Rfc822Text,
     Uid,
-    XGmLabels,
+    /// https://developers.google.com/gmail/imap/imap-extensions#access_to_gmail_labels_x-gm-labels
+    GmailLabels,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -332,7 +333,8 @@ pub enum AttributeValue<'a> {
     Rfc822Size(u32),
     Rfc822Text(Option<Cow<'a, [u8]>>),
     Uid(u32),
-    XGmLabels(Vec<Cow<'a, str>>),
+    /// https://developers.google.com/gmail/imap/imap-extensions#access_to_gmail_labels_x-gm-labels
+    GmailLabels(Vec<Cow<'a, str>>),
 }
 
 impl<'a> AttributeValue<'a> {
@@ -359,8 +361,8 @@ impl<'a> AttributeValue<'a> {
             AttributeValue::Rfc822Size(v) => AttributeValue::Rfc822Size(v),
             AttributeValue::Rfc822Text(v) => AttributeValue::Rfc822Text(v.map(to_owned_cow)),
             AttributeValue::Uid(v) => AttributeValue::Uid(v),
-            AttributeValue::XGmLabels(v) => {
-                AttributeValue::XGmLabels(v.into_iter().map(to_owned_cow).collect())
+            AttributeValue::GmailLabels(v) => {
+                AttributeValue::GmailLabels(v.into_iter().map(to_owned_cow).collect())
             }
         }
     }
