@@ -20,7 +20,7 @@ use nom::{
 use crate::{
     parser::{
         core::*, rfc2087, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551, rfc5161,
-        rfc5256, rfc5464, rfc7162,
+        rfc5256, rfc5464, rfc7162, rfc2971
     },
     types::*,
 };
@@ -679,6 +679,7 @@ pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
             rfc7162::resp_vanished,
             rfc2087::quota,
             rfc2087::quota_root,
+            rfc2971::resp_id,
         )),
         tag(b"\r\n"),
     )(i)

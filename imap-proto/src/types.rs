@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::ops::RangeInclusive;
 
 fn to_owned_cow<'a, T: ?Sized + ToOwned>(c: Cow<'a, T>) -> Cow<'static, T> {
@@ -43,6 +44,7 @@ pub enum Response<'a> {
     MailboxData(MailboxDatum<'a>),
     Quota(Quota<'a>),
     QuotaRoot(QuotaRoot<'a>),
+    Id(Option<HashMap<Cow<'a, str>, Cow<'a, str>>>),
 }
 
 impl<'a> Response<'a> {
@@ -91,6 +93,14 @@ impl<'a> Response<'a> {
             Response::MailboxData(datum) => Response::MailboxData(datum.into_owned()),
             Response::Quota(quota) => Response::Quota(quota.into_owned()),
             Response::QuotaRoot(quota_root) => Response::QuotaRoot(quota_root.into_owned()),
+            Response::Id(map) => Response::Id(
+                map.map(|m|
+                    m
+                        .into_iter()
+                        .map(|(k, v)| (to_owned_cow(k), to_owned_cow(v)))
+                        .collect()
+                )
+            ),
         }
     }
 }
