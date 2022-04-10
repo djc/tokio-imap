@@ -6,6 +6,7 @@ pub mod core;
 pub mod bodystructure;
 pub mod gmail;
 pub mod rfc2087;
+pub mod rfc2971;
 pub mod rfc3501;
 pub mod rfc4315;
 pub mod rfc4551;
