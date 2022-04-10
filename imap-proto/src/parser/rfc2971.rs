@@ -5,25 +5,21 @@
 //! The IMAP4 ID extension
 //!
 
-
-use std::{
-    collections::HashMap,
-    borrow::Cow,
-};
+use std::{borrow::Cow, collections::HashMap};
 
 use nom::{
-    IResult,
     branch::alt,
     bytes::complete::tag_no_case,
     character::complete::{char, space1},
     combinator::map,
     multi::many0,
     sequence::{separated_pair, tuple},
+    IResult,
 };
 
 use crate::{
-    Response,
     parser::core::{nil, nstring_utf8, string_utf8},
+    Response,
 };
 
 // A single id parameter (field and value).
@@ -63,32 +59,24 @@ fn id_param_list_not_nil(i: &[u8]) -> IResult<&[u8], HashMap<&str, &str>> {
 // id_params_list ::= "(" #(string SPACE nstring) ")" / nil
 // [RFC2971 - Formal Syntax](https://tools.ietf.org/html/rfc2971#section-4)
 fn id_param_list(i: &[u8]) -> IResult<&[u8], Option<HashMap<&str, &str>>> {
-    alt((
-        map(id_param_list_not_nil, Some),
-        map(nil, |_| None),
-    ))(i)
+    alt((map(id_param_list_not_nil, Some), map(nil, |_| None)))(i)
 }
 
 // id_response ::= "ID" SPACE id_params_list
 // [RFC2971 - Formal Syntax](https://tools.ietf.org/html/rfc2971#section-4)
 pub(crate) fn resp_id(i: &[u8]) -> IResult<&[u8], Response> {
     let (rest, map) = map(
-        tuple((
-            tag_no_case("ID"),
-            space1,
-            id_param_list,
-        )),
+        tuple((tag_no_case("ID"), space1, id_param_list)),
         |(_id, _sp, p)| p,
     )(i)?;
 
     Ok((
         rest,
-        Response::Id(map.map(|m|
-            m
-                .into_iter()
+        Response::Id(map.map(|m| {
+            m.into_iter()
                 .map(|(k, v)| (Cow::Borrowed(k), Cow::Borrowed(v)))
                 .collect()
-        )),
+        })),
     ))
 }
 

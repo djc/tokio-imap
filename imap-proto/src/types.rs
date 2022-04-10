@@ -93,14 +93,11 @@ impl<'a> Response<'a> {
             Response::MailboxData(datum) => Response::MailboxData(datum.into_owned()),
             Response::Quota(quota) => Response::Quota(quota.into_owned()),
             Response::QuotaRoot(quota_root) => Response::QuotaRoot(quota_root.into_owned()),
-            Response::Id(map) => Response::Id(
-                map.map(|m|
-                    m
-                        .into_iter()
-                        .map(|(k, v)| (to_owned_cow(k), to_owned_cow(v)))
-                        .collect()
-                )
-            ),
+            Response::Id(map) => Response::Id(map.map(|m| {
+                m.into_iter()
+                    .map(|(k, v)| (to_owned_cow(k), to_owned_cow(v)))
+                    .collect()
+            })),
         }
     }
 }
