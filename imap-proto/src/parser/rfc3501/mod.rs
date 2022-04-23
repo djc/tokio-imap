@@ -19,8 +19,8 @@ use nom::{
 
 use crate::{
     parser::{
-        core::*, rfc2087, rfc2971, rfc3501::body::*, rfc3501::body_structure::*, rfc4315, rfc4551,
-        rfc5161, rfc5256, rfc5464, rfc7162,
+        core::*, rfc2087, rfc2971, rfc3501::body::*, rfc3501::body_structure::*, rfc4314, rfc4315,
+        rfc4551, rfc5161, rfc5256, rfc5464, rfc7162,
     },
     types::*,
 };
@@ -54,7 +54,7 @@ fn status(i: &[u8]) -> IResult<&[u8], Status> {
     alt((status_ok, status_no, status_bad, status_preauth, status_bye))(i)
 }
 
-fn mailbox(i: &[u8]) -> IResult<&[u8], &str> {
+pub(crate) fn mailbox(i: &[u8]) -> IResult<&[u8], &str> {
     map(astring_utf8, |s| {
         if s.eq_ignore_ascii_case("INBOX") {
             "INBOX"
@@ -680,6 +680,9 @@ pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
             rfc2087::quota,
             rfc2087::quota_root,
             rfc2971::resp_id,
+            rfc4314::acl,
+            rfc4314::list_rights,
+            rfc4314::my_rights,
         )),
         tag(b"\r\n"),
     )(i)

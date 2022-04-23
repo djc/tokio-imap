@@ -49,6 +49,327 @@ fn test_name_attributes() {
     }
 }
 
+/// Test the ACL response from RFC 4314/2086
+#[test]
+fn test_acl_response() {
+    match parse_response(b"* ACL INBOX user lrswipkxtecdan\r\n") {
+        Ok((_, Response::Acl(_))) => {}
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+}
+
+#[test]
+fn test_acl_attributes() {
+    // no rights
+    match parse_response(b"* ACL INBOX\r\n") {
+        Ok((_, Response::Acl(acl))) => {
+            assert_eq!(
+                acl,
+                Acl {
+                    mailbox: Cow::Borrowed("INBOX"),
+                    acls: vec![],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+
+    // one right pair
+    match parse_response(b"* ACL INBOX user lrswipkxtecdan\r\n") {
+        Ok((_, Response::Acl(acl))) => {
+            assert_eq!(
+                acl,
+                Acl {
+                    mailbox: Cow::Borrowed("INBOX"),
+                    acls: vec![AclEntry {
+                        identifier: Cow::Borrowed("user"),
+                        rights: vec![
+                            AclRight::Lookup,
+                            AclRight::Read,
+                            AclRight::Seen,
+                            AclRight::Write,
+                            AclRight::Insert,
+                            AclRight::Post,
+                            AclRight::CreateMailbox,
+                            AclRight::DeleteMailbox,
+                            AclRight::DeleteMessage,
+                            AclRight::Expunge,
+                            AclRight::OldCreate,
+                            AclRight::OldDelete,
+                            AclRight::Administer,
+                            AclRight::Annotation,
+                        ],
+                    },],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+
+    // with custom rights
+    match parse_response(b"* ACL INBOX user lr0123\r\n") {
+        Ok((_, Response::Acl(acl))) => {
+            assert_eq!(
+                acl,
+                Acl {
+                    mailbox: Cow::Borrowed("INBOX"),
+                    acls: vec![AclEntry {
+                        identifier: Cow::Borrowed("user"),
+                        rights: vec![
+                            AclRight::Lookup,
+                            AclRight::Read,
+                            AclRight::Custom('0'),
+                            AclRight::Custom('1'),
+                            AclRight::Custom('2'),
+                            AclRight::Custom('3'),
+                        ],
+                    },],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+
+    // multiple right pairs
+    match parse_response(b"* ACL INBOX user lrswipkxtecdan user2 lr\r\n") {
+        Ok((_, Response::Acl(acl))) => {
+            assert_eq!(
+                acl,
+                Acl {
+                    mailbox: Cow::Borrowed("INBOX"),
+                    acls: vec![
+                        AclEntry {
+                            identifier: Cow::Borrowed("user"),
+                            rights: vec![
+                                AclRight::Lookup,
+                                AclRight::Read,
+                                AclRight::Seen,
+                                AclRight::Write,
+                                AclRight::Insert,
+                                AclRight::Post,
+                                AclRight::CreateMailbox,
+                                AclRight::DeleteMailbox,
+                                AclRight::DeleteMessage,
+                                AclRight::Expunge,
+                                AclRight::OldCreate,
+                                AclRight::OldDelete,
+                                AclRight::Administer,
+                                AclRight::Annotation,
+                            ],
+                        },
+                        AclEntry {
+                            identifier: Cow::Borrowed("user2"),
+                            rights: vec![AclRight::Lookup, AclRight::Read],
+                        },
+                    ],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+
+    // quoted mailbox
+    match parse_response(b"* ACL \"My folder\" user lrswipkxtecdan\r\n") {
+        Ok((_, Response::Acl(acl))) => {
+            assert_eq!(
+                acl,
+                Acl {
+                    mailbox: Cow::Borrowed("My folder"),
+                    acls: vec![AclEntry {
+                        identifier: Cow::Borrowed("user"),
+                        rights: vec![
+                            AclRight::Lookup,
+                            AclRight::Read,
+                            AclRight::Seen,
+                            AclRight::Write,
+                            AclRight::Insert,
+                            AclRight::Post,
+                            AclRight::CreateMailbox,
+                            AclRight::DeleteMailbox,
+                            AclRight::DeleteMessage,
+                            AclRight::Expunge,
+                            AclRight::OldCreate,
+                            AclRight::OldDelete,
+                            AclRight::Administer,
+                            AclRight::Annotation,
+                        ],
+                    },],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+
+    // quoted identifier
+    match parse_response(b"* ACL Trash \"user name\" lrswipkxtecdan\r\n") {
+        Ok((_, Response::Acl(acl))) => {
+            assert_eq!(
+                acl,
+                Acl {
+                    mailbox: Cow::Borrowed("Trash"),
+                    acls: vec![AclEntry {
+                        identifier: Cow::Borrowed("user name"),
+                        rights: vec![
+                            AclRight::Lookup,
+                            AclRight::Read,
+                            AclRight::Seen,
+                            AclRight::Write,
+                            AclRight::Insert,
+                            AclRight::Post,
+                            AclRight::CreateMailbox,
+                            AclRight::DeleteMailbox,
+                            AclRight::DeleteMessage,
+                            AclRight::Expunge,
+                            AclRight::OldCreate,
+                            AclRight::OldDelete,
+                            AclRight::Administer,
+                            AclRight::Annotation,
+                        ],
+                    },],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+}
+
+/// Test the LISTRIGHTS response from RFC 4314/2086
+#[test]
+fn test_list_rights_response() {
+    match parse_response(b"* LISTRIGHTS INBOX user lkxca r s w i p t e d n\r\n") {
+        Ok((_, Response::ListRights(_))) => {}
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+}
+
+#[test]
+fn test_list_rights_attributes() {
+    // no required/always rights, and no optional rights
+    match parse_response(b"* LISTRIGHTS INBOX user \"\"\r\n") {
+        Ok((_, Response::ListRights(rights))) => {
+            assert_eq!(
+                rights,
+                ListRights {
+                    mailbox: Cow::Borrowed("INBOX"),
+                    identifier: Cow::Borrowed("user"),
+                    required: vec![],
+                    optional: vec![],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+
+    // no required/always rights, and with optional rights
+    match parse_response(b"* LISTRIGHTS INBOX user \"\" l k x c\r\n") {
+        Ok((_, Response::ListRights(rights))) => {
+            assert_eq!(
+                rights,
+                ListRights {
+                    mailbox: Cow::Borrowed("INBOX"),
+                    identifier: Cow::Borrowed("user"),
+                    required: vec![],
+                    optional: vec![
+                        AclRight::Lookup,
+                        AclRight::CreateMailbox,
+                        AclRight::DeleteMailbox,
+                        AclRight::OldCreate,
+                    ],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+
+    // with required/always rights, and with optional rights
+    match parse_response(b"* LISTRIGHTS INBOX user lkr x c\r\n") {
+        Ok((_, Response::ListRights(rights))) => {
+            assert_eq!(
+                rights,
+                ListRights {
+                    mailbox: Cow::Borrowed("INBOX"),
+                    identifier: Cow::Borrowed("user"),
+                    required: vec![AclRight::Lookup, AclRight::CreateMailbox, AclRight::Read],
+                    optional: vec![AclRight::DeleteMailbox, AclRight::OldCreate],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+
+    // with required/always rights, and no optional rights
+    match parse_response(b"* LISTRIGHTS INBOX user lkr\r\n") {
+        Ok((_, Response::ListRights(rights))) => {
+            assert_eq!(
+                rights,
+                ListRights {
+                    mailbox: Cow::Borrowed("INBOX"),
+                    identifier: Cow::Borrowed("user"),
+                    required: vec![AclRight::Lookup, AclRight::CreateMailbox, AclRight::Read],
+                    optional: vec![],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+
+    // with mailbox with spaces
+    match parse_response(b"* LISTRIGHTS \"My Folder\" user lkr x c\r\n") {
+        Ok((_, Response::ListRights(rights))) => {
+            assert_eq!(
+                rights,
+                ListRights {
+                    mailbox: Cow::Borrowed("My Folder"),
+                    identifier: Cow::Borrowed("user"),
+                    required: vec![AclRight::Lookup, AclRight::CreateMailbox, AclRight::Read],
+                    optional: vec![AclRight::DeleteMailbox, AclRight::OldCreate],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+}
+
+/// Test the MYRIGHTS response from RFC 4314/2086
+#[test]
+fn test_my_rights_response() {
+    match parse_response(b"* MYRIGHTS INBOX lkxca\r\n") {
+        Ok((_, Response::MyRights(_))) => {}
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+}
+
+#[test]
+fn test_my_rights_attributes() {
+    // with rights
+    match parse_response(b"* MYRIGHTS INBOX lkr\r\n") {
+        Ok((_, Response::MyRights(rights))) => {
+            assert_eq!(
+                rights,
+                MyRights {
+                    mailbox: Cow::Borrowed("INBOX"),
+                    rights: vec![AclRight::Lookup, AclRight::CreateMailbox, AclRight::Read],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+
+    // with space in mailbox
+    match parse_response(b"* MYRIGHTS \"My Folder\" lkr\r\n") {
+        Ok((_, Response::MyRights(rights))) => {
+            assert_eq!(
+                rights,
+                MyRights {
+                    mailbox: Cow::Borrowed("My Folder"),
+                    rights: vec![AclRight::Lookup, AclRight::CreateMailbox, AclRight::Read],
+                }
+            )
+        }
+        rsp => panic!("unexpected response {:?}", rsp),
+    }
+}
+
 #[test]
 fn test_number_overflow() {
     match parse_response(b"* 2222222222222222222222222222222222222222222C\r\n") {

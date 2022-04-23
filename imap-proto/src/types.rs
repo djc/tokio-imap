@@ -2,6 +2,9 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::ops::RangeInclusive;
 
+pub mod acls;
+pub use acls::*;
+
 fn to_owned_cow<'a, T: ?Sized + ToOwned>(c: Cow<'a, T>) -> Cow<'static, T> {
     Cow::Owned(c.into_owned())
 }
@@ -45,6 +48,9 @@ pub enum Response<'a> {
     Quota(Quota<'a>),
     QuotaRoot(QuotaRoot<'a>),
     Id(Option<HashMap<Cow<'a, str>, Cow<'a, str>>>),
+    Acl(Acl<'a>),
+    ListRights(ListRights<'a>),
+    MyRights(MyRights<'a>),
 }
 
 impl<'a> Response<'a> {
@@ -98,6 +104,9 @@ impl<'a> Response<'a> {
                     .map(|(k, v)| (to_owned_cow(k), to_owned_cow(v)))
                     .collect()
             })),
+            Response::Acl(acl_list) => Response::Acl(acl_list.into_owned()),
+            Response::ListRights(rights) => Response::ListRights(rights.into_owned()),
+            Response::MyRights(rights) => Response::MyRights(rights.into_owned()),
         }
     }
 }
