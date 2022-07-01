@@ -12,7 +12,7 @@ pub struct ImapCodec {
     decode_need_message_bytes: usize,
 }
 
-impl<'a> Decoder for ImapCodec {
+impl Decoder for ImapCodec {
     type Item = ResponseData;
     type Error = io::Error;
     fn decode(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, io::Error> {
