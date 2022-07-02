@@ -171,6 +171,24 @@ mod tests {
             }
         );
 
+        // Test that NILs inside parameter list don't crash the parser.
+        // RFC2971 allows NILs as parameter values.
+        assert_matches!(
+            resp_id(br##"ID ("name" "Cyrus" "version" "1.5" "os" NIL "os-version" NIL "support-url" "mailto:cyrus-bugs+@andrew.cmu.edu")"##),
+            Ok((_, Response::Id(Some(id_info)))) => {
+                assert_eq!(
+                    id_info,
+                    vec![
+                        ("name", "Cyrus"),
+                        ("version", "1.5"),
+                        ("support-url", "mailto:cyrus-bugs+@andrew.cmu.edu"),
+                    ].into_iter()
+                    .map(|(k, v)| (Cow::Borrowed(k), Cow::Borrowed(v)))
+                    .collect()
+                );
+            }
+        );
+
         assert_matches!(
             resp_id(br##"ID NIL"##),
             Ok((_, Response::Id(id_info))) => {
