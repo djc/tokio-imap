@@ -41,7 +41,7 @@ impl<'a> BodyStructParser<'a> {
             .map
             .iter()
             .filter_map(|(k, v)| {
-                if func(*v) {
+                if func(v) {
                     let slice: &[u32] = k;
                     Some(slice)
                 } else {
