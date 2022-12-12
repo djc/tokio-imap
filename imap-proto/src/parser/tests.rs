@@ -724,6 +724,19 @@ fn test_flags() {
         ),
         rsp => panic!("Unexpected response: {:?}", rsp),
     }
+
+    // Invalid response (FLAGS can't include ']') from some unknown providers.
+    //
+    // As a workaround, such response is parsed without error.
+    match parse_response(b"* FLAGS (OIB-Seen-[Gmail]/All)\r\n") {
+        Ok((_, capabilities)) => assert_eq!(
+            capabilities,
+            Response::MailboxData(MailboxDatum::Flags(vec![Cow::Borrowed(
+                "OIB-Seen-[Gmail]/All"
+            )]))
+        ),
+        rsp => panic!("Unexpected response: {:?}", rsp),
+    }
 }
 
 #[test]
