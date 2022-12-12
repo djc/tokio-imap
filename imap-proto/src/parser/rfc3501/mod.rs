@@ -75,8 +75,8 @@ pub(crate) fn flag(i: &[u8]) -> IResult<&[u8], &str> {
     // Correct code is
     //   alt((flag_extension, atom))(i)
     //
-    // Unfortunately, some unknown provider sends the following response:
-    // * FLAGS (\Answered \Flagged \Deleted \Seen \Draft OIB-Seen-[Gmail]/All)
+    // Unfortunately, some unknown providers send the following response:
+    // * FLAGS (OIB-Seen-[Gmail]/All)
     //
     // As a workaround, ']' (resp-specials) is allowed here.
     alt((
