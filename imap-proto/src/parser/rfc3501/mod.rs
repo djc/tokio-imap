@@ -72,7 +72,17 @@ fn flag_extension(i: &[u8]) -> IResult<&[u8], &str> {
 }
 
 pub(crate) fn flag(i: &[u8]) -> IResult<&[u8], &str> {
-    alt((flag_extension, atom))(i)
+    // Correct code is
+    //   alt((flag_extension, atom))(i)
+    //
+    // Unfortunately, some unknown provider sends the following response:
+    // * FLAGS (\Answered \Flagged \Deleted \Seen \Draft OIB-Seen-[Gmail]/All)
+    //
+    // As a workaround, ']' (resp-specials) is allowed here.
+    alt((
+        flag_extension,
+        map_res(take_while1(is_astring_char), from_utf8),
+    ))(i)
 }
 
 fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<Cow<str>>> {
