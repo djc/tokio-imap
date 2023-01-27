@@ -14,10 +14,10 @@ fn main() -> std::io::Result<()> {
 
         match Response::from_bytes(line.replace('\n', "\r\n").as_bytes()) {
             Ok((remaining, command)) => {
-                println!("{:#?}", command);
+                println!("{command:#?}");
 
                 if !remaining.is_empty() {
-                    println!("Remaining data in buffer: {:?}", remaining);
+                    println!("Remaining data in buffer: {remaining:?}");
                 }
             }
             Err(_) => {

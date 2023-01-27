@@ -39,7 +39,7 @@ impl Decoder for ImapCodec {
             | Err(nom::Err::Failure(nom::error::Error { code, .. })) => {
                 return Err(io::Error::new(
                     io::ErrorKind::Other,
-                    format!("{:?} during parsing of {:?}", code, buf),
+                    format!("{code:?} during parsing of {buf:?}"),
                 ));
             }
         };

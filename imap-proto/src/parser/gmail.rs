@@ -34,7 +34,7 @@ mod tests {
         let env = br#"X-GM-LABELS (\Inbox \Sent Important "Muy Importante") "#;
         match super::msg_att_gmail_labels(env) {
             Ok((_, AttributeValue::GmailLabels(labels))) => {
-                println!("{:?}", labels);
+                println!("{labels:?}");
                 assert_eq!(
                     ["\\Inbox", "\\Sent", "Important", "Muy Importante"].to_vec(),
                     labels
@@ -45,7 +45,7 @@ mod tests {
                 if let nom::Err::Error(i) = &e {
                     println!("{:?}", std::str::from_utf8(i.input));
                 }
-                panic!("unexpected response {:?}", e);
+                panic!("unexpected response {e:?}");
             }
         }
     }

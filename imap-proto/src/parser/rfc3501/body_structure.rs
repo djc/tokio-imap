@@ -330,7 +330,7 @@ mod tests {
 
     fn mock_body_text() -> (String, BodyStructure<'static>) {
         (
-            format!(r#"("TEXT" "PLAIN" {} 42)"#, BODY_FIELDS),
+            format!(r#"("TEXT" "PLAIN" {BODY_FIELDS} 42)"#),
             BodyStructure::Text {
                 common: BodyContentCommon {
                     ty: ContentType {
@@ -444,7 +444,7 @@ mod tests {
 
     #[test]
     fn test_body_structure_text_with_ext() {
-        let body_str = format!(r#"("TEXT" "PLAIN" {} 42 NIL NIL NIL NIL)"#, BODY_FIELDS);
+        let body_str = format!(r#"("TEXT" "PLAIN" {BODY_FIELDS} 42 NIL NIL NIL NIL)"#);
         let (_, text_body_struct) = mock_body_text();
 
         assert_matches!(
@@ -493,10 +493,8 @@ mod tests {
     fn test_body_structure_message() {
         let (text_body_str, _) = mock_body_text();
         let envelope_str = r#"("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)" "IMAP4rev1 WG mtg summary and minutes" (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) (("Terry Gray" NIL "gray" "cac.washington.edu")) ((NIL NIL "imap" "cac.washington.edu")) ((NIL NIL "minutes" "CNRI.Reston.VA.US") ("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL "<B27397-0100000@cac.washington.edu>")"#;
-        let body_str = format!(
-            r#"("MESSAGE" "RFC822" {} {} {} 42)"#,
-            BODY_FIELDS, envelope_str, text_body_str
-        );
+        let body_str =
+            format!(r#"("MESSAGE" "RFC822" {BODY_FIELDS} {envelope_str} {text_body_str} 42)"#);
 
         assert_matches!(
             body(body_str.as_bytes()),
@@ -508,10 +506,8 @@ mod tests {
     fn test_body_structure_multipart() {
         let (text_body_str1, text_body_struct1) = mock_body_text();
         let (text_body_str2, text_body_struct2) = mock_body_text();
-        let body_str = format!(
-            r#"({}{} "ALTERNATIVE" NIL NIL NIL NIL)"#,
-            text_body_str1, text_body_str2
-        );
+        let body_str =
+            format!(r#"({text_body_str1}{text_body_str2} "ALTERNATIVE" NIL NIL NIL NIL)"#);
 
         assert_matches!(
             body(body_str.as_bytes()),
