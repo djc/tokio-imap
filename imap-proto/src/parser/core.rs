@@ -281,7 +281,7 @@ mod tests {
             Ok((_, value)) => {
                 assert_eq!(value, b"XYZ");
             }
-            rsp => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {rsp:?}"),
         }
     }
 
@@ -291,7 +291,7 @@ mod tests {
             Ok((_, value)) => {
                 assert_eq!(value, b"text");
             }
-            rsp => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {rsp:?}"),
         }
     }
 
@@ -303,7 +303,7 @@ mod tests {
                 assert_eq!(*value.end(), 28);
                 assert_eq!(value.collect::<Vec<u32>>(), vec![23, 24, 25, 26, 27, 28]);
             }
-            rsp => panic!("Unexpected response {:?}", rsp),
+            rsp => panic!("Unexpected response {rsp:?}"),
         }
     }
 
@@ -325,7 +325,7 @@ mod tests {
                 assert_eq!(*v.start(), 15);
                 assert_eq!(*v.end(), 30);
             }
-            rsp => panic!("Unexpected response {:?}", rsp),
+            rsp => panic!("Unexpected response {rsp:?}"),
         }
     }
 }

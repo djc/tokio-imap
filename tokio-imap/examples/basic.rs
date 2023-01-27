@@ -18,7 +18,7 @@ async fn main() {
     let mailbox = args.next().expect("no mailbox provided");
 
     if let Err(cause) = imap_fetch(&server, login, password, mailbox).await {
-        eprintln!("Fatal error: {}", cause);
+        eprintln!("Fatal error: {cause}");
     }
 }
 
@@ -28,7 +28,7 @@ async fn imap_fetch(
     password: String,
     mailbox: String,
 ) -> Result<(), ImapError> {
-    eprintln!("Will connect to {}", server);
+    eprintln!("Will connect to {server}");
     let (_, mut tls_client) = TlsClient::connect(server)
         .await
         .map_err(|e| ImapError::Connect { cause: e })?;
@@ -43,7 +43,7 @@ async fn imap_fetch(
         Response::Capabilities(_) => {}
         Response::Done { information, .. } => {
             if let Some(info) = information {
-                eprintln!("Login failed: {:?}", info);
+                eprintln!("Login failed: {info:?}");
             }
             return Err(ImapError::Login {
                 cause: io::Error::new(io::ErrorKind::Other, "login failed"),
@@ -83,7 +83,7 @@ async fn process_email(response_data: ResponseData) -> Result<(), io::Error> {
         for val in attr_vals {
             match val {
                 AttributeValue::Uid(u) => {
-                    eprintln!("Message UID: {}", u);
+                    eprintln!("Message UID: {u}");
                 }
                 AttributeValue::Rfc822(Some(src)) => {
                     eprintln!("Message length: {}", src.to_vec().len());
@@ -123,11 +123,11 @@ impl Error for ImapError {
 impl Display for ImapError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match *self {
-            ImapError::Connect { ref cause } => write!(f, "Connect failed: {}", cause),
-            ImapError::Login { ref cause } => write!(f, "Login failed: {}", cause),
-            ImapError::Select { ref cause } => write!(f, "Mailbox selection failed: {}", cause),
-            ImapError::UidFetch { ref cause } => write!(f, "Fetching messages failed: {}", cause),
-            ImapError::Close { ref cause } => write!(f, "Closing failed: {}", cause),
+            ImapError::Connect { ref cause } => write!(f, "Connect failed: {cause}"),
+            ImapError::Login { ref cause } => write!(f, "Login failed: {cause}"),
+            ImapError::Select { ref cause } => write!(f, "Mailbox selection failed: {cause}"),
+            ImapError::UidFetch { ref cause } => write!(f, "Fetching messages failed: {cause}"),
+            ImapError::Close { ref cause } => write!(f, "Closing failed: {cause}"),
         }
     }
 }

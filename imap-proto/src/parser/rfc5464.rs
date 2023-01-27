@@ -308,7 +308,7 @@ mod tests {
                     "AAA"
                 );
             }
-            Err(e) => panic!("ERR: {:?}", e),
+            Err(e) => panic!("ERR: {e:?}"),
             _ => panic!("Strange failure"),
         }
     }
@@ -344,7 +344,7 @@ mod tests {
                     information: Some(Cow::Borrowed("Some entries omitted.")),
                 },
             )) => {}
-            rsp => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {rsp:?}"),
         }
 
         match parse_response(b"* NO [METADATA MAXSIZE 123] Annotation too large.\r\n") {
@@ -356,7 +356,7 @@ mod tests {
                     information: Some(Cow::Borrowed("Annotation too large.")),
                 },
             )) => {}
-            rsp => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {rsp:?}"),
         }
 
         match parse_response(b"* NO [METADATA TOOMANY] Too many annotations.\r\n") {
@@ -368,7 +368,7 @@ mod tests {
                     information: Some(Cow::Borrowed("Too many annotations.")),
                 },
             )) => {}
-            rsp => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {rsp:?}"),
         }
 
         match parse_response(b"* NO [METADATA NOPRIVATE] Private annotations not supported.\r\n") {
@@ -380,7 +380,7 @@ mod tests {
                     information: Some(Cow::Borrowed("Private annotations not supported.")),
                 },
             )) => {}
-            rsp => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {rsp:?}"),
         }
     }
 }

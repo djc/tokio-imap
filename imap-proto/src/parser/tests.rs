@@ -7,7 +7,7 @@ use std::num::NonZeroUsize;
 fn test_mailbox_data_response() {
     match parse_response(b"* LIST (\\HasNoChildren) \".\" INBOX.Tests\r\n") {
         Ok((_, Response::MailboxData(_))) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -45,7 +45,7 @@ fn test_name_attributes() {
                 ]
             );
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -54,7 +54,7 @@ fn test_name_attributes() {
 fn test_acl_response() {
     match parse_response(b"* ACL INBOX user lrswipkxtecdan\r\n") {
         Ok((_, Response::Acl(_))) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -71,7 +71,7 @@ fn test_acl_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // one right pair
@@ -103,7 +103,7 @@ fn test_acl_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // with custom rights
@@ -127,7 +127,7 @@ fn test_acl_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // multiple right pairs
@@ -165,7 +165,7 @@ fn test_acl_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // quoted mailbox
@@ -197,7 +197,7 @@ fn test_acl_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // quoted identifier
@@ -229,7 +229,7 @@ fn test_acl_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -238,7 +238,7 @@ fn test_acl_attributes() {
 fn test_list_rights_response() {
     match parse_response(b"* LISTRIGHTS INBOX user lkxca r s w i p t e d n\r\n") {
         Ok((_, Response::ListRights(_))) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -257,7 +257,7 @@ fn test_list_rights_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // no required/always rights, and with optional rights
@@ -278,7 +278,7 @@ fn test_list_rights_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // with required/always rights, and with optional rights
@@ -294,7 +294,7 @@ fn test_list_rights_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // with required/always rights, and no optional rights
@@ -310,7 +310,7 @@ fn test_list_rights_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // with mailbox with spaces
@@ -326,7 +326,7 @@ fn test_list_rights_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -335,7 +335,7 @@ fn test_list_rights_attributes() {
 fn test_my_rights_response() {
     match parse_response(b"* MYRIGHTS INBOX lkxca\r\n") {
         Ok((_, Response::MyRights(_))) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -352,7 +352,7 @@ fn test_my_rights_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // with space in mailbox
@@ -366,7 +366,7 @@ fn test_my_rights_attributes() {
                 }
             )
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -389,7 +389,7 @@ fn test_unseen() {
                 information: Some(Cow::Borrowed("Message 3 is first unseen")),
             },
         ) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -405,11 +405,10 @@ fn test_body_text() {
                     index: None,
                     data: Some(Cow::Borrowed(b"foo")),
                 },
-                "body = {:?}",
-                body
+                "body = {body:?}"
             );
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -421,11 +420,10 @@ fn test_body_structure() {
             let body = &attrs[0];
             assert!(
                 matches!(*body, AttributeValue::BodyStructure(_)),
-                "body = {:?}",
-                body
+                "body = {body:?}"
             );
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -442,7 +440,7 @@ fn test_status() {
                 ]
             );
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -450,11 +448,11 @@ fn test_status() {
 fn test_notify() {
     match parse_response(b"* 3501 EXPUNGE\r\n") {
         Ok((_, Response::Expunge(3501))) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
     match parse_response(b"* 3501 EXISTS\r\n") {
         Ok((_, Response::MailboxData(MailboxDatum::Exists(3501)))) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
     match parse_response(b"+ idling\r\n") {
         Ok((
@@ -464,7 +462,7 @@ fn test_notify() {
                 information: Some(Cow::Borrowed("idling")),
             },
         )) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -476,7 +474,7 @@ fn test_search() {
             Ok((_, Response::MailboxData(MailboxDatum::Search(ids)))) => {
                 assert!(ids.is_empty());
             }
-            rsp => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {rsp:?}"),
         }
     }
     for response in &["* SEARCH 12345 67890\r\n", "* SEARCH 12345 67890 \r\n"] {
@@ -485,7 +483,7 @@ fn test_search() {
                 assert_eq!(ids[0], 12345);
                 assert_eq!(ids[1], 67890);
             }
-            rsp => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {rsp:?}"),
         }
     }
 }
@@ -498,7 +496,7 @@ fn test_sort() {
             Ok((_, Response::MailboxData(MailboxDatum::Sort(ids)))) => {
                 assert!(ids.is_empty());
             }
-            rsp => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {rsp:?}"),
         }
     }
     for response in &["* SORT 12345 67890\r\n", "* SORT 12345 67890 \r\n"] {
@@ -507,7 +505,7 @@ fn test_sort() {
                 assert_eq!(ids[0], 12345);
                 assert_eq!(ids[1], 67890);
             }
-            rsp => panic!("unexpected response {:?}", rsp),
+            rsp => panic!("unexpected response {rsp:?}"),
         }
     }
 }
@@ -518,7 +516,7 @@ fn test_uid_fetch() {
         Err(nom::Err::Incomplete(nom::Needed::Size(size))) => {
             assert_eq!(size, NonZeroUsize::new(10275).unwrap());
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -529,7 +527,7 @@ fn test_uid_fetch_extra_space() {
         Err(nom::Err::Incomplete(nom::Needed::Size(size))) => {
             assert_eq!(size, NonZeroUsize::new(10275).unwrap());
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -539,7 +537,7 @@ fn test_header_fields() {
 
     match parse_response(RESPONSE) {
         Ok((_, Response::Fetch(_, _))) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -554,7 +552,7 @@ fn test_response_codes() {
                 information: Some(Cow::Borrowed("Alert!")),
             },
         )) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     match parse_response(b"* NO [PARSE] Something\r\n") {
@@ -566,7 +564,7 @@ fn test_response_codes() {
                 information: Some(Cow::Borrowed("Something")),
             },
         )) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     match parse_response(b"* OK [CAPABILITY IMAP4rev1 IDLE] Logged in\r\n") {
@@ -582,7 +580,7 @@ fn test_response_codes() {
             assert_eq!(c[0], Capability::Imap4rev1);
             assert_eq!(c[1], Capability::Atom(Cow::Borrowed("IDLE")));
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     match parse_response(b"* OK [CAPABILITY UIDPLUS IMAP4rev1 IDLE] Logged in\r\n") {
@@ -599,7 +597,7 @@ fn test_response_codes() {
             assert_eq!(c[1], Capability::Imap4rev1);
             assert_eq!(c[2], Capability::Atom(Cow::Borrowed("IDLE")));
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // Missing IMAP4rev1
@@ -612,7 +610,7 @@ fn test_response_codes() {
                 information: Some(Cow::Borrowed("[CAPABILITY UIDPLUS IDLE] Logged in")),
             },
         )) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     match parse_response(b"* NO [BADCHARSET] error\r\n") {
@@ -624,7 +622,7 @@ fn test_response_codes() {
                 information: Some(Cow::Borrowed("error")),
             },
         )) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     match parse_response(b"* NO [BADCHARSET (utf-8 latin1)] error\r\n") {
@@ -640,7 +638,7 @@ fn test_response_codes() {
             assert_eq!(v[0], "utf-8");
             assert_eq!(v[1], "latin1");
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     match parse_response(b"* NO [BADCHARSET ()] error\r\n") {
@@ -652,7 +650,7 @@ fn test_response_codes() {
                 information: Some(Cow::Borrowed("[BADCHARSET ()] error")),
             },
         )) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -660,7 +658,7 @@ fn test_response_codes() {
 fn test_incomplete_fetch() {
     match parse_response(b"* 4644 FETCH (UID ") {
         Err(nom::Err::Incomplete(_)) => {}
-        rsp => panic!("should be incomplete: {:?}", rsp),
+        rsp => panic!("should be incomplete: {rsp:?}"),
     }
 }
 
@@ -675,7 +673,7 @@ fn test_continuation() {
                 information: None,
             },
         )) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 
     // short version, sent by yandex
@@ -687,7 +685,7 @@ fn test_continuation() {
                 information: None,
             },
         )) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -701,7 +699,7 @@ fn test_enabled() {
                 Capability::Atom(Cow::Borrowed("X-GOOD-IDEA")),
             ])
         ),
-        rsp => panic!("Unexpected response: {:?}", rsp),
+        rsp => panic!("Unexpected response: {rsp:?}"),
     }
 }
 
@@ -722,7 +720,7 @@ fn test_flags() {
                 Cow::Borrowed("\\*")
             ]))
         ),
-        rsp => panic!("Unexpected response: {:?}", rsp),
+        rsp => panic!("Unexpected response: {rsp:?}"),
     }
 
     // Invalid response (FLAGS can't include ']') from some unknown providers.
@@ -735,7 +733,7 @@ fn test_flags() {
                 "OIB-Seen-[Gmail]/All"
             )]))
         ),
-        rsp => panic!("Unexpected response: {:?}", rsp),
+        rsp => panic!("Unexpected response: {rsp:?}"),
     }
 }
 
@@ -755,7 +753,7 @@ fn test_vanished() {
             assert_eq!(*v.start(), 3);
             assert_eq!(*v.end(), 8);
         }
-        rsp => panic!("Unexpected response: {:?}", rsp),
+        rsp => panic!("Unexpected response: {rsp:?}"),
     }
 
     match parse_response(b"* VANISHED 1,2,3:8,10\r\n") {
@@ -763,7 +761,7 @@ fn test_vanished() {
             assert!(!earlier);
             assert_eq!(uids.len(), 4);
         }
-        rsp => panic!("Unexpected response: {:?}", rsp),
+        rsp => panic!("Unexpected response: {rsp:?}"),
     }
 
     match parse_response(b"* VANISHED (EARLIER) 1\r\n") {
@@ -772,7 +770,7 @@ fn test_vanished() {
             assert_eq!(uids.len(), 1);
             assert_eq!(uids[0].clone().collect::<Vec<u32>>(), vec![1]);
         }
-        rsp => panic!("Unexpected response: {:?}", rsp),
+        rsp => panic!("Unexpected response: {rsp:?}"),
     }
 
     match parse_response(b"* VANISHED 1\r\n") {
@@ -780,7 +778,7 @@ fn test_vanished() {
             assert!(!earlier);
             assert_eq!(uids.len(), 1);
         }
-        rsp => panic!("Unexpected response: {:?}", rsp),
+        rsp => panic!("Unexpected response: {rsp:?}"),
     }
 
     assert!(parse_response(b"* VANISHED \r\n").is_err());
@@ -800,7 +798,7 @@ fn test_uidplus() {
                 information: Some(Cow::Borrowed("APPEND completed")),
             },
         )) if uid_set == [3955.into()] => {}
-        rsp => panic!("Unexpected response: {:?}", rsp),
+        rsp => panic!("Unexpected response: {rsp:?}"),
     }
     match dbg!(parse_response(
         b"* OK [COPYUID 38505 304,319:320 3956:3958] Done\r\n"
@@ -814,7 +812,7 @@ fn test_uidplus() {
             },
         )) if uid_set_src == [304.into(), (319..=320).into()]
             && uid_set_dst == [(3956..=3958).into()] => {}
-        rsp => panic!("Unexpected response: {:?}", rsp),
+        rsp => panic!("Unexpected response: {rsp:?}"),
     }
     match dbg!(parse_response(
         b"* NO [UIDNOTSTICKY] Non-persistent UIDs\r\n"
@@ -827,7 +825,7 @@ fn test_uidplus() {
                 information: Some(Cow::Borrowed("Non-persistent UIDs")),
             },
         )) => {}
-        rsp => panic!("Unexpected response: {:?}", rsp),
+        rsp => panic!("Unexpected response: {rsp:?}"),
     }
 }
 
@@ -909,7 +907,7 @@ fn test_parsing_of_quota_capability_in_login_response() {
             assert_eq!(c[1], Capability::Atom(Cow::Borrowed("IDLE")));
             assert_eq!(c[2], Capability::Atom(Cow::Borrowed("QUOTA")));
         }
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     }
 }
 
@@ -924,7 +922,7 @@ fn test_parsing_of_bye_response() {
                 information: None,
             },
         )) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     };
     match parse_response(b"* BYE Autologout; idle for too long\r\n") {
         Ok((
@@ -935,6 +933,6 @@ fn test_parsing_of_bye_response() {
                 information: Some(Cow::Borrowed("Autologout; idle for too long")),
             },
         )) => {}
-        rsp => panic!("unexpected response {:?}", rsp),
+        rsp => panic!("unexpected response {rsp:?}"),
     };
 }

@@ -32,7 +32,7 @@ impl TlsClient {
         let addr = (server, 993).to_socket_addrs()?.next().ok_or_else(|| {
             io::Error::new(
                 io::ErrorKind::Other,
-                format!("no IP addresses found for {}", server),
+                format!("no IP addresses found for {server}"),
             )
         })?;
 
