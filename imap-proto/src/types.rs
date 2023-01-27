@@ -5,7 +5,7 @@ use std::ops::RangeInclusive;
 pub mod acls;
 pub use acls::*;
 
-fn to_owned_cow<'a, T: ?Sized + ToOwned>(c: Cow<'a, T>) -> Cow<'static, T> {
+fn to_owned_cow<T: ?Sized + ToOwned>(c: Cow<'_, T>) -> Cow<'static, T> {
     Cow::Owned(c.into_owned())
 }
 
@@ -582,7 +582,7 @@ impl<'a> BodyExtension<'a> {
 
 pub type BodyParams<'a> = Option<Vec<(Cow<'a, str>, Cow<'a, str>)>>;
 
-fn body_param_owned<'a>(v: BodyParams<'a>) -> BodyParams<'static> {
+fn body_param_owned(v: BodyParams<'_>) -> BodyParams<'static> {
     v.map(|v| {
         v.into_iter()
             .map(|(k, v)| (to_owned_cow(k), to_owned_cow(v)))
