@@ -11,7 +11,7 @@ repository = "https://github.com/djc/tokio-imap"
 license = "MIT/Apache-2.0"
 readme = "../README.md"
 edition = "2021"
-rust-version = "1.58"
+rust-version = "1.60"
 
 [badges]
 maintenance = { status = "passively-maintained" }
