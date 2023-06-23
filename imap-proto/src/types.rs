@@ -237,6 +237,7 @@ pub enum MailboxDatum<'a> {
         values: Vec<Cow<'a, str>>,
     },
     GmailLabels(Vec<Cow<'a, str>>),
+    GmailMsgId(u64),
 }
 
 impl<'a> MailboxDatum<'a> {
@@ -280,6 +281,7 @@ impl<'a> MailboxDatum<'a> {
             MailboxDatum::GmailLabels(labels) => {
                 MailboxDatum::GmailLabels(labels.into_iter().map(to_owned_cow).collect())
             }
+            MailboxDatum::GmailMsgId(msgid) => MailboxDatum::GmailMsgId(msgid),
         }
     }
 }
@@ -315,6 +317,7 @@ pub enum Attribute {
     Uid,
     /// https://developers.google.com/gmail/imap/imap-extensions#access_to_gmail_labels_x-gm-labels
     GmailLabels,
+    GmailMsgId,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -351,6 +354,7 @@ pub enum AttributeValue<'a> {
     Uid(u32),
     /// https://developers.google.com/gmail/imap/imap-extensions#access_to_gmail_labels_x-gm-labels
     GmailLabels(Vec<Cow<'a, str>>),
+    GmailMsgId(u64),
 }
 
 impl<'a> AttributeValue<'a> {
@@ -380,6 +384,7 @@ impl<'a> AttributeValue<'a> {
             AttributeValue::GmailLabels(v) => {
                 AttributeValue::GmailLabels(v.into_iter().map(to_owned_cow).collect())
             }
+            AttributeValue::GmailMsgId(v) => AttributeValue::GmailMsgId(v),
         }
     }
 }
