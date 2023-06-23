@@ -374,6 +374,7 @@ fn mailbox_data(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
         mailbox_data_recent,
         mailbox_data_search,
         gmail::mailbox_data_gmail_labels,
+        gmail::mailbox_data_gmail_msgid,
         rfc5256::mailbox_data_sort,
     ))(i)
 }
@@ -569,6 +570,7 @@ fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue> {
         msg_att_rfc822_text,
         msg_att_uid,
         gmail::msg_att_gmail_labels,
+        gmail::msg_att_gmail_msgid,
     ))(i)
 }
 
