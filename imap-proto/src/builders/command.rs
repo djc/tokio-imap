@@ -28,14 +28,14 @@ impl CommandBuilder {
         let args = format!("EXAMINE \"{}\"", quoted_string(mailbox).unwrap()).into_bytes();
         SelectCommand {
             args,
-            state: PhantomData::default(),
+            state: PhantomData,
         }
     }
 
     pub fn fetch() -> FetchCommand<fetch::Empty> {
         FetchCommand {
             args: b"FETCH ".to_vec(),
-            state: PhantomData::default(),
+            state: PhantomData,
         }
     }
 
@@ -69,14 +69,14 @@ impl CommandBuilder {
         let args = format!("SELECT \"{}\"", quoted_string(mailbox).unwrap()).into_bytes();
         SelectCommand {
             args,
-            state: PhantomData::default(),
+            state: PhantomData,
         }
     }
 
     pub fn uid_fetch() -> FetchCommand<fetch::Empty> {
         FetchCommand {
             args: b"UID FETCH ".to_vec(),
-            state: PhantomData::default(),
+            state: PhantomData,
         }
     }
 }
@@ -97,7 +97,7 @@ impl SelectCommand<select::NoParams> {
         self.args.extend(b" (CONDSTORE");
         SelectCommand {
             args: self.args,
-            state: PhantomData::default(),
+            state: PhantomData,
         }
     }
 }
@@ -143,7 +143,7 @@ impl FetchCommand<fetch::Empty> {
         sequence_num(&mut self.args, num);
         FetchCommand {
             args: self.args,
-            state: PhantomData::default(),
+            state: PhantomData,
         }
     }
 
@@ -151,7 +151,7 @@ impl FetchCommand<fetch::Empty> {
         sequence_range(&mut self.args, range);
         FetchCommand {
             args: self.args,
-            state: PhantomData::default(),
+            state: PhantomData,
         }
     }
 
@@ -159,7 +159,7 @@ impl FetchCommand<fetch::Empty> {
         range_from(&mut self.args, range);
         FetchCommand {
             args: self.args,
-            state: PhantomData::default(),
+            state: PhantomData,
         }
     }
 }
@@ -195,7 +195,7 @@ impl FetchCommand<fetch::Messages> {
         );
         FetchCommand {
             args: self.args,
-            state: PhantomData::default(),
+            state: PhantomData,
         }
     }
 
@@ -204,7 +204,7 @@ impl FetchCommand<fetch::Messages> {
         push_attr(&mut self.args, attr);
         FetchCommand {
             args: self.args,
-            state: PhantomData::default(),
+            state: PhantomData,
         }
     }
 }
@@ -236,7 +236,7 @@ impl FetchCommand<fetch::Attributes> {
         changed_since(&mut self.args, seq);
         FetchCommand {
             args: self.args,
-            state: PhantomData::default(),
+            state: PhantomData,
         }
     }
 }
