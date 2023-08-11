@@ -12,19 +12,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        rust: [stable, beta, "1.60"]
+        rust: [stable, beta]
         exclude:
           - os: macos-latest
             rust: beta
           - os: windows-latest
             rust: beta
-          - os: macos-latest
-            rust: "1.60"
-          - os: windows-latest
-            rust: "1.60"
 
     runs-on: ${{ matrix.os }}
-
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -60,6 +55,34 @@ jobs:
         with:
           command: clippy
           args: --workspace --all-targets -- -D warnings
+
+  msrv-proto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.58.0
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --manifest-path imap-proto/Cargo.toml --lib --all-features
+
+  msrv-tokio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.63.0
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --manifest-path tokio-imap/Cargo.toml --lib --all-features
 
   coverage:
     runs-on: ubuntu-latest
