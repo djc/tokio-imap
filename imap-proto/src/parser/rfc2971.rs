@@ -88,7 +88,7 @@ mod tests {
     #[test]
     fn test_id_param() {
         assert_matches!(
-            id_param(br##""name" "Cyrus""##),
+            id_param(br#""name" "Cyrus""#),
             Ok((_, (name, value))) => {
                 assert_eq!(name, "name");
                 assert_eq!(value, Some("Cyrus"));
@@ -96,7 +96,7 @@ mod tests {
         );
 
         assert_matches!(
-            id_param(br##""name" NIL"##),
+            id_param(br#""name" NIL"#),
             Ok((_, (name, value))) => {
                 assert_eq!(name, "name");
                 assert_eq!(value, None);
@@ -107,7 +107,7 @@ mod tests {
     #[test]
     fn test_id_param_list_not_nil() {
         assert_matches!(
-            id_param_list_not_nil(br##"("name" "Cyrus" "version" "1.5" "os" "sunos" "os-version" "5.5" "support-url" "mailto:cyrus-bugs+@andrew.cmu.edu")"##),
+            id_param_list_not_nil(br#"("name" "Cyrus" "version" "1.5" "os" "sunos" "os-version" "5.5" "support-url" "mailto:cyrus-bugs+@andrew.cmu.edu")"#),
             Ok((_, params)) => {
                 assert_eq!(
                     params,
@@ -127,7 +127,7 @@ mod tests {
     #[test]
     fn test_id_param_list() {
         assert_matches!(
-            id_param_list(br##"("name" "Cyrus" "version" "1.5" "os" "sunos" "os-version" "5.5" "support-url" "mailto:cyrus-bugs+@andrew.cmu.edu")"##),
+            id_param_list(br#"("name" "Cyrus" "version" "1.5" "os" "sunos" "os-version" "5.5" "support-url" "mailto:cyrus-bugs+@andrew.cmu.edu")"#),
             Ok((_, Some(params))) => {
                 assert_eq!(
                     params,
@@ -154,7 +154,7 @@ mod tests {
     #[test]
     fn test_resp_id() {
         assert_matches!(
-            resp_id(br##"ID ("name" "Cyrus" "version" "1.5" "os" "sunos" "os-version" "5.5" "support-url" "mailto:cyrus-bugs+@andrew.cmu.edu")"##),
+            resp_id(br#"ID ("name" "Cyrus" "version" "1.5" "os" "sunos" "os-version" "5.5" "support-url" "mailto:cyrus-bugs+@andrew.cmu.edu")"#),
             Ok((_, Response::Id(Some(id_info)))) => {
                 assert_eq!(
                     id_info,
@@ -174,7 +174,7 @@ mod tests {
         // Test that NILs inside parameter list don't crash the parser.
         // RFC2971 allows NILs as parameter values.
         assert_matches!(
-            resp_id(br##"ID ("name" "Cyrus" "version" "1.5" "os" NIL "os-version" NIL "support-url" "mailto:cyrus-bugs+@andrew.cmu.edu")"##),
+            resp_id(br#"ID ("name" "Cyrus" "version" "1.5" "os" NIL "os-version" NIL "support-url" "mailto:cyrus-bugs+@andrew.cmu.edu")"#),
             Ok((_, Response::Id(Some(id_info)))) => {
                 assert_eq!(
                     id_info,
