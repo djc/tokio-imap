@@ -272,7 +272,7 @@ mod tests {
         assert_matches!(quoted(br#""Hello "#), Err(nom::Err::Incomplete(_)));
 
         // Test Error
-        assert_matches!(quoted(br#"\"#), Err(nom::Err::Error(_)));
+        assert_matches!(quoted(br"\"), Err(nom::Err::Error(_)));
     }
 
     #[test]
