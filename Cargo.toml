@@ -1,2 +1,3 @@
 [workspace]
 members = ["imap-proto", "tokio-imap"]
+resolver = "2"
