@@ -8,14 +8,12 @@
 All feedback welcome. Feel free to file bugs, requests for documentation and
 any other feedback to the [issue tracker][issues] or [tweet me][twitter].
 
-tokio-imap and imap-proto were created by and are maintained by Dirkjan Ochtman.
-If you are in a position to support ongoing maintenance and further development
-or use it in a for-profit context, please consider supporting my open source
-work on [Patreon][patreon].
+tokio-imap and imap-proto are maintained by Dirkjan Ochtman. If you depend on these
+projects, please support the project via [GitHub Sponsors] or contact me for support.
 
 [issues]: https://github.com/djc/tokio-imap/issues
 [twitter]: https://twitter.com/djco/
-[patreon]: https://www.patreon.com/dochtman
+[GitHub Sponsors]: https://github.com/sponsors/djc
 
 ## tokio-imap: futures-based IMAP client
 
