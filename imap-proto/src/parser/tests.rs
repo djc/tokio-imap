@@ -442,6 +442,15 @@ fn test_status() {
         }
         rsp => panic!("unexpected response {rsp:?}"),
     }
+
+    // Outlook server sends a STATUS response with a space in the end.
+    match parse_response(b"* STATUS Sent (UIDNEXT 107) \r\n") {
+        Ok((_, Response::MailboxData(MailboxDatum::Status { mailbox, status }))) => {
+            assert_eq!(mailbox, "Sent");
+            assert_eq!(status, [StatusAttribute::UidNext(107),]);
+        }
+        rsp => panic!("unexpected response {rsp:?}"),
+    }
 }
 
 #[test]
