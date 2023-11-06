@@ -696,7 +696,10 @@ pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
             rfc4314::list_rights,
             rfc4314::my_rights,
         )),
-        tag(b"\r\n"),
+        preceded(
+            many0(tag(b" ")), // Outlook server sometimes sends whitespace at the end of STATUS response.
+            tag(b"\r\n"),
+        ),
     )(i)
 }
 
