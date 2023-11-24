@@ -451,6 +451,15 @@ fn test_status() {
         }
         rsp => panic!("unexpected response {rsp:?}"),
     }
+
+    // mail.163.com sends a STATUS response with an empty list when asked for (UIDNEXT)
+    match parse_response(b"* STATUS \"INBOX\" ()\r\n") {
+        Ok((_, Response::MailboxData(MailboxDatum::Status { mailbox, status }))) => {
+            assert_eq!(mailbox, "INBOX");
+            assert_eq!(status, []);
+        }
+        rsp => panic!("unexpected response {rsp:?}"),
+    }
 }
 
 #[test]
