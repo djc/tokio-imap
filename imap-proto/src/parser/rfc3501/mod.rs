@@ -344,7 +344,10 @@ fn status_att(i: &[u8]) -> IResult<&[u8], StatusAttribute> {
 }
 
 fn status_att_list(i: &[u8]) -> IResult<&[u8], Vec<StatusAttribute>> {
-    parenthesized_nonempty_list(status_att)(i)
+    // RFC 3501 specifies that the list is non-empty in the formal grammar
+    //   status-att-list =  status-att SP number *(SP status-att SP number)
+    // but mail.163.com sends an empty list in STATUS response anyway.
+    parenthesized_list(status_att)(i)
 }
 
 fn mailbox_data_status(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
