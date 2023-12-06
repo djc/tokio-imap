@@ -23,7 +23,7 @@ imap-proto = { version = "0.16", path = "../imap-proto" }
 nom = "7"
 pin-project = "1"
 tokio = { version = "1", features = ["net"] }
-tokio-rustls = "0.24"
+tokio-rustls = "0.25"
 tokio-util = { version = "0.7.0", features = ["codec"] }
 webpki-roots = "0.25.1"
 
