@@ -2,7 +2,7 @@
 name = "imap-proto"
 version = "0.16.3"
 edition = "2021"
-rust-version = "1.58"
+rust-version = "1.61"
 description = "IMAP protocol parser and data structures"
 documentation = "https://docs.rs/imap-proto"
 keywords = ["imap", "email"]
