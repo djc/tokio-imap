@@ -7,7 +7,7 @@
 use nom::{
     branch::alt,
     bytes::streaming::{tag, tag_no_case},
-    combinator::{map, map_opt},
+    combinator::map,
     multi::separated_list0,
     sequence::tuple,
     IResult,
@@ -124,7 +124,7 @@ fn slice_to_str(i: &[u8]) -> &str {
 }
 
 fn nil_value(i: &[u8]) -> IResult<&[u8], Option<String>> {
-    map_opt(tag_no_case("NIL"), |_| None)(i)
+    map(tag_no_case("NIL"), |_| None)(i)
 }
 
 fn string_value(i: &[u8]) -> IResult<&[u8], Option<String>> {
@@ -307,6 +307,23 @@ mod tests {
                         .expect("None value is not expected"),
                     "AAA"
                 );
+            }
+            Err(e) => panic!("ERR: {e:?}"),
+            _ => panic!("Strange failure"),
+        }
+    }
+
+    #[test]
+    fn test_nil_success() {
+        match metadata_solicited(b"METADATA \"\" (/shared/comment NIL /shared/admin NIL)\r\n") {
+            Ok((i, Response::MailboxData(MailboxDatum::MetadataSolicited { mailbox, values }))) => {
+                assert_eq!(mailbox, "");
+                assert_eq!(i, b"\r\n");
+                assert_eq!(values.len(), 2);
+                assert_eq!(values[0].entry, "/shared/comment");
+                assert_eq!(values[0].value, None);
+                assert_eq!(values[1].entry, "/shared/admin");
+                assert_eq!(values[1].value, None);
             }
             Err(e) => panic!("ERR: {e:?}"),
             _ => panic!("Strange failure"),
