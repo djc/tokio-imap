@@ -21,6 +21,9 @@ projects, please support the project via [GitHub Sponsors] or contact me for sup
 [![crates.io, latest release](https://img.shields.io/crates/v/tokio-imap.svg)](https://crates.io/crates/tokio-imap)
 [![API docs, latest release](https://docs.rs/tokio-imap/badge.svg)](http://docs.rs/tokio-imap)
 
+NOTE: Unlike imap-proto, tokio-imap doesn't receive much maintenance. As
+an alternative we suggest to evaluate async-imap instead.
+
 A [Tokio stack-based][Tokio_stack], fully asynchronous IMAP library, with strong focus on following
 the relevant specs, mainly [IMAP4rev1][rfc3501], but with limited support for
 the [Conditional STORE][rfc4551] extension. The type system is used to help
