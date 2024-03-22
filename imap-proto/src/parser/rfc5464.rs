@@ -21,7 +21,7 @@ fn is_entry_component_char(c: u8) -> bool {
 }
 
 enum EntryParseStage<'a> {
-    PrivateShared(usize),
+    PrivateShared,
     Admin(usize),
     VendorComment(usize),
     Path(usize),
@@ -81,10 +81,10 @@ fn check_path(i: &[u8], l: usize) -> EntryParseStage {
 }
 
 fn check_entry_name(i: &[u8]) -> IResult<&[u8], &[u8]> {
-    let mut stage = EntryParseStage::PrivateShared(0);
+    let mut stage = EntryParseStage::PrivateShared;
     loop {
         match stage {
-            EntryParseStage::PrivateShared(_) => {
+            EntryParseStage::PrivateShared => {
                 stage = check_private_shared(i);
             }
             EntryParseStage::Admin(l) => {
