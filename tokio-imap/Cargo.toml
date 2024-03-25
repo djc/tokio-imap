@@ -24,7 +24,7 @@ nom = "7"
 pin-project = "1"
 rustls-pki-types = "1"
 tokio = { version = "1", features = ["net"] }
-tokio-rustls = "0.25"
+tokio-rustls = "0.26"
 tokio-util = { version = "0.7.0", features = ["codec"] }
 webpki-roots = "0.26"
 
