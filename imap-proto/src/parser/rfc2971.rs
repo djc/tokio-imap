@@ -10,10 +10,10 @@ use std::{borrow::Cow, collections::HashMap};
 use nom::{
     branch::alt,
     bytes::complete::tag_no_case,
-    character::complete::{char, space1},
+    character::complete::{char, space0, space1},
     combinator::map,
     multi::many0,
-    sequence::{separated_pair, tuple},
+    sequence::{preceded, separated_pair, tuple},
     IResult,
 };
 
@@ -38,7 +38,7 @@ fn id_param_list_not_nil(i: &[u8]) -> IResult<&[u8], HashMap<&str, &str>> {
             char('('),
             id_param,
             many0(tuple((space1, id_param))),
-            char(')'),
+            preceded(space0, char(')')),
         )),
         |(_, first_param, rest_params, _)| {
             let mut params = vec![first_param];
@@ -193,6 +193,24 @@ mod tests {
             resp_id(br##"ID NIL"##),
             Ok((_, Response::Id(id_info))) => {
                 assert_eq!(id_info, None);
+            }
+        );
+
+        assert_matches!(
+            resp_id(br#"ID ("name" "Archiveopteryx" "version" "3.2.0" "compile-time" "Feb  6 2023 19:59:14" "homepage-url" "http://archiveopteryx.org" "release-url" "http://archiveopteryx.org/3.2.0" )"#),
+            Ok((_, Response::Id(Some(id_info)))) => {
+                assert_eq!(
+                    id_info,
+                    vec![
+                        ("name", "Archiveopteryx"),
+                        ("version", "3.2.0"),
+                        ("compile-time", "Feb  6 2023 19:59:14"),
+                        ("homepage-url", "http://archiveopteryx.org"),
+                        ("release-url", "http://archiveopteryx.org/3.2.0"),
+                    ].into_iter()
+                    .map(|(k, v)| (Cow::Borrowed(k), Cow::Borrowed(v)))
+                    .collect()
+                );
             }
         );
     }
