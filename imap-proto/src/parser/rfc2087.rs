@@ -55,13 +55,8 @@ pub(crate) fn quota_list(i: &[u8]) -> IResult<&[u8], Vec<QuotaResource>> {
 /// quota_resource  ::= atom SP number SP number
 /// ```
 pub(crate) fn quota_resource(i: &[u8]) -> IResult<&[u8], QuotaResource> {
-    let (rest, (name, _, usage, _, limit)) = tuple((
-        quota_resource_name,
-        tag(" "),
-        number_64,
-        tag(" "),
-        number_64,
-    ))(i)?;
+    let (rest, (name, _, usage, _, limit)) =
+        tuple((quota_resource_name, space1, number_64, space1, number_64))(i)?;
 
     Ok((rest, QuotaResource { name, usage, limit }))
 }
@@ -114,6 +109,32 @@ mod tests {
                             name: QuotaResourceName::Storage,
                             usage: 10,
                             limit: 512
+                        }]
+                    })
+                );
+            }
+        );
+    }
+
+    #[test]
+    fn test_quota_spaces() {
+        // Archiveopteryx 3.2.0 generates QUOTA resources with double space.
+        // This is a test of a workaround for such incorrect implementation of QUOTA.
+        assert_matches!(
+            quota(b"QUOTA \"\" (STORAGE 0 2147483647 MESSAGE 0  2147483647)"),
+            Ok((_, r)) => {
+                assert_eq!(
+                    r,
+                    Response::Quota(Quota {
+                        root_name: Cow::Borrowed(""),
+                        resources: vec![QuotaResource {
+                            name: QuotaResourceName::Storage,
+                            usage: 0,
+                            limit: 2147483647
+                        }, QuotaResource {
+                            name: QuotaResourceName::Message,
+                            usage: 0,
+                            limit: 2147483647
                         }]
                     })
                 );
