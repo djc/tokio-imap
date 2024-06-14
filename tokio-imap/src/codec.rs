@@ -25,7 +25,8 @@ impl Decoder for ImapCodec {
                 // allocated on the heap and should not move. It will not be
                 // freed as long as we keep a reference alive, which we do
                 // by retaining a reference to the split buffer, below.
-                let response = unsafe { mem::transmute(response) };
+                let response =
+                    unsafe { mem::transmute::<Response<'_>, Response<'static>>(response) };
                 (response, buf.len() - remaining.len())
             }
             Err(nom::Err::Incomplete(Needed::Size(min))) => {
