@@ -2,7 +2,7 @@
 name = "tokio-imap"
 version = "0.5.0"
 edition = "2021"
-rust-version = "1.63"
+rust-version = "1.67"
 description = "Tokio-based IMAP protocol (client, for now) implementation"
 documentation = "https://docs.rs/tokio-imap"
 keywords = ["imap", "tokio"]
