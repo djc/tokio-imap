@@ -245,8 +245,14 @@ mod tests {
         assert_eq!(val, b"Hello");
 
         // Allowed escapes...
-        assert!(quoted(br#""Hello \" "???"#).is_ok());
-        assert!(quoted(br#""Hello \\ "???"#).is_ok());
+        assert_eq!(
+            quoted(br#""Hello \" "???"#),
+            Ok((&b"???"[..], &br#"Hello \" "#[..]))
+        );
+        assert_eq!(
+            quoted(br#""Hello \\ "???"#),
+            Ok((&b"???"[..], &br#"Hello \\ "#[..]))
+        );
 
         // Not allowed escapes...
         assert!(quoted(br#""Hello \a "???"#).is_err());
