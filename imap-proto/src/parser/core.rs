@@ -98,20 +98,7 @@ pub fn literal(input: &[u8]) -> IResult<&[u8], &[u8]> {
 
     let (remaining, data) = take(count)(remaining)?;
 
-    if !data.iter().all(|byte| is_char8(*byte)) {
-        // FIXME: what ErrorKind should this have?
-        return Err(nom::Err::Error(nom::error::Error::new(
-            remaining,
-            nom::error::ErrorKind::Verify,
-        )));
-    }
-
     Ok((remaining, data))
-}
-
-/// CHAR8 = %x01-ff ; any OCTET except NUL, %x00
-pub fn is_char8(i: u8) -> bool {
-    i != 0
 }
 
 // ----- astring ----- atom (roughly) or string
@@ -280,6 +267,16 @@ mod tests {
         match string(b"{3}\r\nXYZ") {
             Ok((_, value)) => {
                 assert_eq!(value, b"XYZ");
+            }
+            rsp => panic!("unexpected response {rsp:?}"),
+        }
+    }
+
+    #[test]
+    fn test_string_literal_containing_null() {
+        match string(b"{5}\r\nX\0Y\0Z") {
+            Ok((_, value)) => {
+                assert_eq!(value, b"X\0Y\0Z");
             }
             rsp => panic!("unexpected response {rsp:?}"),
         }
