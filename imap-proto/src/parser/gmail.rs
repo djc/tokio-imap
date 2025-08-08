@@ -38,6 +38,18 @@ pub(crate) fn mailbox_data_gmail_msgid(i: &[u8]) -> IResult<&[u8], MailboxDatum>
     map(gmail_msgid, MailboxDatum::GmailMsgId)(i)
 }
 
+pub(crate) fn gmail_thrid(i: &[u8]) -> IResult<&[u8], u64> {
+    preceded(tag_no_case("X-GM-THRID "), number_64)(i)
+}
+
+pub(crate) fn msg_att_gmail_thrid(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+    map(gmail_thrid, AttributeValue::GmailThrId)(i)
+}
+
+pub(crate) fn mailbox_data_gmail_thrid(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+    map(gmail_thrid, MailboxDatum::GmailThrId)(i)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::types::*;
@@ -69,6 +81,24 @@ mod tests {
             Ok((_, AttributeValue::GmailMsgId(msgid))) => {
                 println!("{msgid:?}");
                 assert_eq!(1278455344230334865u64, msgid);
+            }
+            rsp => {
+                let e = rsp.unwrap_err();
+                if let nom::Err::Error(i) = &e {
+                    println!("{:?}", std::str::from_utf8(i.input));
+                }
+                panic!("unexpected response {e:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_gmail_thrid() {
+        let env = br#"X-GM-THRID 1278455344230334865 "#;
+        match super::msg_att_gmail_thrid(env) {
+            Ok((_, AttributeValue::GmailThrId(thrid))) => {
+                println!("{thrid:?}");
+                assert_eq!(1278455344230334865, thrid);
             }
             rsp => {
                 let e = rsp.unwrap_err();
