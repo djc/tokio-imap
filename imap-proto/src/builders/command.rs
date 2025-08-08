@@ -255,6 +255,7 @@ fn push_attr(cmd: &mut Vec<u8>, attr: Attribute) {
             Attribute::Uid => "UID",
             Attribute::GmailLabels => "X-GM-LABELS",
             Attribute::GmailMsgId => "X-GM-MSGID",
+            Attribute::GmailThrId => "X-GM-THRID",
         }
         .as_bytes(),
     );
