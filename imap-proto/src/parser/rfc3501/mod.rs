@@ -93,6 +93,11 @@ fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<Cow<str>>> {
     // * FLAGS (\Answered \Flagged \Deleted \Seen \Draft \*)
     //
     // As a workaround, "\*" is allowed here.
+    //
+    // Also, surgemail sends an additional space before the closing bracket:
+    // * FLAGS (\Answered \Flagged \Deleted \Draft \Seen $Forwarded )
+    //
+    // As a workaround, optional spaces before the closing bracket are allowed.
     parenthesized_list(map(flag_perm, Cow::Borrowed))(i)
 }
 
@@ -801,6 +806,24 @@ mod tests {
         assert_matches!(
             super::capability_data(b"CAPABILITY AUTH=GSSAPI AUTH=PLAIN\r\n"),
             Err(_)
+        );
+    }
+
+    #[test]
+    fn test_surgemail_select_flags() {
+        // Tests workaround for surgemail with space before closing bracket
+        assert_matches!(
+            super::flag_list(b"(\\Answered \\Flagged \\Deleted \\Draft \\Seen $Forwarded )"),
+            Ok(([], flags)) => {
+                assert_eq!(flags, vec![
+                        "\\Answered",
+                        "\\Flagged",
+                        "\\Deleted",
+                        "\\Draft",
+                        "\\Seen",
+                        "$Forwarded"
+                    ])
+            }
         );
     }
 }
