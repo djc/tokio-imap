@@ -2,9 +2,9 @@ use nom::{
     branch::alt,
     bytes::streaming::{escaped, tag, tag_no_case, take, take_while, take_while1},
     character::streaming::{char, digit1, one_of},
-    combinator::{map, map_res},
+    combinator::{map, map_res, opt},
     multi::{separated_list0, separated_list1},
-    sequence::{delimited, tuple},
+    sequence::{delimited, preceded, tuple},
     IResult,
 };
 
@@ -212,7 +212,14 @@ where
     F: FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]>,
 {
-    delimited(char('('), separated_list0(char(' '), f), char(')'))
+    delimited(
+        char('('),
+        separated_list0(char(' '), f),
+        preceded(
+            opt(char(' ')), // Surgemail sometimes sends a space before the closing bracket.
+            char(')'),
+        ),
+    )
 }
 
 pub fn opt_opt<'a, F, O, E>(mut f: F) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Option<O>, E>
