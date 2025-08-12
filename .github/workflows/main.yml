@@ -52,7 +52,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: 1.70.0
+          toolchain: 1.71.0
       - run: cargo check --manifest-path tokio-imap/Cargo.toml --lib --all-features
 
   coverage:
