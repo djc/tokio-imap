@@ -11,18 +11,18 @@ use crate::{AttributeValue, MailboxDatum};
 use super::core::{number_64, parenthesized_list, quoted_utf8};
 use super::rfc3501::flag;
 
-pub(crate) fn gmail_label_list(i: &[u8]) -> IResult<&[u8], Vec<Cow<str>>> {
+pub(crate) fn gmail_label_list(i: &[u8]) -> IResult<&[u8], Vec<Cow<'_, str>>> {
     preceded(
         tag_no_case("X-GM-LABELS "),
         parenthesized_list(map(alt((flag, quoted_utf8)), Cow::Borrowed)),
     )(i)
 }
 
-pub(crate) fn msg_att_gmail_labels(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+pub(crate) fn msg_att_gmail_labels(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(gmail_label_list, AttributeValue::GmailLabels)(i)
 }
 
-pub(crate) fn mailbox_data_gmail_labels(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+pub(crate) fn mailbox_data_gmail_labels(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(gmail_label_list, MailboxDatum::GmailLabels)(i)
 }
 
@@ -30,11 +30,11 @@ pub(crate) fn gmail_msgid(i: &[u8]) -> IResult<&[u8], u64> {
     preceded(tag_no_case("X-GM-MSGID "), number_64)(i)
 }
 
-pub(crate) fn msg_att_gmail_msgid(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+pub(crate) fn msg_att_gmail_msgid(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(gmail_msgid, AttributeValue::GmailMsgId)(i)
 }
 
-pub(crate) fn mailbox_data_gmail_msgid(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+pub(crate) fn mailbox_data_gmail_msgid(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(gmail_msgid, MailboxDatum::GmailMsgId)(i)
 }
 
@@ -42,11 +42,11 @@ pub(crate) fn gmail_thrid(i: &[u8]) -> IResult<&[u8], u64> {
     preceded(tag_no_case("X-GM-THRID "), number_64)(i)
 }
 
-pub(crate) fn msg_att_gmail_thrid(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+pub(crate) fn msg_att_gmail_thrid(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(gmail_thrid, AttributeValue::GmailThrId)(i)
 }
 
-pub(crate) fn mailbox_data_gmail_thrid(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+pub(crate) fn mailbox_data_gmail_thrid(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(gmail_thrid, MailboxDatum::GmailThrId)(i)
 }
 

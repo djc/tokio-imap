@@ -54,7 +54,7 @@ pub fn section(i: &[u8]) -> IResult<&[u8], Option<SectionPath>> {
     delimited(char('['), opt(section_spec), char(']'))(i)
 }
 
-pub fn msg_att_body_section(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+pub fn msg_att_body_section(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(
         tuple((
             tag_no_case("BODY"),

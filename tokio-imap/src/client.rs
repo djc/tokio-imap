@@ -64,7 +64,7 @@ impl TlsClient {
         greeting.map(|greeting| (greeting, client))
     }
 
-    pub fn call<C: Into<Command>>(&mut self, cmd: C) -> ResponseStream<TlsStream<TcpStream>> {
+    pub fn call<C: Into<Command>>(&mut self, cmd: C) -> ResponseStream<'_, TlsStream<TcpStream>> {
         let request_id = self.request_ids.next().unwrap(); // safe: never returns Err,
         ResponseStream {
             client: self,

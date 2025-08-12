@@ -85,7 +85,7 @@ pub(crate) fn flag(i: &[u8]) -> IResult<&[u8], &str> {
     ))(i)
 }
 
-fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<Cow<str>>> {
+fn flag_list(i: &[u8]) -> IResult<&[u8], Vec<Cow<'_, str>>> {
     // Correct code is
     //   parenthesized_list(flag)(i)
     //
@@ -105,11 +105,11 @@ fn flag_perm(i: &[u8]) -> IResult<&[u8], &str> {
     alt((map_res(tag(b"\\*"), from_utf8), flag))(i)
 }
 
-fn resp_text_code_alert(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code_alert(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(tag_no_case(b"ALERT"), |_| ResponseCode::Alert)(i)
 }
 
-fn resp_text_code_badcharset(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code_badcharset(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(
         preceded(
             tag_no_case(b"BADCHARSET"),
@@ -122,15 +122,15 @@ fn resp_text_code_badcharset(i: &[u8]) -> IResult<&[u8], ResponseCode> {
     )(i)
 }
 
-fn resp_text_code_capability(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code_capability(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(capability_data, ResponseCode::Capabilities)(i)
 }
 
-fn resp_text_code_parse(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code_parse(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(tag_no_case(b"PARSE"), |_| ResponseCode::Parse)(i)
 }
 
-fn resp_text_code_permanent_flags(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code_permanent_flags(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(
         preceded(
             tag_no_case(b"PERMANENTFLAGS "),
@@ -140,40 +140,40 @@ fn resp_text_code_permanent_flags(i: &[u8]) -> IResult<&[u8], ResponseCode> {
     )(i)
 }
 
-fn resp_text_code_read_only(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code_read_only(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(tag_no_case(b"READ-ONLY"), |_| ResponseCode::ReadOnly)(i)
 }
 
-fn resp_text_code_read_write(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code_read_write(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(tag_no_case(b"READ-WRITE"), |_| ResponseCode::ReadWrite)(i)
 }
 
-fn resp_text_code_try_create(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code_try_create(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(tag_no_case(b"TRYCREATE"), |_| ResponseCode::TryCreate)(i)
 }
 
-fn resp_text_code_uid_validity(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code_uid_validity(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(
         preceded(tag_no_case(b"UIDVALIDITY "), number),
         ResponseCode::UidValidity,
     )(i)
 }
 
-fn resp_text_code_uid_next(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code_uid_next(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(
         preceded(tag_no_case(b"UIDNEXT "), number),
         ResponseCode::UidNext,
     )(i)
 }
 
-fn resp_text_code_unseen(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code_unseen(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(
         preceded(tag_no_case(b"UNSEEN "), number),
         ResponseCode::Unseen,
     )(i)
 }
 
-fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     // Per the spec, the closing tag should be "] ".
     // See `resp_text` for more on why this is done differently.
     delimited(
@@ -203,7 +203,7 @@ fn resp_text_code(i: &[u8]) -> IResult<&[u8], ResponseCode> {
     )(i)
 }
 
-fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
+fn capability(i: &[u8]) -> IResult<&[u8], Capability<'_>> {
     alt((
         map(tag_no_case(b"IMAP4rev1"), |_| Capability::Imap4rev1),
         map(
@@ -224,7 +224,7 @@ fn ensure_capabilities_contains_imap4rev(
     }
 }
 
-fn capability_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
+fn capability_data(i: &[u8]) -> IResult<&[u8], Vec<Capability<'_>>> {
     map_res(
         preceded(
             tag_no_case(b"CAPABILITY"),
@@ -234,7 +234,7 @@ fn capability_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
     )(i)
 }
 
-fn mailbox_data_search(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+fn mailbox_data_search(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(
         // Technically, trailing whitespace is not allowed here, but multiple
         // email servers in the wild seem to have it anyway (see #34, #108).
@@ -246,21 +246,21 @@ fn mailbox_data_search(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     )(i)
 }
 
-fn mailbox_data_flags(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+fn mailbox_data_flags(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(
         preceded(tag_no_case("FLAGS "), flag_list),
         MailboxDatum::Flags,
     )(i)
 }
 
-fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+fn mailbox_data_exists(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(
         terminated(number, tag_no_case(" EXISTS")),
         MailboxDatum::Exists,
     )(i)
 }
 
-fn name_attribute(i: &[u8]) -> IResult<&[u8], NameAttribute> {
+fn name_attribute(i: &[u8]) -> IResult<&[u8], NameAttribute<'_>> {
     alt((
         // RFC 3501
         value(NameAttribute::NoInferiors, tag_no_case(b"\\Noinferiors")),
@@ -287,7 +287,7 @@ fn name_attribute(i: &[u8]) -> IResult<&[u8], NameAttribute> {
 }
 
 #[allow(clippy::type_complexity)]
-fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<NameAttribute>, Option<&str>, &str)> {
+fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<NameAttribute<'_>>, Option<&str>, &str)> {
     map(
         tuple((
             parenthesized_list(name_attribute),
@@ -300,7 +300,7 @@ fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<NameAttribute>, Option<&str>, &
     )(i)
 }
 
-fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(preceded(tag_no_case("LIST "), mailbox_list), |data| {
         MailboxDatum::List {
             name_attributes: data.0,
@@ -310,7 +310,7 @@ fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     })(i)
 }
 
-fn mailbox_data_lsub(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+fn mailbox_data_lsub(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(preceded(tag_no_case("LSUB "), mailbox_list), |data| {
         MailboxDatum::List {
             name_attributes: data.0,
@@ -355,7 +355,7 @@ fn status_att_list(i: &[u8]) -> IResult<&[u8], Vec<StatusAttribute>> {
     parenthesized_list(status_att)(i)
 }
 
-fn mailbox_data_status(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+fn mailbox_data_status(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(
         tuple((tag_no_case("STATUS "), mailbox, tag(" "), status_att_list)),
         |(_, mailbox, _, status)| MailboxDatum::Status {
@@ -365,14 +365,14 @@ fn mailbox_data_status(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
     )(i)
 }
 
-fn mailbox_data_recent(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+fn mailbox_data_recent(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(
         terminated(number, tag_no_case(" RECENT")),
         MailboxDatum::Recent,
     )(i)
 }
 
-fn mailbox_data(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+fn mailbox_data(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     alt((
         mailbox_data_flags,
         mailbox_data_exists,
@@ -390,7 +390,7 @@ fn mailbox_data(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
 
 // An address structure is a parenthesized list that describes an
 // electronic mail address.
-fn address(i: &[u8]) -> IResult<&[u8], Address> {
+fn address(i: &[u8]) -> IResult<&[u8], Address<'_>> {
     paren_delimited(map(
         tuple((
             nstring,
@@ -410,7 +410,7 @@ fn address(i: &[u8]) -> IResult<&[u8], Address> {
     ))(i)
 }
 
-fn opt_addresses(i: &[u8]) -> IResult<&[u8], Option<Vec<Address>>> {
+fn opt_addresses(i: &[u8]) -> IResult<&[u8], Option<Vec<Address<'_>>>> {
     alt((
         map(nil, |_s| None),
         map(
@@ -443,7 +443,7 @@ fn opt_addresses(i: &[u8]) -> IResult<&[u8], Option<Vec<Address>>> {
 // env-subject     = nstring
 //
 // env-to          = "(" 1*address ")" / nil
-pub(crate) fn envelope(i: &[u8]) -> IResult<&[u8], Envelope> {
+pub(crate) fn envelope(i: &[u8]) -> IResult<&[u8], Envelope<'_>> {
     paren_delimited(map(
         tuple((
             nstring,
@@ -501,33 +501,33 @@ pub(crate) fn envelope(i: &[u8]) -> IResult<&[u8], Envelope> {
     ))(i)
 }
 
-fn msg_att_envelope(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+fn msg_att_envelope(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(preceded(tag_no_case("ENVELOPE "), envelope), |envelope| {
         AttributeValue::Envelope(Box::new(envelope))
     })(i)
 }
 
-fn msg_att_internal_date(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+fn msg_att_internal_date(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(
         preceded(tag_no_case("INTERNALDATE "), nstring_utf8),
         |date| AttributeValue::InternalDate(Cow::Borrowed(date.unwrap())),
     )(i)
 }
 
-fn msg_att_flags(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+fn msg_att_flags(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(
         preceded(tag_no_case("FLAGS "), flag_list),
         AttributeValue::Flags,
     )(i)
 }
 
-fn msg_att_rfc822(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+fn msg_att_rfc822(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(preceded(tag_no_case("RFC822 "), nstring), |v| {
         AttributeValue::Rfc822(v.map(Cow::Borrowed))
     })(i)
 }
 
-fn msg_att_rfc822_header(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+fn msg_att_rfc822_header(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     // extra space workaround for DavMail
     map(
         tuple((tag_no_case("RFC822.HEADER "), opt(tag(b" ")), nstring)),
@@ -535,20 +535,20 @@ fn msg_att_rfc822_header(i: &[u8]) -> IResult<&[u8], AttributeValue> {
     )(i)
 }
 
-fn msg_att_rfc822_size(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+fn msg_att_rfc822_size(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(
         preceded(tag_no_case("RFC822.SIZE "), number),
         AttributeValue::Rfc822Size,
     )(i)
 }
 
-fn msg_att_rfc822_text(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+fn msg_att_rfc822_text(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(preceded(tag_no_case("RFC822.TEXT "), nstring), |v| {
         AttributeValue::Rfc822Text(v.map(Cow::Borrowed))
     })(i)
 }
 
-fn msg_att_uid(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+fn msg_att_uid(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(preceded(tag_no_case("UID "), number), AttributeValue::Uid)(i)
 }
 
@@ -565,7 +565,7 @@ fn msg_att_uid(i: &[u8]) -> IResult<&[u8], AttributeValue> {
 //                   "BODY" section ["<" number ">"] SP nstring /
 //                   "UID" SP uniqueid
 //                     ; MUST NOT change for a message
-fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     alt((
         msg_att_body_section,
         msg_att_body_structure,
@@ -584,12 +584,12 @@ fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue> {
     ))(i)
 }
 
-fn msg_att_list(i: &[u8]) -> IResult<&[u8], Vec<AttributeValue>> {
+fn msg_att_list(i: &[u8]) -> IResult<&[u8], Vec<AttributeValue<'_>>> {
     parenthesized_nonempty_list(msg_att)(i)
 }
 
 // message-data    = nz-number SP ("EXPUNGE" / ("FETCH" SP msg-att))
-fn message_data_fetch(i: &[u8]) -> IResult<&[u8], Response> {
+fn message_data_fetch(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     map(
         tuple((number, tag_no_case(" FETCH "), msg_att_list)),
         |(num, _, attrs)| Response::Fetch(num, attrs),
@@ -612,7 +612,7 @@ fn imap_tag(i: &[u8]) -> IResult<&[u8], RequestId> {
 //     ["[" resp-text-code "]" SP] text
 // However, examples in RFC 4551 (Conditional STORE) counteract this by giving
 // examples of `resp-text` that do not include the trailing space and text.
-fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode>, Option<&str>)> {
+fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode<'_>>, Option<&str>)> {
     map(tuple((opt(resp_text_code), text)), |(code, text)| {
         let res = if text.is_empty() {
             None
@@ -626,14 +626,14 @@ fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode>, Option<&str>)> {
 }
 
 // an response-text if it is at the end of a response. Empty text is then allowed without the normally needed trailing space.
-fn trailing_resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode>, Option<&str>)> {
+fn trailing_resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode<'_>>, Option<&str>)> {
     map(opt(tuple((tag(b" "), resp_text))), |resptext| {
         resptext.map(|(_, tuple)| tuple).unwrap_or((None, None))
     })(i)
 }
 
 // continue-req    = "+" SP (resp-text / base64) CRLF
-pub(crate) fn continue_req(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn continue_req(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     // Some servers do not send the space :/
     // TODO: base64
     map(
@@ -649,7 +649,7 @@ pub(crate) fn continue_req(i: &[u8]) -> IResult<&[u8], Response> {
 //
 // resp-cond-state = ("OK" / "NO" / "BAD") SP resp-text
 //                     ; Status condition
-pub(crate) fn response_tagged(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn response_tagged(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     map(
         tuple((
             imap_tag,
@@ -674,7 +674,7 @@ pub(crate) fn response_tagged(i: &[u8]) -> IResult<&[u8], Response> {
 //
 // resp-cond-state = ("OK" / "NO" / "BAD") SP resp-text
 //                     ; Status condition
-fn resp_cond(i: &[u8]) -> IResult<&[u8], Response> {
+fn resp_cond(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     map(tuple((status, trailing_resp_text)), |(status, text)| {
         Response::Data {
             status,
@@ -686,7 +686,7 @@ fn resp_cond(i: &[u8]) -> IResult<&[u8], Response> {
 
 // response-data   = "*" SP (resp-cond-state / resp-cond-bye /
 //                   mailbox-data / message-data / capability-data / quota) CRLF
-pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn response_data(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     delimited(
         tag(b"* "),
         alt((

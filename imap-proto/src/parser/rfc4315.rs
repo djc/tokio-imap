@@ -27,7 +27,7 @@ use crate::types::*;
 /// ```
 ///
 /// [RFC4315 - 3 Additional Response Codes](https://tools.ietf.org/html/rfc4315#section-3)
-pub(crate) fn resp_text_code_append_uid(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_append_uid(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(
         preceded(
             tag_no_case(b"APPENDUID "),
@@ -45,7 +45,7 @@ pub(crate) fn resp_text_code_append_uid(i: &[u8]) -> IResult<&[u8], ResponseCode
 /// ```
 ///
 /// [RFC4315 - 3 Additional Response Codes](https://tools.ietf.org/html/rfc4315#section-3)
-pub(crate) fn resp_text_code_copy_uid(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_copy_uid(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(
         preceded(
             tag_no_case(b"COPYUID "),
@@ -62,7 +62,7 @@ pub(crate) fn resp_text_code_copy_uid(i: &[u8]) -> IResult<&[u8], ResponseCode> 
 /// ```
 ///
 /// [RFC4315 - 3 Additional Response Codes](https://tools.ietf.org/html/rfc4315#section-3)
-pub(crate) fn resp_text_code_uid_not_sticky(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_uid_not_sticky(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     map(tag_no_case(b"UIDNOTSTICKY"), |_| ResponseCode::UidNotSticky)(i)
 }
 

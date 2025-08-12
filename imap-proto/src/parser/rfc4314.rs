@@ -27,7 +27,7 @@ use crate::types::*;
 /// ```ignore
 /// acl_response  ::= "ACL" SP mailbox SP acl_list
 /// ```
-pub(crate) fn acl(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn acl(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (rest, (_, _, mailbox, acls)) = tuple((
         tag_no_case("ACL"),
         space1,
@@ -41,14 +41,14 @@ pub(crate) fn acl(i: &[u8]) -> IResult<&[u8], Response> {
 /// ```ignore
 /// acl_list  ::= *(SP acl_entry)
 /// ```
-fn acl_list(i: &[u8]) -> IResult<&[u8], Vec<AclEntry>> {
+fn acl_list(i: &[u8]) -> IResult<&[u8], Vec<AclEntry<'_>>> {
     preceded(space0, separated_list0(space1, acl_entry))(i)
 }
 
 /// ```ignore
 /// acl_entry ::= SP identifier SP rights
 /// ```
-fn acl_entry(i: &[u8]) -> IResult<&[u8], AclEntry> {
+fn acl_entry(i: &[u8]) -> IResult<&[u8], AclEntry<'_>> {
     let (rest, (identifier, rights)) = separated_pair(
         map(astring_utf8, Cow::Borrowed),
         space1,
@@ -62,7 +62,7 @@ fn acl_entry(i: &[u8]) -> IResult<&[u8], AclEntry> {
 /// ```ignore
 /// list_rights_response  ::= "LISTRIGHTS" SP mailbox SP identifier SP required_rights *(SP optional_rights)
 /// ```
-pub(crate) fn list_rights(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn list_rights(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (rest, (_, _, mailbox, _, identifier, _, required, optional)) = tuple((
         tag_no_case("LISTRIGHTS"),
         space1,
@@ -101,7 +101,7 @@ fn list_rights_optional(i: &[u8]) -> IResult<&[u8], Vec<AclRight>> {
 /// ```ignore
 /// my_rights_response  ::= "MYRIGHTS" SP mailbox SP rights
 /// ```
-pub(crate) fn my_rights(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn my_rights(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (rest, (_, _, mailbox, _, rights)) = tuple((
         tag_no_case("MYRIGHTS"),
         space1,
