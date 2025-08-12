@@ -1,8 +1,5 @@
 [licenses]
-allow = ["MPL-2.0"]
-allow-osi-fsf-free = "either"
-copyleft = "warn"
-exceptions = [{ allow = ["ISC", "MIT", "OpenSSL"], name = "ring" }]
+allow = ["Apache-2.0", "BSD-3-Clause", "CDLA-Permissive-2.0", "ISC", "MIT", "Unicode-3.0"]
 private = { ignore = true }
 
 [[licenses.clarify]]
