@@ -26,7 +26,7 @@ rustls-pki-types = "1"
 tokio = { version = "1", features = ["net"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "ring", "tls12"] }
 tokio-util = { version = "0.7.0", features = ["codec"] }
-webpki-roots = "0.26"
+webpki-roots = "1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "net", "rt-multi-thread"] }
