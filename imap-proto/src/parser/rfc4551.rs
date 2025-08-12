@@ -16,7 +16,7 @@ use crate::{
 // Extends resp-test-code defined in rfc3501.
 // [RFC4551 - 3.6 HIGHESTMODSEQ Status Data Items](https://tools.ietf.org/html/rfc4551#section-3.6)
 // [RFC4551 - 4. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc4551#section-4)
-pub(crate) fn resp_text_code_highest_mod_seq(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_highest_mod_seq(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     let (i, (_, num)) = tuple((tag_no_case("HIGHESTMODSEQ "), number_64))(i)?;
     Ok((i, ResponseCode::HighestModSeq(num)))
 }
@@ -30,7 +30,7 @@ pub(crate) fn status_att_val_highest_mod_seq(i: &[u8]) -> IResult<&[u8], StatusA
 }
 
 // [RFC4551 - 4. Formal Syntax - fetch-mod-resp](https://tools.ietf.org/html/rfc4551#section-4)
-pub(crate) fn msg_att_mod_seq(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+pub(crate) fn msg_att_mod_seq(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     let (i, (_, num)) = tuple((tag_no_case("MODSEQ "), paren_delimited(number_64)))(i)?;
     Ok((i, AttributeValue::ModSeq(num)))
 }

@@ -20,11 +20,11 @@ use crate::types::*;
 // The ENABLED response lists capabilities that were enabled in response
 // to a ENABLE command.
 // [RFC5161 - 3.2 The ENABLED Response](https://tools.ietf.org/html/rfc5161#section-3.2)
-pub(crate) fn resp_enabled(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn resp_enabled(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     map(enabled_data, Response::Capabilities)(i)
 }
 
-fn enabled_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
+fn enabled_data(i: &[u8]) -> IResult<&[u8], Vec<Capability<'_>>> {
     let (i, (_, capabilities)) = tuple((
         tag_no_case("ENABLED"),
         many0(preceded(char(' '), capability)),
@@ -32,6 +32,6 @@ fn enabled_data(i: &[u8]) -> IResult<&[u8], Vec<Capability>> {
     Ok((i, capabilities))
 }
 
-fn capability(i: &[u8]) -> IResult<&[u8], Capability> {
+fn capability(i: &[u8]) -> IResult<&[u8], Capability<'_>> {
     map(map(atom, Cow::Borrowed), Capability::Atom)(i)
 }

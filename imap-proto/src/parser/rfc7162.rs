@@ -19,7 +19,7 @@ use crate::types::*;
 // about multiple messages, and it returns UIDs instead of message
 // numbers.
 // [RFC7162 - VANISHED RESPONSE](https://tools.ietf.org/html/rfc7162#section-3.2.10)
-pub(crate) fn resp_vanished(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn resp_vanished(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (rest, (_, earlier, _, uids)) = tuple((
         tag_no_case("VANISHED"),
         opt(tuple((space1, tag_no_case("(EARLIER)")))),

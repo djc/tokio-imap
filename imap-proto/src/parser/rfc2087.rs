@@ -26,7 +26,7 @@ use super::core::number_64;
 /// ```ignore
 /// quota_response  ::= "QUOTA" SP astring SP quota_list
 /// ```
-pub(crate) fn quota(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn quota(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (rest, (_, _, root_name, _, resources)) = tuple((
         tag_no_case("QUOTA"),
         space1,
@@ -47,21 +47,21 @@ pub(crate) fn quota(i: &[u8]) -> IResult<&[u8], Response> {
 /// ```ignore
 /// quota_list  ::= "(" #quota_resource ")"
 /// ```
-pub(crate) fn quota_list(i: &[u8]) -> IResult<&[u8], Vec<QuotaResource>> {
+pub(crate) fn quota_list(i: &[u8]) -> IResult<&[u8], Vec<QuotaResource<'_>>> {
     delimited(tag("("), separated_list0(space1, quota_resource), tag(")"))(i)
 }
 
 /// ```ignore
 /// quota_resource  ::= atom SP number SP number
 /// ```
-pub(crate) fn quota_resource(i: &[u8]) -> IResult<&[u8], QuotaResource> {
+pub(crate) fn quota_resource(i: &[u8]) -> IResult<&[u8], QuotaResource<'_>> {
     let (rest, (name, _, usage, _, limit)) =
         tuple((quota_resource_name, space1, number_64, space1, number_64))(i)?;
 
     Ok((rest, QuotaResource { name, usage, limit }))
 }
 
-pub(crate) fn quota_resource_name(i: &[u8]) -> IResult<&[u8], QuotaResourceName> {
+pub(crate) fn quota_resource_name(i: &[u8]) -> IResult<&[u8], QuotaResourceName<'_>> {
     alt((
         map(tag_no_case("STORAGE"), |_| QuotaResourceName::Storage),
         map(tag_no_case("MESSAGE"), |_| QuotaResourceName::Message),
@@ -73,7 +73,7 @@ pub(crate) fn quota_resource_name(i: &[u8]) -> IResult<&[u8], QuotaResourceName>
 /// ```ignore
 /// quotaroot_response ::= "QUOTAROOT" SP astring *(SP astring)
 /// ```
-pub(crate) fn quota_root(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn quota_root(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (rest, (_, _, mailbox_name, quota_root_names)) = tuple((
         tag_no_case("QUOTAROOT"),
         space1,
@@ -223,7 +223,7 @@ mod tests {
         );
     }
 
-    fn terminated_quota_root(i: &[u8]) -> IResult<&[u8], Response> {
+    fn terminated_quota_root(i: &[u8]) -> IResult<&[u8], Response<'_>> {
         nom::sequence::terminated(quota_root, nom::bytes::streaming::tag("\r\n"))(i)
     }
 

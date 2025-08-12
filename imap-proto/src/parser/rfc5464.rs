@@ -29,7 +29,7 @@ enum EntryParseStage<'a> {
     Fail(nom::Err<&'a [u8]>),
 }
 
-fn check_private_shared(i: &[u8]) -> EntryParseStage {
+fn check_private_shared(i: &[u8]) -> EntryParseStage<'_> {
     if i.starts_with(b"/private") {
         EntryParseStage::VendorComment(8)
     } else if i.starts_with(b"/shared") {
@@ -41,7 +41,7 @@ fn check_private_shared(i: &[u8]) -> EntryParseStage {
     }
 }
 
-fn check_admin(i: &[u8], l: usize) -> EntryParseStage {
+fn check_admin(i: &[u8], l: usize) -> EntryParseStage<'_> {
     if i[l..].starts_with(b"/admin") {
         EntryParseStage::Path(l + 6)
     } else {
@@ -49,7 +49,7 @@ fn check_admin(i: &[u8], l: usize) -> EntryParseStage {
     }
 }
 
-fn check_vendor_comment(i: &[u8], l: usize) -> EntryParseStage {
+fn check_vendor_comment(i: &[u8], l: usize) -> EntryParseStage<'_> {
     if i[l..].starts_with(b"/comment") {
         EntryParseStage::Path(l + 8)
     } else if i[l..].starts_with(b"/vendor") {
@@ -66,7 +66,7 @@ fn check_vendor_comment(i: &[u8], l: usize) -> EntryParseStage {
     }
 }
 
-fn check_path(i: &[u8], l: usize) -> EntryParseStage {
+fn check_path(i: &[u8], l: usize) -> EntryParseStage<'_> {
     if i.len() == l || i[l] == b' ' || i[l] == b'\r' {
         return EntryParseStage::Done(l);
     } else if i[l] != b'/' {
@@ -147,7 +147,7 @@ fn keyval_list(i: &[u8]) -> IResult<&[u8], Vec<Metadata>> {
     ))(i)
 }
 
-fn entry_list(i: &[u8]) -> IResult<&[u8], Vec<Cow<str>>> {
+fn entry_list(i: &[u8]) -> IResult<&[u8], Vec<Cow<'_, str>>> {
     separated_list0(tag(" "), map(map(entry_name, slice_to_str), Cow::Borrowed))(i)
 }
 
@@ -157,7 +157,7 @@ fn metadata_common(i: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 // [RFC5464 - 4.4.1 METADATA Response with values]
-pub(crate) fn metadata_solicited(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn metadata_solicited(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (i, (mailbox, values)) = tuple((metadata_common, keyval_list))(i)?;
     Ok((
         i,
@@ -169,7 +169,7 @@ pub(crate) fn metadata_solicited(i: &[u8]) -> IResult<&[u8], Response> {
 }
 
 // [RFC5464 - 4.4.2 Unsolicited METADATA Response without values]
-pub(crate) fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (i, (mailbox, values)) = tuple((metadata_common, entry_list))(i)?;
     Ok((
         i,
@@ -184,7 +184,7 @@ pub(crate) fn metadata_unsolicited(i: &[u8]) -> IResult<&[u8], Response> {
 // Extends resp-test-code defined in rfc3501.
 // [RFC5464 - 4.2.1 MAXSIZE GETMETADATA Command Option](https://tools.ietf.org/html/rfc5464#section-4.2.1)
 // [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
-pub(crate) fn resp_text_code_metadata_long_entries(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_metadata_long_entries(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     let (i, (_, num)) = tuple((tag_no_case("METADATA LONGENTRIES "), number_64))(i)?;
     Ok((i, ResponseCode::MetadataLongEntries(num)))
 }
@@ -193,7 +193,7 @@ pub(crate) fn resp_text_code_metadata_long_entries(i: &[u8]) -> IResult<&[u8], R
 // Extends resp-test-code defined in rfc3501.
 // [RFC5464 - 4.3 SETMETADATA Command](https://tools.ietf.org/html/rfc5464#section-4.3)
 // [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
-pub(crate) fn resp_text_code_metadata_max_size(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_metadata_max_size(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     let (i, (_, num)) = tuple((tag_no_case("METADATA MAXSIZE "), number_64))(i)?;
     Ok((i, ResponseCode::MetadataMaxSize(num)))
 }
@@ -202,7 +202,7 @@ pub(crate) fn resp_text_code_metadata_max_size(i: &[u8]) -> IResult<&[u8], Respo
 // Extends resp-test-code defined in rfc3501.
 // [RFC5464 - 4.3 SETMETADATA Command](https://tools.ietf.org/html/rfc5464#section-4.3)
 // [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
-pub(crate) fn resp_text_code_metadata_too_many(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_metadata_too_many(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     let (i, _) = tag_no_case("METADATA TOOMANY")(i)?;
     Ok((i, ResponseCode::MetadataTooMany))
 }
@@ -211,7 +211,7 @@ pub(crate) fn resp_text_code_metadata_too_many(i: &[u8]) -> IResult<&[u8], Respo
 // Extends resp-test-code defined in rfc3501.
 // [RFC5464 - 4.3 SETMETADATA Command](https://tools.ietf.org/html/rfc5464#section-4.3)
 // [RFC5464 - 5. Formal Syntax - resp-text-code](https://tools.ietf.org/html/rfc5464#section-5)
-pub(crate) fn resp_text_code_metadata_no_private(i: &[u8]) -> IResult<&[u8], ResponseCode> {
+pub(crate) fn resp_text_code_metadata_no_private(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
     let (i, _) = tag_no_case("METADATA NOPRIVATE")(i)?;
     Ok((i, ResponseCode::MetadataNoPrivate))
 }

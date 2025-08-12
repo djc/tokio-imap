@@ -64,7 +64,7 @@ fn id_param_list(i: &[u8]) -> IResult<&[u8], Option<HashMap<&str, &str>>> {
 
 // id_response ::= "ID" SPACE id_params_list
 // [RFC2971 - Formal Syntax](https://tools.ietf.org/html/rfc2971#section-4)
-pub(crate) fn resp_id(i: &[u8]) -> IResult<&[u8], Response> {
+pub(crate) fn resp_id(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (rest, map) = map(
         tuple((tag_no_case("ID"), space1, id_param_list)),
         |(_id, _sp, p)| p,

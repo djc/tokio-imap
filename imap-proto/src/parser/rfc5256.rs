@@ -31,7 +31,7 @@ use crate::{parser::core::number, types::MailboxDatum};
 /// ```
 ///
 /// [RFC5256 - 4 Additional Responses](https://tools.ietf.org/html/rfc5256#section-4)
-pub(crate) fn mailbox_data_sort(i: &[u8]) -> IResult<&[u8], MailboxDatum> {
+pub(crate) fn mailbox_data_sort(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(
         // Technically, trailing whitespace is not allowed for the SEARCH command,
         // but multiple email servers in the wild seem to have it anyway (see #34, #108).

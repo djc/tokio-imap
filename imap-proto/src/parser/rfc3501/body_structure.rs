@@ -16,7 +16,7 @@ use crate::{
 
 // body-fields     = body-fld-param SP body-fld-id SP body-fld-desc SP
 //                   body-fld-enc SP body-fld-octets
-fn body_fields(i: &[u8]) -> IResult<&[u8], BodyFields> {
+fn body_fields(i: &[u8]) -> IResult<&[u8], BodyFields<'_>> {
     let (i, (param, _, id, _, description, _, transfer_encoding, _, octets)) = tuple((
         body_param,
         tag(" "),
@@ -48,7 +48,7 @@ fn body_fields(i: &[u8]) -> IResult<&[u8], BodyFields> {
 //                   [SP body-fld-loc *(SP body-extension)]]]
 //                     ; MUST NOT be returned on non-extensible
 //                     ; "BODY" fetch
-fn body_ext_1part(i: &[u8]) -> IResult<&[u8], BodyExt1Part> {
+fn body_ext_1part(i: &[u8]) -> IResult<&[u8], BodyExt1Part<'_>> {
     let (i, (md5, disposition, language, location, extension)) = tuple((
         // Per RFC 1864, MD5 values are base64-encoded
         opt_opt(preceded(tag(" "), nstring_utf8)),
@@ -74,7 +74,7 @@ fn body_ext_1part(i: &[u8]) -> IResult<&[u8], BodyExt1Part> {
 //                   [SP body-fld-loc *(SP body-extension)]]]
 //                     ; MUST NOT be returned on non-extensible
 //                     ; "BODY" fetch
-fn body_ext_mpart(i: &[u8]) -> IResult<&[u8], BodyExtMPart> {
+fn body_ext_mpart(i: &[u8]) -> IResult<&[u8], BodyExtMPart<'_>> {
     let (i, (param, disposition, language, location, extension)) = tuple((
         opt_opt(preceded(tag(" "), body_param)),
         opt_opt(preceded(tag(" "), body_disposition)),
@@ -95,7 +95,7 @@ fn body_ext_mpart(i: &[u8]) -> IResult<&[u8], BodyExtMPart> {
     ))
 }
 
-fn body_encoding(i: &[u8]) -> IResult<&[u8], ContentEncoding> {
+fn body_encoding(i: &[u8]) -> IResult<&[u8], ContentEncoding<'_>> {
     alt((
         delimited(
             char('"'),
@@ -127,7 +127,7 @@ fn body_lang(i: &[u8]) -> IResult<&[u8], Option<Vec<Cow<'_, str>>>> {
     ))(i)
 }
 
-fn body_param(i: &[u8]) -> IResult<&[u8], BodyParams> {
+fn body_param(i: &[u8]) -> IResult<&[u8], BodyParams<'_>> {
     alt((
         map(nil, |_| None),
         map(
@@ -140,7 +140,7 @@ fn body_param(i: &[u8]) -> IResult<&[u8], BodyParams> {
     ))(i)
 }
 
-fn body_extension(i: &[u8]) -> IResult<&[u8], BodyExtension> {
+fn body_extension(i: &[u8]) -> IResult<&[u8], BodyExtension<'_>> {
     alt((
         map(number, BodyExtension::Num),
         // Cannot find documentation on character encoding for body extension values.
@@ -153,7 +153,7 @@ fn body_extension(i: &[u8]) -> IResult<&[u8], BodyExtension> {
     ))(i)
 }
 
-fn body_disposition(i: &[u8]) -> IResult<&[u8], Option<ContentDisposition>> {
+fn body_disposition(i: &[u8]) -> IResult<&[u8], Option<ContentDisposition<'_>>> {
     alt((
         map(nil, |_| None),
         paren_delimited(map(
@@ -168,7 +168,7 @@ fn body_disposition(i: &[u8]) -> IResult<&[u8], Option<ContentDisposition>> {
     ))(i)
 }
 
-fn body_type_basic(i: &[u8]) -> IResult<&[u8], BodyStructure> {
+fn body_type_basic(i: &[u8]) -> IResult<&[u8], BodyStructure<'_>> {
     map(
         tuple((
             string_utf8,
@@ -201,7 +201,7 @@ fn body_type_basic(i: &[u8]) -> IResult<&[u8], BodyStructure> {
     )(i)
 }
 
-fn body_type_text(i: &[u8]) -> IResult<&[u8], BodyStructure> {
+fn body_type_text(i: &[u8]) -> IResult<&[u8], BodyStructure<'_>> {
     map(
         tuple((
             tag_no_case("\"TEXT\""),
@@ -237,7 +237,7 @@ fn body_type_text(i: &[u8]) -> IResult<&[u8], BodyStructure> {
     )(i)
 }
 
-fn body_type_message(i: &[u8]) -> IResult<&[u8], BodyStructure> {
+fn body_type_message(i: &[u8]) -> IResult<&[u8], BodyStructure<'_>> {
     map(
         tuple((
             tag_no_case("\"MESSAGE\" \"RFC822\""),
@@ -277,7 +277,7 @@ fn body_type_message(i: &[u8]) -> IResult<&[u8], BodyStructure> {
     )(i)
 }
 
-fn body_type_multipart(i: &[u8]) -> IResult<&[u8], BodyStructure> {
+fn body_type_multipart(i: &[u8]) -> IResult<&[u8], BodyStructure<'_>> {
     map(
         tuple((many1(body), tag(" "), string_utf8, body_ext_mpart)),
         |(bodies, _, subtype, ext)| BodyStructure::Multipart {
@@ -297,7 +297,7 @@ fn body_type_multipart(i: &[u8]) -> IResult<&[u8], BodyStructure> {
     )(i)
 }
 
-pub(crate) fn body(i: &[u8]) -> IResult<&[u8], BodyStructure> {
+pub(crate) fn body(i: &[u8]) -> IResult<&[u8], BodyStructure<'_>> {
     paren_delimited(alt((
         body_type_text,
         body_type_message,
@@ -306,7 +306,7 @@ pub(crate) fn body(i: &[u8]) -> IResult<&[u8], BodyStructure> {
     )))(i)
 }
 
-pub(crate) fn msg_att_body_structure(i: &[u8]) -> IResult<&[u8], AttributeValue> {
+pub(crate) fn msg_att_body_structure(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(tuple((tag_no_case("BODYSTRUCTURE "), body)), |(_, body)| {
         AttributeValue::BodyStructure(body)
     })(i)
