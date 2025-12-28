@@ -3,10 +3,10 @@ use std::io;
 use std::net::ToSocketAddrs;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Context, Poll};
+use std::task::{ready, Context, Poll};
 
 use futures_sink::Sink;
-use futures_util::{ready, stream::Stream, StreamExt};
+use futures_util::{Stream, StreamExt};
 use pin_project::pin_project;
 use rustls_pki_types::ServerName;
 use tokio::io::{AsyncRead, AsyncWrite};
