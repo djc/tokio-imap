@@ -7,7 +7,7 @@ use std::task::{ready, Context, Poll};
 
 use futures_sink::Sink;
 use futures_util::{Stream, StreamExt};
-use pin_project::pin_project;
+use pin_project_lite::pin_project;
 use rustls_pki_types::ServerName;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
@@ -75,13 +75,14 @@ impl TlsClient {
     }
 }
 
-#[pin_project]
-pub struct ResponseStream<'a, T> {
-    #[pin]
-    client: &'a mut Client<T>,
-    request_id: RequestId,
-    cmd: Command,
-    state: ResponseStreamState,
+pin_project! {
+    pub struct ResponseStream<'a, T> {
+        #[pin]
+        client: &'a mut Client<T>,
+        request_id: RequestId,
+        cmd: Command,
+        state: ResponseStreamState,
+    }
 }
 
 impl<'a, T> Stream for ResponseStream<'a, T>

@@ -21,7 +21,7 @@ futures-util = { version = "0.3.8", default-features = false }
 futures-sink = "0.3.8"
 imap-proto = { version = "0.16", path = "../imap-proto" }
 nom = "7"
-pin-project = "1"
+pin-project-lite = "0.2.11"
 rustls-pki-types = "1"
 tokio = { version = "1", features = ["net"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["logging", "ring", "tls12"] }
