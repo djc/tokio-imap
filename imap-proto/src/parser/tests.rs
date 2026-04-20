@@ -681,6 +681,13 @@ fn test_incomplete_fetch() {
 }
 
 #[test]
+fn test_fetch_response_whitespace_tolerance() {
+    // Allow extra whitespace before the closing parenthesis.
+    let input = b"* 11784 FETCH (UID 87567 INTERNALDATE \"06-May-2023 18:48:30 +0200\" RFC822.SIZE 5799845 )\r\n";
+    assert!(parse_response(input).is_ok());
+}
+
+#[test]
 fn test_continuation() {
     // regular RFC compliant
     match parse_response(b"+ \r\n") {

@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
     bytes::streaming::{escaped, tag, tag_no_case, take, take_while, take_while1},
-    character::streaming::{char, digit1, one_of},
+    character::streaming::{char, digit1, one_of, space0},
     combinator::{map, map_res, opt},
     multi::{separated_list0, separated_list1},
     sequence::{delimited, preceded, tuple},
@@ -204,7 +204,13 @@ where
     F: FnMut(&'a [u8]) -> IResult<&'a [u8], O, E>,
     E: nom::error::ParseError<&'a [u8]>,
 {
-    delimited(char('('), separated_list1(char(' '), f), char(')'))
+    delimited(
+        char('('),
+        separated_list1(char(' '), f),
+        // Targeted lenience: Some real-world IMAP servers
+        // insert extra whitespace before the closing parenthesis.
+        tuple((space0, char(')'))),
+    )
 }
 
 pub fn parenthesized_list<'a, F, O, E>(f: F) -> impl FnMut(&'a [u8]) -> IResult<&'a [u8], Vec<O>, E>
