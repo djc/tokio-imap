@@ -960,7 +960,10 @@ mod tests {
 
     #[test]
     fn test_attribute_value_unknown_into_owned() {
-        assert_eq!(AttributeValue::Unknown.into_owned(), AttributeValue::Unknown);
+        assert_eq!(
+            AttributeValue::Unknown.into_owned(),
+            AttributeValue::Unknown
+        );
     }
 
     /// Tests that the [`NameAttribute::into_owned`] method returns the

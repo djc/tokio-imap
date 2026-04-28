@@ -977,10 +977,7 @@ fn test_fetch_rfc8474_emailid() {
             assert!(matches!(attrs[1], AttributeValue::Unknown));
             assert!(matches!(
                 attrs[2],
-                AttributeValue::BodySection {
-                    index: Some(0),
-                    ..
-                }
+                AttributeValue::BodySection { index: Some(0), .. }
             ));
         }
         rsp => panic!("unexpected response {rsp:?}"),
