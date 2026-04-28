@@ -565,6 +565,41 @@ fn msg_att_uid(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
 //                   "BODY" section ["<" number ">"] SP nstring /
 //                   "UID" SP uniqueid
 //                     ; MUST NOT change for a message
+
+// Catch-all for RFC extension attributes not explicitly handled above.
+//
+// RFC-compliant servers (Apache James, Stalwart, Dovecot) may include
+// attributes from extensions that post-date this crate, for example:
+//   - RFC 8474 §5 OBJECTID: EMAILID / THREADID
+//   - RFC 8514 §2 SAVEDATE
+//
+// When all known parsers fail, this function consumes "name SP value" where
+// the value is one of:
+//   - a single-level parenthesised group `(...)` — covers EMAILID / THREADID
+//   - an nstring (NIL / quoted-string / literal) — covers SAVEDATE and NIL forms
+//   - a bare atom or number — fallback for any remaining scalar value
+//
+// The name and value are discarded and `AttributeValue::Unknown` is returned so
+// that the rest of the `FETCH` attribute list can be parsed without error.
+// Note: deeply nested parenthesised values (beyond one level) are not handled
+// by the bare-paren arm; add a dedicated parser if a specific extension needs them.
+fn msg_att_unknown(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
+    map(
+        pair(
+            map_res(take_while1(is_atom_char), from_utf8),
+            preceded(
+                tag(b" "),
+                alt((
+                    value((), paren_delimited(take_while(|c: u8| c != b')'))),
+                    value((), nstring),
+                    value((), take_while1(|c: u8| c != b' ' && c != b')')),
+                )),
+            ),
+        ),
+        |_| AttributeValue::Unknown,
+    )(i)
+}
+
 fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     alt((
         msg_att_body_section,
@@ -581,6 +616,7 @@ fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
         gmail::msg_att_gmail_labels,
         gmail::msg_att_gmail_msgid,
         gmail::msg_att_gmail_thrid,
+        msg_att_unknown,
     ))(i)
 }
 

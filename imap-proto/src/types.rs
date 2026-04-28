@@ -359,6 +359,15 @@ pub enum AttributeValue<'a> {
     GmailLabels(Vec<Cow<'a, str>>),
     GmailMsgId(u64),
     GmailThrId(u64),
+    /// An unknown or not-yet-supported FETCH attribute.
+    ///
+    /// Returned for any `msg-att` token that the parser does not explicitly
+    /// recognise (e.g. `EMAILID` / `THREADID` from RFC 8474, `SAVEDATE` from
+    /// RFC 8514, or any future extension).  The name and raw value are consumed
+    /// and discarded so that the rest of the `FETCH` attribute list can be
+    /// parsed without error.  Callers that need the raw value should match on
+    /// the specific RFC extension and open a tracking issue or PR.
+    Unknown,
 }
 
 impl<'a> AttributeValue<'a> {
@@ -390,6 +399,7 @@ impl<'a> AttributeValue<'a> {
             }
             AttributeValue::GmailMsgId(v) => AttributeValue::GmailMsgId(v),
             AttributeValue::GmailThrId(v) => AttributeValue::GmailThrId(v),
+            AttributeValue::Unknown => AttributeValue::Unknown,
         }
     }
 }
