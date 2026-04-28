@@ -958,6 +958,11 @@ impl<'a> QuotaRoot<'a> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn test_attribute_value_unknown_into_owned() {
+        assert_eq!(AttributeValue::Unknown.into_owned(), AttributeValue::Unknown);
+    }
+
     /// Tests that the [`NameAttribute::into_owned`] method returns the
     /// same value (the ownership should only change).
     #[test]
