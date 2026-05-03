@@ -14,7 +14,7 @@ use super::rfc3501::flag;
 pub(crate) fn gmail_label_list(i: &[u8]) -> IResult<&[u8], Vec<Cow<'_, str>>> {
     preceded(
         tag_no_case("X-GM-LABELS "),
-        parenthesized_list(map(alt((flag, quoted_utf8)), Cow::Borrowed)),
+        parenthesized_list(alt((map(flag, Cow::Borrowed), quoted_utf8))),
     )(i)
 }
 

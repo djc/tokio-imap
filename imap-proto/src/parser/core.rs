@@ -8,6 +8,7 @@ use nom::{
     IResult,
 };
 
+use std::borrow::Cow;
 use std::str::{from_utf8, FromStr};
 
 // ----- number -----
@@ -61,9 +62,17 @@ pub fn string(i: &[u8]) -> IResult<&[u8], &[u8]> {
     alt((quoted, literal))(i)
 }
 
-// string bytes as utf8
-pub fn string_utf8(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(string, from_utf8)(i)
+#[inline]
+fn lossy_str(bytes: &[u8]) -> Cow<'_, str> {
+    String::from_utf8_lossy(bytes)
+}
+
+// string bytes as utf8 — falls back to lossy decoding when the literal
+// or quoted contents include non-UTF-8 bytes (e.g. Latin-1 / ISO-8859-9
+// MIME filenames in BODYSTRUCTURE responses). Strict from_utf8 would
+// fail, breaking the entire response stream on a single bad mail.
+pub fn string_utf8(i: &[u8]) -> IResult<&[u8], Cow<'_, str>> {
+    map(string, lossy_str)(i)
 }
 
 // quoted = DQUOTE *QUOTED-CHAR DQUOTE
@@ -79,9 +88,9 @@ pub fn quoted(i: &[u8]) -> IResult<&[u8], &[u8]> {
     )(i)
 }
 
-// quoted bytes as utf8
-pub fn quoted_utf8(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(quoted, from_utf8)(i)
+// quoted bytes as utf8 — lossy, see comment on string_utf8.
+pub fn quoted_utf8(i: &[u8]) -> IResult<&[u8], Cow<'_, str>> {
+    map(quoted, lossy_str)(i)
 }
 
 // quoted-specials = DQUOTE / "\"
@@ -108,9 +117,9 @@ pub fn astring(i: &[u8]) -> IResult<&[u8], &[u8]> {
     alt((take_while1(is_astring_char), string))(i)
 }
 
-// astring bytes as utf8
-pub fn astring_utf8(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(astring, from_utf8)(i)
+// astring bytes as utf8 — lossy, see comment on string_utf8.
+pub fn astring_utf8(i: &[u8]) -> IResult<&[u8], Cow<'_, str>> {
+    map(astring, lossy_str)(i)
 }
 
 // ASTRING-CHAR = ATOM-CHAR / resp-specials
@@ -152,8 +161,8 @@ pub fn nstring(i: &[u8]) -> IResult<&[u8], Option<&[u8]>> {
     alt((map(nil, |_| None), map(string, Some)))(i)
 }
 
-// nstring bytes as utf8
-pub fn nstring_utf8(i: &[u8]) -> IResult<&[u8], Option<&str>> {
+// nstring bytes as utf8 — lossy, see comment on string_utf8.
+pub fn nstring_utf8(i: &[u8]) -> IResult<&[u8], Option<Cow<'_, str>>> {
     alt((map(nil, |_| None), map(string_utf8, Some)))(i)
 }
 
@@ -164,9 +173,9 @@ pub fn nil(i: &[u8]) -> IResult<&[u8], &[u8]> {
 
 // ----- text -----
 
-// text = 1*TEXT-CHAR
-pub fn text(i: &[u8]) -> IResult<&[u8], &str> {
-    map_res(take_while(is_text_char), from_utf8)(i)
+// text = 1*TEXT-CHAR — lossy, see comment on string_utf8.
+pub fn text(i: &[u8]) -> IResult<&[u8], Cow<'_, str>> {
+    map(take_while(is_text_char), lossy_str)(i)
 }
 
 // TEXT-CHAR = <any CHAR except CR and LF>
@@ -178,8 +187,17 @@ pub fn is_text_char(c: u8) -> bool {
 //          ; any 7-bit US-ASCII character,
 //          ;  excluding NUL
 // From RFC5234
+//
+// Real-world IMAP servers (Dovecot, Cyrus, …) regularly emit 8-bit bytes
+// inside quoted strings and literals — typically MIME filenames in
+// non-UTF-8 encodings like Latin-1 or ISO-8859-9 (Turkish). RFC 6855 /
+// IMAP4rev2 (RFC 9051) formally allow UTF-8 in these positions. Strict
+// 7-bit rejection breaks BODYSTRUCTURE parsing on a single bad mail and
+// desyncs the entire stream. Accept any non-NUL byte and let the
+// higher-level UTF-8 conversion deal with non-UTF-8 sequences via lossy
+// decoding.
 pub fn is_char(c: u8) -> bool {
-    matches!(c, 0x01..=0x7F)
+    c != 0
 }
 
 // ----- others -----

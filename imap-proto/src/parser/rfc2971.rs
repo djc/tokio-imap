@@ -25,14 +25,15 @@ use crate::{
 // A single id parameter (field and value).
 // Format: string SPACE nstring
 // [RFC2971 - Formal Syntax](https://tools.ietf.org/html/rfc2971#section-4)
-fn id_param(i: &[u8]) -> IResult<&[u8], (&str, Option<&str>)> {
+#[allow(clippy::type_complexity)]
+fn id_param(i: &[u8]) -> IResult<&[u8], (Cow<'_, str>, Option<Cow<'_, str>>)> {
     separated_pair(string_utf8, space1, nstring_utf8)(i)
 }
 
 // The non-nil case of id parameter list.
 // Format: "(" #(string SPACE nstring) ")"
 // [RFC2971 - Formal Syntax](https://tools.ietf.org/html/rfc2971#section-4)
-fn id_param_list_not_nil(i: &[u8]) -> IResult<&[u8], HashMap<&str, &str>> {
+fn id_param_list_not_nil(i: &[u8]) -> IResult<&[u8], HashMap<Cow<'_, str>, Cow<'_, str>>> {
     map(
         tuple((
             char('('),
@@ -58,7 +59,8 @@ fn id_param_list_not_nil(i: &[u8]) -> IResult<&[u8], HashMap<&str, &str>> {
 // The id parameter list of all cases
 // id_params_list ::= "(" #(string SPACE nstring) ")" / nil
 // [RFC2971 - Formal Syntax](https://tools.ietf.org/html/rfc2971#section-4)
-fn id_param_list(i: &[u8]) -> IResult<&[u8], Option<HashMap<&str, &str>>> {
+#[allow(clippy::type_complexity)]
+fn id_param_list(i: &[u8]) -> IResult<&[u8], Option<HashMap<Cow<'_, str>, Cow<'_, str>>>> {
     alt((map(id_param_list_not_nil, Some), map(nil, |_| None)))(i)
 }
 
@@ -70,14 +72,7 @@ pub(crate) fn resp_id(i: &[u8]) -> IResult<&[u8], Response<'_>> {
         |(_id, _sp, p)| p,
     )(i)?;
 
-    Ok((
-        rest,
-        Response::Id(map.map(|m| {
-            m.into_iter()
-                .map(|(k, v)| (Cow::Borrowed(k), Cow::Borrowed(v)))
-                .collect()
-        })),
-    ))
+    Ok((rest, Response::Id(map)))
 }
 
 #[cfg(test)]
@@ -91,7 +86,7 @@ mod tests {
             id_param(br#""name" "Cyrus""#),
             Ok((_, (name, value))) => {
                 assert_eq!(name, "name");
-                assert_eq!(value, Some("Cyrus"));
+                assert_eq!(value.as_deref(), Some("Cyrus"));
             }
         );
 
@@ -99,7 +94,7 @@ mod tests {
             id_param(br#""name" NIL"#),
             Ok((_, (name, value))) => {
                 assert_eq!(name, "name");
-                assert_eq!(value, None);
+                assert!(value.is_none());
             }
         );
     }
@@ -118,6 +113,7 @@ mod tests {
                         ("os-version", "5.5"),
                         ("support-url", "mailto:cyrus-bugs+@andrew.cmu.edu"),
                     ].into_iter()
+                    .map(|(k, v)| (Cow::Borrowed(k), Cow::Borrowed(v)))
                     .collect()
                 );
             }
@@ -138,6 +134,7 @@ mod tests {
                         ("os-version", "5.5"),
                         ("support-url", "mailto:cyrus-bugs+@andrew.cmu.edu"),
                     ].into_iter()
+                    .map(|(k, v)| (Cow::Borrowed(k), Cow::Borrowed(v)))
                     .collect()
                 );
             }

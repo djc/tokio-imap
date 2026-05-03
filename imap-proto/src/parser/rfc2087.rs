@@ -4,8 +4,6 @@
 //! IMAP4 QUOTA extension
 //!
 
-use std::borrow::Cow;
-
 use nom::{
     branch::alt,
     bytes::streaming::{tag, tag_no_case},
@@ -30,7 +28,7 @@ pub(crate) fn quota(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (rest, (_, _, root_name, _, resources)) = tuple((
         tag_no_case("QUOTA"),
         space1,
-        map(astring_utf8, Cow::Borrowed),
+        astring_utf8,
         space1,
         quota_list,
     ))(i)?;
@@ -65,7 +63,7 @@ pub(crate) fn quota_resource_name(i: &[u8]) -> IResult<&[u8], QuotaResourceName<
     alt((
         map(tag_no_case("STORAGE"), |_| QuotaResourceName::Storage),
         map(tag_no_case("MESSAGE"), |_| QuotaResourceName::Message),
-        map(map(astring_utf8, Cow::Borrowed), QuotaResourceName::Atom),
+        map(astring_utf8, QuotaResourceName::Atom),
     ))(i)
 }
 
@@ -77,8 +75,8 @@ pub(crate) fn quota_root(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (rest, (_, _, mailbox_name, quota_root_names)) = tuple((
         tag_no_case("QUOTAROOT"),
         space1,
-        map(astring_utf8, Cow::Borrowed),
-        many0(preceded(space1, map(astring_utf8, Cow::Borrowed))),
+        astring_utf8,
+        many0(preceded(space1, astring_utf8)),
     ))(i)?;
 
     Ok((

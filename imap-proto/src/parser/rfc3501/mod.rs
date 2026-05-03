@@ -54,10 +54,10 @@ fn status(i: &[u8]) -> IResult<&[u8], Status> {
     alt((status_ok, status_no, status_bad, status_preauth, status_bye))(i)
 }
 
-pub(crate) fn mailbox(i: &[u8]) -> IResult<&[u8], &str> {
+pub(crate) fn mailbox(i: &[u8]) -> IResult<&[u8], Cow<'_, str>> {
     map(astring_utf8, |s| {
         if s.eq_ignore_ascii_case("INBOX") {
-            "INBOX"
+            Cow::Borrowed("INBOX")
         } else {
             s
         }
@@ -115,7 +115,7 @@ fn resp_text_code_badcharset(i: &[u8]) -> IResult<&[u8], ResponseCode<'_>> {
             tag_no_case(b"BADCHARSET"),
             opt(preceded(
                 tag(b" "),
-                parenthesized_nonempty_list(map(astring_utf8, Cow::Borrowed)),
+                parenthesized_nonempty_list(astring_utf8),
             )),
         ),
         ResponseCode::BadCharset,
@@ -287,7 +287,9 @@ fn name_attribute(i: &[u8]) -> IResult<&[u8], NameAttribute<'_>> {
 }
 
 #[allow(clippy::type_complexity)]
-fn mailbox_list(i: &[u8]) -> IResult<&[u8], (Vec<NameAttribute<'_>>, Option<&str>, &str)> {
+fn mailbox_list(
+    i: &[u8],
+) -> IResult<&[u8], (Vec<NameAttribute<'_>>, Option<Cow<'_, str>>, Cow<'_, str>)> {
     map(
         tuple((
             parenthesized_list(name_attribute),
@@ -304,8 +306,8 @@ fn mailbox_data_list(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(preceded(tag_no_case("LIST "), mailbox_list), |data| {
         MailboxDatum::List {
             name_attributes: data.0,
-            delimiter: data.1.map(Cow::Borrowed),
-            name: Cow::Borrowed(data.2),
+            delimiter: data.1,
+            name: data.2,
         }
     })(i)
 }
@@ -314,8 +316,8 @@ fn mailbox_data_lsub(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(preceded(tag_no_case("LSUB "), mailbox_list), |data| {
         MailboxDatum::List {
             name_attributes: data.0,
-            delimiter: data.1.map(Cow::Borrowed),
-            name: Cow::Borrowed(data.2),
+            delimiter: data.1,
+            name: data.2,
         }
     })(i)
 }
@@ -358,10 +360,7 @@ fn status_att_list(i: &[u8]) -> IResult<&[u8], Vec<StatusAttribute>> {
 fn mailbox_data_status(i: &[u8]) -> IResult<&[u8], MailboxDatum<'_>> {
     map(
         tuple((tag_no_case("STATUS "), mailbox, tag(" "), status_att_list)),
-        |(_, mailbox, _, status)| MailboxDatum::Status {
-            mailbox: Cow::Borrowed(mailbox),
-            status,
-        },
+        |(_, mailbox, _, status)| MailboxDatum::Status { mailbox, status },
     )(i)
 }
 
@@ -510,7 +509,7 @@ fn msg_att_envelope(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
 fn msg_att_internal_date(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
     map(
         preceded(tag_no_case("INTERNALDATE "), nstring_utf8),
-        |date| AttributeValue::InternalDate(Cow::Borrowed(date.unwrap())),
+        |date| AttributeValue::InternalDate(date.unwrap()),
     )(i)
 }
 
@@ -612,12 +611,16 @@ fn imap_tag(i: &[u8]) -> IResult<&[u8], RequestId> {
 //     ["[" resp-text-code "]" SP] text
 // However, examples in RFC 4551 (Conditional STORE) counteract this by giving
 // examples of `resp-text` that do not include the trailing space and text.
-fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode<'_>>, Option<&str>)> {
+#[allow(clippy::type_complexity)]
+fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode<'_>>, Option<Cow<'_, str>>)> {
     map(tuple((opt(resp_text_code), text)), |(code, text)| {
         let res = if text.is_empty() {
             None
         } else if code.is_some() {
-            Some(&text[1..])
+            Some(match text {
+                Cow::Borrowed(s) => Cow::Borrowed(&s[1..]),
+                Cow::Owned(s) => Cow::Owned(s[1..].to_string()),
+            })
         } else {
             Some(text)
         };
@@ -626,7 +629,10 @@ fn resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode<'_>>, Option<&str>
 }
 
 // an response-text if it is at the end of a response. Empty text is then allowed without the normally needed trailing space.
-fn trailing_resp_text(i: &[u8]) -> IResult<&[u8], (Option<ResponseCode<'_>>, Option<&str>)> {
+#[allow(clippy::type_complexity)]
+fn trailing_resp_text(
+    i: &[u8],
+) -> IResult<&[u8], (Option<ResponseCode<'_>>, Option<Cow<'_, str>>)> {
     map(opt(tuple((tag(b" "), resp_text))), |resptext| {
         resptext.map(|(_, tuple)| tuple).unwrap_or((None, None))
     })(i)
@@ -640,7 +646,7 @@ pub(crate) fn continue_req(i: &[u8]) -> IResult<&[u8], Response<'_>> {
         tuple((tag("+"), opt(tag(" ")), resp_text, tag("\r\n"))),
         |(_, _, text, _)| Response::Continue {
             code: text.0,
-            information: text.1.map(Cow::Borrowed),
+            information: text.1,
         },
     )(i)
 }
@@ -662,7 +668,7 @@ pub(crate) fn response_tagged(i: &[u8]) -> IResult<&[u8], Response<'_>> {
             tag,
             status,
             code: text.0,
-            information: text.1.map(Cow::Borrowed),
+            information: text.1,
         },
     )(i)
 }
@@ -679,7 +685,7 @@ fn resp_cond(i: &[u8]) -> IResult<&[u8], Response<'_>> {
         Response::Data {
             status,
             code: text.0,
-            information: text.1.map(Cow::Borrowed),
+            information: text.1,
         }
     })(i)
 }
