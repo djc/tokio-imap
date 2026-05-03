@@ -8,8 +8,6 @@
 //! The IMAP ACL Extension
 //!
 
-use std::borrow::Cow;
-
 use nom::{
     bytes::streaming::tag_no_case,
     character::complete::{space0, space1},
@@ -28,12 +26,7 @@ use crate::types::*;
 /// acl_response  ::= "ACL" SP mailbox SP acl_list
 /// ```
 pub(crate) fn acl(i: &[u8]) -> IResult<&[u8], Response<'_>> {
-    let (rest, (_, _, mailbox, acls)) = tuple((
-        tag_no_case("ACL"),
-        space1,
-        map(mailbox, Cow::Borrowed),
-        acl_list,
-    ))(i)?;
+    let (rest, (_, _, mailbox, acls)) = tuple((tag_no_case("ACL"), space1, mailbox, acl_list))(i)?;
 
     Ok((rest, Response::Acl(Acl { mailbox, acls })))
 }
@@ -50,9 +43,9 @@ fn acl_list(i: &[u8]) -> IResult<&[u8], Vec<AclEntry<'_>>> {
 /// ```
 fn acl_entry(i: &[u8]) -> IResult<&[u8], AclEntry<'_>> {
     let (rest, (identifier, rights)) = separated_pair(
-        map(astring_utf8, Cow::Borrowed),
+        astring_utf8,
         space1,
-        map(astring_utf8, map_text_to_rights),
+        map(astring_utf8, |s| map_text_to_rights(&s)),
     )(i)?;
 
     Ok((rest, AclEntry { identifier, rights }))
@@ -66,11 +59,11 @@ pub(crate) fn list_rights(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (rest, (_, _, mailbox, _, identifier, _, required, optional)) = tuple((
         tag_no_case("LISTRIGHTS"),
         space1,
-        map(mailbox, Cow::Borrowed),
+        mailbox,
         space1,
-        map(astring_utf8, Cow::Borrowed),
+        astring_utf8,
         space1,
-        map(astring_utf8, map_text_to_rights),
+        map(astring_utf8, |s| map_text_to_rights(&s)),
         list_rights_optional,
     ))(i)?;
 
@@ -92,7 +85,7 @@ fn list_rights_optional(i: &[u8]) -> IResult<&[u8], Vec<AclRight>> {
         rest,
         items
             .into_iter()
-            .flat_map(|s| s.chars().map(|c| c.into()))
+            .flat_map(|s| s.chars().map(AclRight::from).collect::<Vec<_>>())
             .collect(),
     ))
 }
@@ -105,9 +98,9 @@ pub(crate) fn my_rights(i: &[u8]) -> IResult<&[u8], Response<'_>> {
     let (rest, (_, _, mailbox, _, rights)) = tuple((
         tag_no_case("MYRIGHTS"),
         space1,
-        map(mailbox, Cow::Borrowed),
+        mailbox,
         space1,
-        map(astring_utf8, map_text_to_rights),
+        map(astring_utf8, |s| map_text_to_rights(&s)),
     ))(i)?;
 
     Ok((rest, Response::MyRights(MyRights { mailbox, rights })))

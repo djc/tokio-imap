@@ -427,6 +427,63 @@ fn test_body_structure() {
     }
 }
 
+// Coverage for the lossy-decode (Cow::Owned) branch of resp_text:
+// a server greeting with non-UTF-8 bytes in the message text (here
+// Latin-1 "Willkommen" with ü = 0xFC) must parse without failing,
+// and the information field must come back as an owned Cow with
+// the U+FFFD replacement character.
+#[test]
+fn test_resp_text_lossy_decode_8bit() {
+    let mut response: Vec<u8> = Vec::new();
+    response.extend_from_slice(b"* OK Willk");
+    response.push(0xFC); // Latin-1 'ü', not valid UTF-8
+    response.extend_from_slice(b"ommen\r\n");
+
+    match parse_response(&response) {
+        Ok((
+            _,
+            Response::Data {
+                status: Status::Ok,
+                code: None,
+                information: Some(info),
+            },
+        )) => {
+            assert!(
+                matches!(info, Cow::Owned(_)),
+                "expected lossy Owned, got {info:?}"
+            );
+            assert_eq!(info, "Willk\u{FFFD}ommen");
+        }
+        rsp => panic!("unexpected response {rsp:?}"),
+    }
+}
+
+// Regression: BODYSTRUCTURE with an 8-bit literal in a body parameter
+// (e.g. a MIME filename in Latin-1 / ISO-8859-9). Real-world IMAP
+// servers (Dovecot, Cyrus) emit these for mails from clients with
+// non-UTF-8 locales (Turkish "Görüntü1" is a common case from Outlook
+// for Turkish). The parser must accept the bytes via lossy UTF-8
+// decoding instead of failing the entire response.
+#[test]
+fn test_body_structure_with_8bit_literal_filename() {
+    // ("name" {8}\r\n<G>\xf6<r>\xfc<n><t>\xfc<1>) — "Görüntü1" in Latin-1
+    let mut response: Vec<u8> = Vec::new();
+    response.extend_from_slice(b"* 15 FETCH (BODYSTRUCTURE (\"image\" \"png\" (\"name\" {8}\r\n");
+    response.extend_from_slice(&[0x47, 0xF6, 0x72, 0xFC, 0x6E, 0x74, 0xFC, 0x31]);
+    response
+        .extend_from_slice(b") \"<part1@example.com>\" NIL \"base64\" 15440 NIL NIL NIL NIL))\r\n");
+    match parse_response(&response) {
+        Ok((_, Response::Fetch(_, attrs))) => {
+            assert!(
+                matches!(attrs[0], AttributeValue::BodyStructure(_)),
+                "body = {:?}",
+                attrs[0]
+            );
+        }
+        rsp => panic!("unexpected response {rsp:?}"),
+    }
+}
+
 #[test]
 fn test_status() {
     match parse_response(b"* STATUS blurdybloop (MESSAGES 231 UIDNEXT 44292)\r\n") {

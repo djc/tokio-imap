@@ -36,8 +36,8 @@ fn body_fields(i: &[u8]) -> IResult<&[u8], BodyFields<'_>> {
         i,
         BodyFields {
             param,
-            id: id.map(Cow::Borrowed),
-            description: description.map(Cow::Borrowed),
+            id,
+            description,
             transfer_encoding,
             octets,
         },
@@ -61,10 +61,10 @@ fn body_ext_1part(i: &[u8]) -> IResult<&[u8], BodyExt1Part<'_>> {
     Ok((
         i,
         BodyExt1Part {
-            md5: md5.map(Cow::Borrowed),
+            md5,
             disposition,
             language,
-            location: location.map(Cow::Borrowed),
+            location,
             extension,
         },
     ))
@@ -89,7 +89,7 @@ fn body_ext_mpart(i: &[u8]) -> IResult<&[u8], BodyExtMPart<'_>> {
             param,
             disposition,
             language,
-            location: location.map(Cow::Borrowed),
+            location,
             extension,
         },
     ))
@@ -110,20 +110,15 @@ fn body_encoding(i: &[u8]) -> IResult<&[u8], ContentEncoding<'_>> {
             )),
             char('"'),
         ),
-        map(string_utf8, |enc| {
-            ContentEncoding::Other(Cow::Borrowed(enc))
-        }),
+        map(string_utf8, ContentEncoding::Other),
     ))(i)
 }
 
 fn body_lang(i: &[u8]) -> IResult<&[u8], Option<Vec<Cow<'_, str>>>> {
     alt((
         // body language seems to refer to RFC 3066 language tags, which should be ASCII-only
-        map(nstring_utf8, |v| v.map(|s| vec![Cow::Borrowed(s)])),
-        map(
-            parenthesized_nonempty_list(map(string_utf8, Cow::Borrowed)),
-            Option::from,
-        ),
+        map(nstring_utf8, |v| v.map(|s| vec![s])),
+        map(parenthesized_nonempty_list(string_utf8), Option::from),
     ))(i)
 }
 
@@ -133,7 +128,7 @@ fn body_param(i: &[u8]) -> IResult<&[u8], BodyParams<'_>> {
         map(
             parenthesized_nonempty_list(map(
                 tuple((string_utf8, tag(" "), string_utf8)),
-                |(key, _, val)| (Cow::Borrowed(key), Cow::Borrowed(val)),
+                |(key, _, val)| (key, val),
             )),
             Option::from,
         ),
@@ -145,7 +140,7 @@ fn body_extension(i: &[u8]) -> IResult<&[u8], BodyExtension<'_>> {
         map(number, BodyExtension::Num),
         // Cannot find documentation on character encoding for body extension values.
         // So far, assuming UTF-8 seems fine, please report if you run into issues here.
-        map(nstring_utf8, |v| BodyExtension::Str(v.map(Cow::Borrowed))),
+        map(nstring_utf8, BodyExtension::Str),
         map(
             parenthesized_nonempty_list(body_extension),
             BodyExtension::List,
@@ -158,12 +153,7 @@ fn body_disposition(i: &[u8]) -> IResult<&[u8], Option<ContentDisposition<'_>>> 
         map(nil, |_| None),
         paren_delimited(map(
             tuple((string_utf8, tag(" "), body_param)),
-            |(ty, _, params)| {
-                Some(ContentDisposition {
-                    ty: Cow::Borrowed(ty),
-                    params,
-                })
-            },
+            |(ty, _, params)| Some(ContentDisposition { ty, params }),
         )),
     ))(i)
 }
@@ -181,8 +171,8 @@ fn body_type_basic(i: &[u8]) -> IResult<&[u8], BodyStructure<'_>> {
         |(ty, _, subtype, _, fields, ext)| BodyStructure::Basic {
             common: BodyContentCommon {
                 ty: ContentType {
-                    ty: Cow::Borrowed(ty),
-                    subtype: Cow::Borrowed(subtype),
+                    ty,
+                    subtype,
                     params: fields.param,
                 },
                 disposition: ext.disposition,
@@ -217,7 +207,7 @@ fn body_type_text(i: &[u8]) -> IResult<&[u8], BodyStructure<'_>> {
             common: BodyContentCommon {
                 ty: ContentType {
                     ty: Cow::Borrowed("TEXT"),
-                    subtype: Cow::Borrowed(subtype),
+                    subtype,
                     params: fields.param,
                 },
                 disposition: ext.disposition,
@@ -284,7 +274,7 @@ fn body_type_multipart(i: &[u8]) -> IResult<&[u8], BodyStructure<'_>> {
             common: BodyContentCommon {
                 ty: ContentType {
                     ty: Cow::Borrowed("MULTIPART"),
-                    subtype: Cow::Borrowed(subtype),
+                    subtype,
                     params: ext.param,
                 },
                 disposition: ext.disposition,
