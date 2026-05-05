@@ -19,7 +19,7 @@ maintenance = { status = "passively-maintained" }
 bytes = "1"
 futures-util = { version = "0.3.8", default-features = false }
 futures-sink = "0.3.8"
-imap-proto = { version = "0.16", path = "../imap-proto" }
+imap-proto = { version = "0.17", path = "../imap-proto" }
 nom = "7"
 pin-project-lite = "0.2.11"
 rustls-pki-types = "1"
