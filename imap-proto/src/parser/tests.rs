@@ -967,14 +967,16 @@ fn test_parsing_of_bye_response() {
 #[test]
 fn test_fetch_rfc8474_emailid() {
     // James sends EMAILID in FETCH responses when the client requests it.
-    // Stock imap-proto fails with TakeWhile1; patched parser returns Unknown.
     match parse_response(
         b"* 1 FETCH (UID 123 EMAILID (M6d952b5c6f82bfd8) BODY[]<0> {5}\r\nhello)\r\n",
     ) {
         Ok((_, Response::Fetch(1, attrs))) => {
             assert_eq!(attrs.len(), 3);
             assert!(matches!(attrs[0], AttributeValue::Uid(123)));
-            assert!(matches!(attrs[1], AttributeValue::Unknown));
+            match &attrs[1] {
+                AttributeValue::EmailId(id) => assert_eq!(id.as_ref(), "M6d952b5c6f82bfd8"),
+                other => panic!("expected EmailId, got {other:?}"),
+            }
             assert!(matches!(
                 attrs[2],
                 AttributeValue::BodySection { index: Some(0), .. }
@@ -991,7 +993,12 @@ fn test_fetch_rfc8474_threadid() {
     ) {
         Ok((_, Response::Fetch(1, attrs))) => {
             assert_eq!(attrs.len(), 3);
-            assert!(matches!(attrs[1], AttributeValue::Unknown));
+            match &attrs[1] {
+                AttributeValue::ThreadId(Some(id)) => {
+                    assert_eq!(id.as_ref(), "T64b4c7e452f961e2");
+                }
+                other => panic!("expected ThreadId(Some), got {other:?}"),
+            }
         }
         rsp => panic!("unexpected response {rsp:?}"),
     }
@@ -1003,7 +1010,7 @@ fn test_fetch_rfc8474_threadid_nil() {
     match parse_response(b"* 1 FETCH (UID 7 THREADID NIL BODY[]<0> {2}\r\nhi)\r\n") {
         Ok((_, Response::Fetch(1, attrs))) => {
             assert_eq!(attrs.len(), 3);
-            assert!(matches!(attrs[1], AttributeValue::Unknown));
+            assert!(matches!(attrs[1], AttributeValue::ThreadId(None)));
         }
         rsp => panic!("unexpected response {rsp:?}"),
     }
@@ -1018,8 +1025,35 @@ fn test_fetch_rfc8474_emailid_and_threadid() {
         Ok((_, Response::Fetch(1, attrs))) => {
             assert_eq!(attrs.len(), 4);
             assert!(matches!(attrs[0], AttributeValue::Uid(42)));
+            match &attrs[1] {
+                AttributeValue::EmailId(id) => assert_eq!(id.as_ref(), "Mdeadbeef"),
+                other => panic!("expected EmailId, got {other:?}"),
+            }
+            match &attrs[2] {
+                AttributeValue::ThreadId(Some(id)) => assert_eq!(id.as_ref(), "Tcafebabe"),
+                other => panic!("expected ThreadId(Some), got {other:?}"),
+            }
+        }
+        rsp => panic!("unexpected response {rsp:?}"),
+    }
+}
+
+#[test]
+fn test_fetch_unknown_savedate_fallback() {
+    // RFC 8514 §2: SAVEDATE is not yet typed first-class.  Confirm the
+    // catch-all `msg_att_unknown` still absorbs unknown extension
+    // attributes so that the rest of the FETCH list keeps parsing.
+    match parse_response(
+        b"* 1 FETCH (UID 9 SAVEDATE \"01-Jan-2025 12:00:00 +0000\" BODY[]<0> {2}\r\nok)\r\n",
+    ) {
+        Ok((_, Response::Fetch(1, attrs))) => {
+            assert_eq!(attrs.len(), 3);
+            assert!(matches!(attrs[0], AttributeValue::Uid(9)));
             assert!(matches!(attrs[1], AttributeValue::Unknown));
-            assert!(matches!(attrs[2], AttributeValue::Unknown));
+            assert!(matches!(
+                attrs[2],
+                AttributeValue::BodySection { index: Some(0), .. }
+            ));
         }
         rsp => panic!("unexpected response {rsp:?}"),
     }

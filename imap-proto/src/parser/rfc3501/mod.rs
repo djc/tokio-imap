@@ -566,16 +566,53 @@ fn msg_att_uid(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
 //                   "UID" SP uniqueid
 //                     ; MUST NOT change for a message
 
+// RFC 8474 §5.1 — EMAILID
+//   "EMAILID" SP "(" objectid ")"
+// objectid = 1*ASTRING-CHAR (RFC 8474 §3).  EMAILID is non-optional: a
+// compliant server MUST be able to provide one for any stored message,
+// so the wire form `EMAILID NIL` is not allowed by the RFC.  If a
+// non-compliant server emits it anyway, this parser fails and the
+// catch-all `msg_att_unknown` below absorbs the attribute.
+fn msg_att_emailid(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
+    map(
+        preceded(
+            tag_no_case("EMAILID "),
+            paren_delimited(map_res(take_while1(is_astring_char), from_utf8)),
+        ),
+        |id| AttributeValue::EmailId(Cow::Borrowed(id)),
+    )(i)
+}
+
+// RFC 8474 §5.2 — THREADID
+//   "THREADID" SP ( "(" objectid ")" / nil )
+// THREADID may be NIL, which the RFC mandates for messages that do not
+// currently have a thread association.  We map NIL → `None`.
+fn msg_att_threadid(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
+    map(
+        preceded(
+            tag_no_case("THREADID "),
+            alt((
+                map(nil, |_| None),
+                map(
+                    paren_delimited(map_res(take_while1(is_astring_char), from_utf8)),
+                    |id| Some(Cow::Borrowed(id)),
+                ),
+            )),
+        ),
+        AttributeValue::ThreadId,
+    )(i)
+}
+
 // Catch-all for RFC extension attributes not explicitly handled above.
 //
 // RFC-compliant servers (Apache James, Stalwart, Dovecot) may include
 // attributes from extensions that post-date this crate, for example:
-//   - RFC 8474 §5 OBJECTID: EMAILID / THREADID
 //   - RFC 8514 §2 SAVEDATE
+//   - any future extension this crate has not yet typed
 //
 // When all known parsers fail, this function consumes "name SP value" where
 // the value is one of:
-//   - a single-level parenthesised group `(...)` — covers EMAILID / THREADID
+//   - a single-level parenthesised group `(...)`
 //   - an nstring (NIL / quoted-string / literal) — covers SAVEDATE and NIL forms
 //   - a bare atom or number — fallback for any remaining scalar value
 //
@@ -616,6 +653,8 @@ fn msg_att(i: &[u8]) -> IResult<&[u8], AttributeValue<'_>> {
         gmail::msg_att_gmail_labels,
         gmail::msg_att_gmail_msgid,
         gmail::msg_att_gmail_thrid,
+        msg_att_emailid,
+        msg_att_threadid,
         msg_att_unknown,
     ))(i)
 }

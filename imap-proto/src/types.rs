@@ -359,14 +359,23 @@ pub enum AttributeValue<'a> {
     GmailLabels(Vec<Cow<'a, str>>),
     GmailMsgId(u64),
     GmailThrId(u64),
+    /// RFC 8474 §5.1 — `EMAILID`: a server-assigned unique identifier for
+    /// a message. RFC 8474 mandates that the server can always provide an
+    /// EMAILID for any stored message, so this variant is non-optional.
+    EmailId(Cow<'a, str>),
+    /// RFC 8474 §5.2 — `THREADID`: a server-assigned identifier for the
+    /// thread a message belongs to.  `None` corresponds to the wire-form
+    /// `THREADID NIL`, which RFC 8474 §5.2 mandates for messages that do
+    /// not currently have a thread association.
+    ThreadId(Option<Cow<'a, str>>),
     /// An unknown or not-yet-supported FETCH attribute.
     ///
     /// Returned for any `msg-att` token that the parser does not explicitly
-    /// recognise (e.g. `EMAILID` / `THREADID` from RFC 8474, `SAVEDATE` from
-    /// RFC 8514, or any future extension).  The name and raw value are consumed
-    /// and discarded so that the rest of the `FETCH` attribute list can be
-    /// parsed without error.  Callers that need the raw value should match on
-    /// the specific RFC extension and open a tracking issue or PR.
+    /// recognise (e.g. `SAVEDATE` from RFC 8514, or any future extension).
+    /// The name and raw value are consumed and discarded so that the rest
+    /// of the `FETCH` attribute list can be parsed without error.  Callers
+    /// that need the raw value should match on the specific RFC extension
+    /// and open a tracking issue or PR.
     Unknown,
 }
 
@@ -399,6 +408,8 @@ impl<'a> AttributeValue<'a> {
             }
             AttributeValue::GmailMsgId(v) => AttributeValue::GmailMsgId(v),
             AttributeValue::GmailThrId(v) => AttributeValue::GmailThrId(v),
+            AttributeValue::EmailId(v) => AttributeValue::EmailId(to_owned_cow(v)),
+            AttributeValue::ThreadId(v) => AttributeValue::ThreadId(v.map(to_owned_cow)),
             AttributeValue::Unknown => AttributeValue::Unknown,
         }
     }
