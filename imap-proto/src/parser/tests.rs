@@ -1018,3 +1018,100 @@ fn test_parsing_of_bye_response() {
         rsp => panic!("unexpected response {rsp:?}"),
     };
 }
+
+// ── RFC 8474 OBJECTID (EMAILID / THREADID) — Apache James 3.9 ───────────────
+
+#[test]
+fn test_fetch_rfc8474_emailid() {
+    // James sends EMAILID in FETCH responses when the client requests it.
+    match parse_response(
+        b"* 1 FETCH (UID 123 EMAILID (M6d952b5c6f82bfd8) BODY[]<0> {5}\r\nhello)\r\n",
+    ) {
+        Ok((_, Response::Fetch(1, attrs))) => {
+            assert_eq!(attrs.len(), 3);
+            assert!(matches!(attrs[0], AttributeValue::Uid(123)));
+            match &attrs[1] {
+                AttributeValue::EmailId(id) => assert_eq!(id.as_ref(), "M6d952b5c6f82bfd8"),
+                other => panic!("expected EmailId, got {other:?}"),
+            }
+            assert!(matches!(
+                attrs[2],
+                AttributeValue::BodySection { index: Some(0), .. }
+            ));
+        }
+        rsp => panic!("unexpected response {rsp:?}"),
+    }
+}
+
+#[test]
+fn test_fetch_rfc8474_threadid() {
+    match parse_response(
+        b"* 1 FETCH (UID 123 THREADID (T64b4c7e452f961e2) BODY[]<0> {5}\r\nhello)\r\n",
+    ) {
+        Ok((_, Response::Fetch(1, attrs))) => {
+            assert_eq!(attrs.len(), 3);
+            match &attrs[1] {
+                AttributeValue::ThreadId(Some(id)) => {
+                    assert_eq!(id.as_ref(), "T64b4c7e452f961e2");
+                }
+                other => panic!("expected ThreadId(Some), got {other:?}"),
+            }
+        }
+        rsp => panic!("unexpected response {rsp:?}"),
+    }
+}
+
+#[test]
+fn test_fetch_rfc8474_threadid_nil() {
+    // RFC 8474 §5.2: THREADID can be NIL for messages with no thread association.
+    match parse_response(b"* 1 FETCH (UID 7 THREADID NIL BODY[]<0> {2}\r\nhi)\r\n") {
+        Ok((_, Response::Fetch(1, attrs))) => {
+            assert_eq!(attrs.len(), 3);
+            assert!(matches!(attrs[1], AttributeValue::ThreadId(None)));
+        }
+        rsp => panic!("unexpected response {rsp:?}"),
+    }
+}
+
+#[test]
+fn test_fetch_rfc8474_emailid_and_threadid() {
+    // Both attributes in the same FETCH response.
+    match parse_response(
+        b"* 1 FETCH (UID 42 EMAILID (Mdeadbeef) THREADID (Tcafebabe) BODY[]<0> {3}\r\nhey)\r\n",
+    ) {
+        Ok((_, Response::Fetch(1, attrs))) => {
+            assert_eq!(attrs.len(), 4);
+            assert!(matches!(attrs[0], AttributeValue::Uid(42)));
+            match &attrs[1] {
+                AttributeValue::EmailId(id) => assert_eq!(id.as_ref(), "Mdeadbeef"),
+                other => panic!("expected EmailId, got {other:?}"),
+            }
+            match &attrs[2] {
+                AttributeValue::ThreadId(Some(id)) => assert_eq!(id.as_ref(), "Tcafebabe"),
+                other => panic!("expected ThreadId(Some), got {other:?}"),
+            }
+        }
+        rsp => panic!("unexpected response {rsp:?}"),
+    }
+}
+
+#[test]
+fn test_fetch_unknown_savedate_fallback() {
+    // RFC 8514 §2: SAVEDATE is not yet typed first-class.  Confirm the
+    // catch-all `msg_att_unknown` still absorbs unknown extension
+    // attributes so that the rest of the FETCH list keeps parsing.
+    match parse_response(
+        b"* 1 FETCH (UID 9 SAVEDATE \"01-Jan-2025 12:00:00 +0000\" BODY[]<0> {2}\r\nok)\r\n",
+    ) {
+        Ok((_, Response::Fetch(1, attrs))) => {
+            assert_eq!(attrs.len(), 3);
+            assert!(matches!(attrs[0], AttributeValue::Uid(9)));
+            assert!(matches!(attrs[1], AttributeValue::Unknown));
+            assert!(matches!(
+                attrs[2],
+                AttributeValue::BodySection { index: Some(0), .. }
+            ));
+        }
+        rsp => panic!("unexpected response {rsp:?}"),
+    }
+}
