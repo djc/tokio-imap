@@ -46,7 +46,7 @@ async fn imap_fetch(
                 eprintln!("Login failed: {info:?}");
             }
             return Err(ImapError::Login {
-                cause: io::Error::new(io::ErrorKind::Other, "login failed"),
+                cause: io::Error::other("login failed"),
             });
         }
         _ => unimplemented!(),

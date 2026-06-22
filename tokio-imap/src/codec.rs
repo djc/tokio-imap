@@ -38,10 +38,9 @@ impl Decoder for ImapCodec {
             }
             Err(nom::Err::Error(nom::error::Error { code, .. }))
             | Err(nom::Err::Failure(nom::error::Error { code, .. })) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::Other,
-                    format!("{code:?} during parsing of {buf:?}"),
-                ));
+                return Err(io::Error::other(format!(
+                    "{code:?} during parsing of {buf:?}"
+                )));
             }
         };
         let raw = buf.split_to(rsp_len).freeze();

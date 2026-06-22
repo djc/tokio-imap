@@ -29,12 +29,10 @@ pub struct Client<T> {
 
 impl TlsClient {
     pub async fn connect(server: &str) -> io::Result<(ResponseData, Self)> {
-        let addr = (server, 993).to_socket_addrs()?.next().ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("no IP addresses found for {server}"),
-            )
-        })?;
+        let addr = (server, 993)
+            .to_socket_addrs()?
+            .next()
+            .ok_or_else(|| io::Error::other(format!("no IP addresses found for {server}")))?;
 
         let mut roots = tokio_rustls::rustls::RootCertStore::empty();
         roots.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
@@ -53,7 +51,7 @@ impl TlsClient {
 
         let greeting = match transport.next().await {
             Some(greeting) => Ok(greeting),
-            None => Err(io::Error::new(io::ErrorKind::Other, "no greeting found")),
+            None => Err(io::Error::other("no greeting found")),
         }?;
         let client = Client {
             transport,
@@ -125,8 +123,7 @@ where
                         }
                         Some(Err(e)) => return Poll::Ready(Some(Err(e))),
                         None => {
-                            return Poll::Ready(Some(Err(io::Error::new(
-                                io::ErrorKind::Other,
+                            return Poll::Ready(Some(Err(io::Error::other(
                                 "stream ended before command completion",
                             ))))
                         }
